@@ -2,7 +2,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir fastapi uvicorn sqlalchemy psycopg2-binary "pydantic[email]"
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn \
+    sqlalchemy \
+    psycopg2-binary \
+    "pydantic[email]" \
+    pydantic-settings \
+    "passlib[bcrypt]" \
+    "python-jose[cryptography]" \
+    python-multipart
+
 
 COPY ./app /app/app
 
