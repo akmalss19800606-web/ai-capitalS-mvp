@@ -44,7 +44,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+            - "3000:10000"
     environment:
             BACKEND_URL: http://backend:8000
 
