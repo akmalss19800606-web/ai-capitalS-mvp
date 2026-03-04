@@ -17,3 +17,10 @@ def get_investment_recommendation(asset_name: str, asset_symbol: str, current_pr
         max_tokens=200
     )
     return response.choices[0].message.content
+
+def get_groq_client():
+    from openai import OpenAI
+    return OpenAI(
+        api_key=os.getenv("GROQ_API_KEY"),
+        base_url="https://api.groq.com/openai/v1"
+    )

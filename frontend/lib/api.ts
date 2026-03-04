@@ -25,16 +25,25 @@ export const auth = {
 
 export const portfolios = {
   list: () => apiRequest('/portfolios/'),
+  get: (id: number) => apiRequest(`/portfolios/${id}`),
   create: (data: { name: string; description?: string; total_value?: number }) =>
     apiRequest('/portfolios/', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: { name?: string; description?: string; total_value?: number }) =>
+    apiRequest(`/portfolios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiRequest(`/portfolios/${id}`, { method: 'DELETE' }),
 };
 
 export const market = {
   getPrice: (symbol: string) => apiRequest(`/ai/market/${symbol}`),
+  getOverview: (symbols: string[]) =>
+    apiRequest('/ai/market/overview', { method: 'POST', body: JSON.stringify({ symbols }) }),
 };
 
 export const ai = {
-  recommend: (data: { asset_name: string; asset_symbol: string; current_price: number; portfolio_id: number }) =>
-    apiRequest('/ai/recommend', { method: 'POST', body: JSON.stringify(data) }),
+  recommend: (data: {
+    asset_name: string;
+    asset_symbol: string;
+    current_price: number;
+    portfolio_id: number;
+  }) => apiRequest('/ai/recommend', { method: 'POST', body: JSON.stringify(data) }),
 };
