@@ -48,7 +48,6 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold text-blue-400">AI Capital Management</h1>
           <button onClick={handleLogout} className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg">Выйти</button>
         </div>
-
         <div className="bg-gray-900 rounded-xl p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Создать портфель</h2>
           <div className="flex gap-3">
@@ -62,7 +61,6 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {portfolioList.map(p => (
             <div key={p.id} className="bg-gray-900 rounded-xl p-6 border border-gray-800 hover:border-blue-500 transition-colors">
@@ -72,8 +70,8 @@ export default function Dashboard() {
               </div>
               <p className="text-gray-400 text-sm mb-3">{p.description || 'Нет описания'}</p>
               <div className="flex justify-between items-center">
-                <span className="text-green-400 font-bold">\</span>
-                <button onClick={() => router.push(/portfolio/)}
+                <span className="text-green-400 font-bold">{p.total_value}</span>
+                <button onClick={() => router.push('/portfolio/' + p.id)}
                   className="bg-blue-600 hover:bg-blue-700 px-4 py-1 rounded-lg text-sm">Открыть</button>
               </div>
             </div>
