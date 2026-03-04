@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+﻿FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -11,8 +11,9 @@ RUN pip install --no-cache-dir \
     pydantic-settings \
     "passlib[bcrypt]" \
     "python-jose[cryptography]" \
-    python-multipart
-
+    python-multipart \
+    openai \
+    httpx
 
 COPY ./app /app/app
 

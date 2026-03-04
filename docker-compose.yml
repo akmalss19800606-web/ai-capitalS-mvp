@@ -1,4 +1,4 @@
-services:
+﻿services:
   db:
     image: postgres:16
     container_name: ai_capital_db
@@ -26,6 +26,11 @@ services:
         condition: service_healthy
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://ai_user:ai_password@db:5432/ai_capital
+      OPENAI_API_KEY: 
+      ALPHA_VANTAGE_API_KEY: 
+      SECRET_KEY: 
 
 volumes:
   pgdata:
