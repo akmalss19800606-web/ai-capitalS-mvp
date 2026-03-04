@@ -1,0 +1,44 @@
+databases:
+  - name: ai-capital-db
+    databaseName: ai_capital
+    user: ai_user
+    plan: free
+
+services:
+  - type: web
+    name: ai-capital-backend
+    plan: free
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-capital-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        value: TMPW23EHFMN4Y7XI
+      - key: OPENAI_API_KEY
+        value: optional
+
+  - type: web
+    name: ai-capital-frontend
+    plan: free
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: node .next/standalone/server.js
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: ai-capital-backend
+          type: web
+          property: host
+          envVarKey: BACKEND_URL
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
