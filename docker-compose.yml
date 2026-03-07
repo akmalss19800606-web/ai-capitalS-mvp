@@ -44,9 +44,9 @@ services:
     depends_on:
       - backend
     ports:
-            - "3000:10000"
+            - "10000:10000"
     environment:
-            BACKEND_URL: http://backend:8000
+            BACKEND_URL: "http://ai_capital_backend:8000"
 
 volumes:
   pgdata:
