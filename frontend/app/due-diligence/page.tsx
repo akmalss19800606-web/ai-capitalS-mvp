@@ -23,6 +23,20 @@ const examples = [
   { company: "Artel Electronics", industry: "Производство и переработка" },
 ];
 
+const STATUS_MAP: Record<string, { label: string; bg: string; border: string; text: string; icon: string }> = {
+  'НАДЁЖНО':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
+  'НАДЕЖНО':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
+  'TRUSTED':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
+  'ВЫСОКИЙ РИСК': { label: 'ВЫСОКИЙ РИСК', bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', icon: '🚨' },
+  'HIGH RISK':    { label: 'ВЫСОКИЙ РИСК', bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', icon: '🚨' },
+  'ОСТОРОЖНО':    { label: 'ОСТОРОЖНО',    bg: '#fffbeb', border: '#fcd34d', text: '#d97706', icon: '⚠️' },
+  'CAUTION':      { label: 'ОСТОРОЖНО',    bg: '#fffbeb', border: '#fcd34d', text: '#d97706', icon: '⚠️' },
+};
+
+const getStatusStyle = (status: string) => {
+  return STATUS_MAP[status] || STATUS_MAP['ОСТОРОЖНО'];
+};
+
 export default function DueDiligencePage() {
   const router = useRouter();
   const [companyName, setCompanyName] = useState('');
@@ -50,12 +64,6 @@ export default function DueDiligencePage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getStatusColor = (status: string) => {
-    if (status === 'TRUSTED') return { bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' };
-    if (status === 'HIGH RISK') return { bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', icon: '🚨' };
-    return { bg: '#fffbeb', border: '#fcd34d', text: '#d97706', icon: '⚠️' };
   };
 
   return (
@@ -89,7 +97,6 @@ export default function DueDiligencePage() {
             {loading ? 'Анализирую...' : 'Проверить'}
           </button>
         </div>
-
         <div>
           <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>Примеры:</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -118,14 +125,14 @@ export default function DueDiligencePage() {
       {result && !loading && (
         <div>
           {(() => {
-            const sc = getStatusColor(result.status);
+            const sc = getStatusStyle(result.status);
             return (
               <div style={{ backgroundColor: sc.bg, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${sc.border}`, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ fontSize: '36px' }}>{sc.icon}</div>
                 <div>
                   <p style={{ fontSize: '13px', color: sc.text, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Статус проверки</p>
-                  <p style={{ fontSize: '24px', fontWeight: '800', color: sc.text }}>{result.status}</p>
-                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{result.company} {result.industry ? `· ${result.industry}` : ''}</p>
+                  <p style={{ fontSize: '24px', fontWeight: '800', color: sc.text }}>{sc.label}</p>
+                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{result.company}{result.industry ? ` · ${result.industry}` : ''}</p>
                 </div>
               </div>
             );

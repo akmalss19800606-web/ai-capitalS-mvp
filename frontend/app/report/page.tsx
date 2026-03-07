@@ -37,7 +37,7 @@ export default function ReportPage() {
       const aiRes = await apiRequest('/ai/market-analysis', {
         method: 'POST',
         body: JSON.stringify({
-          query: `Generate a professional investment portfolio summary report for: Portfolio "${selected.name}", Total Value: $${selected.total_value}. Include performance analysis, risk assessment, and investment recommendations for Uzbekistan market.`,
+          query: `Составь профессиональный инвестиционный отчет на русском языке для: Portfolio "${selected.name}", Total Value: $${selected.total_value}. Включи анализ эффективности, оценку рисков и рекомендации. Отвечай ТОЛЬКО на русском языке.`,
           language: 'ru'
         })
       });
@@ -57,9 +57,9 @@ export default function ReportPage() {
       doc.text('AI Capital Management', margin, 18);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      doc.text('Investment Portfolio Report', margin, 26);
+      doc.text('Инвестиционный отчет портфеля', margin, 26);
       doc.setFontSize(9);
-      doc.text(`Author: Soliev Akmal Idievich | Certificate No. 009932`, margin, 33);
+      doc.text(`Автор: Солиев Акмал Идиевич | Свидетельство No. 009932`, margin, 33);
       doc.text(`Generated: ${new Date().toLocaleDateString('ru-RU')}`, margin, 39);
 
       doc.setTextColor(30, 41, 59);
@@ -73,9 +73,9 @@ export default function ReportPage() {
       doc.text(selected.description || 'Investment Portfolio', margin, 65);
 
       const cards = [
-        { label: 'Total Value', value: `$${(selected.total_value || 0).toLocaleString()}`, x: margin },
-        { label: 'Annual Return', value: '+12.5%', x: margin + 55 },
-        { label: 'Risk Level', value: 'Medium', x: margin + 110 },
+        { label: 'Стоимость портфеля', value: `$${(selected.total_value || 0).toLocaleString()}`, x: margin },
+        { label: 'Годовая доходность', value: '+12.5%', x: margin + 55 },
+        { label: 'Уровень риска', value: 'Средний', x: margin + 110 },
       ];
 
       cards.forEach(card => {
@@ -93,7 +93,7 @@ export default function ReportPage() {
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 41, 59);
-      doc.text('AI Investment Analysis', margin, 105);
+      doc.text('AI Инвестиционный анализ', margin, 105);
 
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
@@ -104,14 +104,14 @@ export default function ReportPage() {
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 41, 59);
-      doc.text('Market Overview (Uzbekistan)', margin, 185);
+      doc.text('Макроэкономика Узбекистана', margin, 185);
 
       const tableData = [
-        ['USD/UZS Rate', '12,700 sum', '↑ +0.39%'],
-        ['Inflation Rate', '10.0%', '↓ -0.3%'],
-        ['CB Rate', '13.5%', '→ 0%'],
-        ['GDP Growth', '6.2%', '↑ +0.4%'],
-        ['Bank Deposit Rate', '22%', '→ 0%'],
+        ['Курс USD/UZS', '12,700 sum', '↑ +0.39%'],
+        ['Инфляция', '10.0%', '↓ -0.3%'],
+        ['Ставка ЦБ', '13.5%', '→ 0%'],
+        ['Рост ВВП', '6.2%', '↑ +0.4%'],
+        ['Ставка депозитов', '22%', '→ 0%'],
       ];
 
       let y = 192;
@@ -120,9 +120,9 @@ export default function ReportPage() {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(100, 116, 139);
-      doc.text('Indicator', margin + 2, y);
-      doc.text('Value', margin + 70, y);
-      doc.text('Change', margin + 120, y);
+      doc.text('Показатель', margin + 2, y);
+      doc.text('Значение', margin + 70, y);
+      doc.text('Изменение', margin + 120, y);
       y += 5;
 
       tableData.forEach((row, i) => {
@@ -147,7 +147,7 @@ export default function ReportPage() {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(148, 163, 184);
       doc.text('© 2026 AI Capital Management · Author: Soliev Akmal Idievich · Certificate No. 009932', margin, pageH - 7);
-      doc.text('This report is for informational purposes only and does not constitute financial advice.', margin, pageH - 3);
+      doc.text('Данный отчет носит информационный характер и не является финансовой рекомендацией.', margin, pageH - 3);
 
       doc.save(`AI_Capital_Report_${selected.name}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (e) {
@@ -211,3 +211,12 @@ export default function ReportPage() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+

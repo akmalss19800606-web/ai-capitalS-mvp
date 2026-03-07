@@ -7,11 +7,11 @@ client = OpenAI(
 )
 
 def get_investment_recommendation(asset_name: str, asset_symbol: str, current_price: float, portfolio_value: float) -> str:
-    prompt = f"Asset: {asset_name} ({asset_symbol}), Price: ${current_price}, Portfolio: ${portfolio_value}. Give BUY/SELL/HOLD with 2 sentence reason."
+    prompt = f"Актив: {asset_name} ({asset_symbol}), Цена: ${current_price}, Портфель: ${portfolio_value}. Дай рекомендацию КУПИТЬ/ПРОДАТЬ/ДЕРЖАТЬ с обоснованием в 2 предложениях."
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
-            {"role": "system", "content": "You are a professional investment advisor. Be concise."},
+            {"role": "system", "content": "Ты профессиональный инвестиционный советник. Отвечай ТОЛЬКО на русском языке. Будь кратким."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=200

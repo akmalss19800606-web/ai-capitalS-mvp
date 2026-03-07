@@ -71,21 +71,24 @@ def analyze_local_market(
 ):
     from app.services.ai_service import get_groq_client
     client = get_groq_client()
-    prompt = f"""You are an expert investment analyst specializing in Uzbekistan and Central Asian markets.
-The user is asking about: {request.query}
+    prompt = f"""Ты опытный инвестиционный аналитик, специализирующийся на рынках Узбекистана и Центральной Азии.
+Пользователь спрашивает о: {request.query}
 
-Please provide a detailed investment analysis in Russian language including:
-1. Current market overview
-2. Price levels (approximate)
-3. Investment potential (HIGH/MEDIUM/LOW)
-4. Key risks
-5. Recommendation: INVEST / WAIT / AVOID
+Предоставь детальный инвестиционный анализ СТРОГО НА РУССКОМ ЯЗЫКЕ, включая:
+1. Текущий обзор рынка
+2. Уровни цен (приблизительно)
+3. Инвестиционный потенциал (ВЫСОКИЙ/СРЕДНИЙ/НИЗКИЙ)
+4. Ключевые риски
+5. Рекомендация: ИНВЕСТИРОВАТЬ / ЖДАТЬ / ИЗБЕГАТЬ
 
-Be specific and practical for Uzbekistan market conditions."""
+Будь конкретным и практичным для условий рынка Узбекистана. Отвечай ТОЛЬКО на русском языке."""
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": "Ты профессиональный инвестиционный аналитик. Отвечай ИСКЛЮЧИТЕЛЬНО на русском языке."},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=800
     )
     return {
@@ -105,14 +108,14 @@ def due_diligence_check(
 ):
     from app.services.ai_service import get_groq_client
     client = get_groq_client()
-    prompt = f"""You are an expert financial compliance analyst specializing in Central Asian markets.
+    prompt = f"""Ты опытный финансовый аналитик по соответствию нормативным требованиям, специализирующийся на рынках Центральной Азии.
 
-Analyze the following for investment due diligence:
-Company/Industry: {request.company_name}
-Sector: {request.industry}
-Country: {request.country}
+Проведи анализ для инвестиционного Due Diligence:
+Компания/Отрасль: {request.company_name}
+Сектор: {request.industry}
+Страна: {request.country}
 
-Provide a structured due diligence report in Russian with the following sections:
+Предоставь структурированный отчёт due diligence СТРОГО НА РУССКОМ ЯЗЫКЕ по следующим разделам:
 
 1. ФИНАНСОВАЯ ПРОЗРАЧНОСТЬ (0-100 баллов)
    - Доступность финансовой отчётности
@@ -136,25 +139,29 @@ Provide a structured due diligence report in Russian with the following sections
 
 5. ИТОГОВЫЙ ВЕРДИКТ
    - Общий скоринг (0-100)
-   - Статус: TRUSTED (75-100) / CAUTION (40-74) / HIGH RISK (0-39)
+   - Статус: НАДЁЖНО (75-100) / ОСТОРОЖНО (40-74) / ВЫСОКИЙ РИСК (0-39)
    - Рекомендация для инвестора
 
-Be specific and practical."""
+Отвечай ТОЛЬКО на русском языке. Будь конкретным."""
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": "Ты профессиональный финансовый аналитик. Отвечай ИСКЛЮЧИТЕЛЬНО на русском языке. Никогда не используй английский язык."},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=1000
     )
 
     analysis = response.choices[0].message.content
 
     # Определяем статус из текста
-    status = "CAUTION"
-    if "TRUSTED" in analysis.upper():
-        status = "TRUSTED"
-    elif "HIGH RISK" in analysis.upper():
-        status = "HIGH RISK"
+    status = "ОСТОРОЖНО"
+    analysis_upper = analysis.upper()
+    if "НАДЁЖНО" in analysis_upper or "НАДЕЖНО" in analysis_upper or "TRUSTED" in analysis_upper:
+        status = "НАДЁЖНО"
+    elif "ВЫСОКИЙ РИСК" in analysis_upper or "HIGH RISK" in analysis_upper:
+        status = "ВЫСОКИЙ РИСК"
 
     return {
         "company": request.company_name,
