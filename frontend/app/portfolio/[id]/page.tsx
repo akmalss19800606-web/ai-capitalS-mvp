@@ -28,6 +28,15 @@ const statsData = [
   { label: 'Dividends', value: '$240', color: '#8b5cf6' },
 ];
 
+const mockAssets = [
+  { symbol: 'AAPL', name: 'Apple Inc.', price: '$263.75', change: '-0.37%', changeColor: '#ef4444' },
+  { symbol: 'GOOGL', name: 'Alphabet Inc.', price: '$172.45', change: '+1.24%', changeColor: '#22c55e' },
+  { symbol: 'MSFT', name: 'Microsoft Corp.', price: '$415.20', change: '+0.85%', changeColor: '#22c55e' },
+  { symbol: 'AMZN', name: 'Amazon.com Inc.', price: '$198.90', change: '+0.62%', changeColor: '#22c55e' },
+  { symbol: 'NVDA', name: 'NVIDIA Corp.', price: '$875.40', change: '+2.15%', changeColor: '#22c55e' },
+  { symbol: 'META', name: 'Meta Platforms', price: '$512.30', change: '-0.88%', changeColor: '#ef4444' },
+];
+
 export default function PortfolioDetail() {
   const router = useRouter();
   const params = useParams();
@@ -38,6 +47,7 @@ export default function PortfolioDetail() {
   const [aiResult, setAiResult] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [marketLoading, setMarketLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -50,30 +60,33 @@ export default function PortfolioDetail() {
 
   const handleGetMarket = async () => {
     setMarketLoading(true);
+    setErrorMsg('');
     try {
       const data = await market.getPrice(symbol.toUpperCase());
       setMarketData(data);
     } catch (e) {
-      alert('Error fetching market data');
+      setErrorMsg('Ошибка получения рыночных данных. Проверьте тикер.');
     } finally {
       setMarketLoading(false);
     }
   };
 
   const handleGetAI = async () => {
-    if (!marketData || !portfolio) return;
+    if (!portfolio) return;
     setAiLoading(true);
     setAiResult('');
+    setErrorMsg('');
     try {
+      const currentPrice = marketData?.price || 0;
       const res = await ai.recommend({
         asset_name: symbol.toUpperCase(),
         asset_symbol: symbol.toUpperCase(),
-        current_price: marketData.price || 0,
+        current_price: currentPrice,
         portfolio_id: portfolio.id,
       });
-      setAiResult(res.recommendation);
+      setAiResult(res.recommendation || res.analysis || JSON.stringify(res));
     } catch (e) {
-      alert('Error getting AI recommendation');
+      setErrorMsg('Ошибка получения AI рекомендации.');
     } finally {
       setAiLoading(false);
     }
@@ -81,18 +94,21 @@ export default function PortfolioDetail() {
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
-      <p style={{ color: '#64748b' }}>Loading...</p>
+      <p style={{ color: '#64748b' }}>Загрузка...</p>
     </div>
   );
 
   if (!portfolio) return null;
+
+  const portfolioName = portfolio.name || `Портфель #${portfolio.id}`;
+  const totalValue = portfolio.total_value || 0;
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
         <button onClick={() => router.push('/')} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>Back</button>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b' }}>{portfolio.name}</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b' }}>{portfolioName}</h1>
           <p style={{ color: '#64748b', fontSize: '14px' }}>{portfolio.description || 'Investment portfolio'}</p>
         </div>
       </div>
@@ -100,7 +116,7 @@ export default function PortfolioDetail() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0' }}>
           <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '6px' }}>Total Value</p>
-          <p style={{ fontSize: '26px', fontWeight: '700', color: '#1e293b' }}>${(portfolio.total_value || 0).toLocaleString()}</p>
+          <p style={{ fontSize: '26px', fontWeight: '700', color: '#1e293b' }}>${totalValue.toLocaleString()}</p>
         </div>
         {statsData.map((s, i) => (
           <div key={i} style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '20px', border: '1px solid #e2e8f0' }}>
@@ -125,21 +141,36 @@ export default function PortfolioDetail() {
 
       <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>Market Data + AI Analysis</h2>
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+
+        {errorMsg && (
+          <div style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', marginBottom: '12px' }}>
+            <p style={{ color: '#dc2626', fontSize: '13px' }}>{errorMsg}</p>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             value={symbol}
             onChange={e => setSymbol(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && handleGetMarket()}
             placeholder="Ticker (e.g. AAPL)"
+            aria-label="Ticker (e.g. AAPL)"
             style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', width: '180px', backgroundColor: '#f8fafc', color: '#1e293b' }}
           />
-          <button onClick={handleGetMarket} disabled={marketLoading} style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: marketLoading ? 0.7 : 1 }}>
+          <button
+            onClick={handleGetMarket}
+            disabled={marketLoading}
+            style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: marketLoading ? 'not-allowed' : 'pointer', opacity: marketLoading ? 0.7 : 1 }}
+          >
             {marketLoading ? 'Loading...' : 'Get Price'}
           </button>
-          {marketData && (
-            <button onClick={handleGetAI} disabled={aiLoading} style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#8b5cf6', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: aiLoading ? 0.7 : 1 }}>
-              {aiLoading ? 'Analyzing...' : 'AI Recommend'}
-            </button>
-          )}
+          <button
+            onClick={handleGetAI}
+            disabled={aiLoading}
+            style={{ padding: '10px 20px', borderRadius: '8px', backgroundColor: '#8b5cf6', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: aiLoading ? 'not-allowed' : 'pointer', opacity: aiLoading ? 0.7 : 1 }}
+          >
+            {aiLoading ? 'Analyzing...' : 'AI Recommend'}
+          </button>
         </div>
 
         {marketData && (
@@ -173,14 +204,10 @@ export default function PortfolioDetail() {
 
       <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0' }}>
         <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>Assets</h2>
-        {[
-          { symbol: 'AAPL', name: 'Apple Inc.', price: '$263.75', change: '-0.37%', changeColor: '#ef4444' },
-          { symbol: 'GOOGL', name: 'Alphabet Inc.', price: '$172.45', change: '+1.24%', changeColor: '#22c55e' },
-          { symbol: 'MSFT', name: 'Microsoft Corp.', price: '$415.20', change: '+0.85%', changeColor: '#22c55e' },
-        ].map((asset, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < 2 ? '1px solid #f1f5f9' : 'none' }}>
+        {mockAssets.map((asset, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < mockAssets.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '11px', color: '#3b82f6' }}>{asset.symbol}</div>
+              <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '10px', color: '#3b82f6' }}>{asset.symbol}</div>
               <div>
                 <p style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{asset.symbol}</p>
                 <p style={{ color: '#94a3b8', fontSize: '12px' }}>{asset.name}</p>

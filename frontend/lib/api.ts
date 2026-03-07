@@ -1,4 +1,4 @@
-const API_URL = '/api/v1';
+const API_URL = 'http://localhost:8000/api/v1';
 
 export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
