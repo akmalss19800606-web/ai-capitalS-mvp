@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey
+﻿from sqlalchemy import Column, Integer, String, Float, DateTime, Enum, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.db.session import Base
@@ -26,8 +26,12 @@ class InvestmentDecision(Base):
     amount = Column(Float, nullable=False)
     price = Column(Float, nullable=False)
     ai_recommendation = Column(String, nullable=True)
+    notes = Column(Text, nullable=True)
     status = Column(Enum(DecisionStatus), nullable=False, default=DecisionStatus.DRAFT)
     portfolio_id = Column(Integer, ForeignKey("portfolios.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     portfolio = relationship("Portfolio", back_populates="decisions")
+    creator = relationship("User", back_populates="decisions")
