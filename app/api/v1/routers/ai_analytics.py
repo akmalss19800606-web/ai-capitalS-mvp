@@ -11,9 +11,13 @@
   POST /analytics/frontier           — Efficient Frontier
   GET  /analytics/frontier/{id}      — получить результат
 """
+import logging
+import traceback
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
+
+logger = logging.getLogger(__name__)
 
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
@@ -237,61 +241,68 @@ def create_frontier(
     current_user: User = Depends(get_current_user),
 ):
     """Оптимизация портфеля — Efficient Frontier."""
-    portfolio = db.query(Portfolio).filter(
-        Portfolio.id == req.portfolio_id
-    ).first()
-    if not portfolio:
-        raise HTTPException(status_code=404, detail="Портфель не найден")
+    try:
+        portfolio = db.query(Portfolio).filter(
+            Portfolio.id == req.portfolio_id
+        ).first()
+        if not portfolio:
+            raise HTTPException(status_code=404, detail="Портфель не найден")
 
-    # Собираем активы из решений портфеля
-    decisions = db.query(InvestmentDecision).filter(
-        InvestmentDecision.portfolio_id == req.portfolio_id,
-        InvestmentDecision.status.in_(["approved", "active", "in_progress"]),
-    ).all()
+        # Собираем активы из решений портфеля (любой статус)
+        decisions = db.query(InvestmentDecision).filter(
+            InvestmentDecision.portfolio_id == req.portfolio_id,
+        ).all()
 
-    assets = []
-    total_amount = sum(float(d.amount or 0) for d in decisions) or 1
+        logger.info(f"Frontier: portfolio_id={req.portfolio_id}, decisions={len(decisions)}")
 
-    for d in decisions:
-        amt = float(d.amount or 0)
-        assets.append({
-            "name": d.title or f"Решение #{d.id}",
-            "weight": amt / total_amount,
-            "expected_return": 0.10 + (hash(d.title or "") % 20) / 100,  # 10-30%
-            "volatility": 0.10 + (hash(str(d.id)) % 25) / 100,  # 10-35%
-        })
+        assets = []
+        total_amount = sum(float(d.amount or 0) for d in decisions) or 1
 
-    # Запуск оптимизации
-    result = run_efficient_frontier(
-        assets=assets,
-        risk_free_rate=req.risk_free_rate,
-        num_frontier_points=req.num_frontier_points,
-        optimization_target=req.optimization_target,
-    )
+        for d in decisions:
+            amt = float(d.amount or 0)
+            assets.append({
+                "name": d.title or f"Решение #{d.id}",
+                "weight": amt / total_amount,
+                "expected_return": 0.10 + abs(hash(d.title or "") % 20) / 100,  # 10-30%
+                "volatility": 0.10 + abs(hash(str(d.id)) % 25) / 100,  # 10-35%
+            })
 
-    # Сохраняем
-    opt = PortfolioOptimization(
-        portfolio_id=req.portfolio_id,
-        user_id=current_user.id,
-        risk_free_rate=req.risk_free_rate,
-        optimization_target=req.optimization_target,
-        current_allocation=result["current_allocation"],
-        optimal_allocation=result["optimal_allocation"],
-        current_return=result["current_return"],
-        current_risk=result["current_risk"],
-        current_sharpe=result["current_sharpe"],
-        optimal_return=result["optimal_return"],
-        optimal_risk=result["optimal_risk"],
-        optimal_sharpe=result["optimal_sharpe"],
-        frontier_points=result["frontier_points"],
-        var_95=result["var_95"],
-        cvar_95=result["cvar_95"],
-    )
-    db.add(opt)
-    db.commit()
-    db.refresh(opt)
+        # Запуск оптимизации
+        result = run_efficient_frontier(
+            assets=assets,
+            risk_free_rate=req.risk_free_rate,
+            num_frontier_points=req.num_frontier_points,
+            optimization_target=req.optimization_target,
+        )
 
-    return opt
+        # Сохраняем
+        opt = PortfolioOptimization(
+            portfolio_id=req.portfolio_id,
+            user_id=current_user.id,
+            risk_free_rate=req.risk_free_rate,
+            optimization_target=req.optimization_target,
+            current_allocation=result["current_allocation"],
+            optimal_allocation=result["optimal_allocation"],
+            current_return=result["current_return"],
+            current_risk=result["current_risk"],
+            current_sharpe=result["current_sharpe"],
+            optimal_return=result["optimal_return"],
+            optimal_risk=result["optimal_risk"],
+            optimal_sharpe=result["optimal_sharpe"],
+            frontier_points=result["frontier_points"],
+            var_95=result["var_95"],
+            cvar_95=result["cvar_95"],
+        )
+        db.add(opt)
+        db.commit()
+        db.refresh(opt)
+
+        return opt
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Frontier error: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Ошибка оптимизации: {str(e)}")
 
 
 @router.get("/frontier/{opt_id}", response_model=EfficientFrontierResponse)

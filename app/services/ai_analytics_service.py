@@ -425,7 +425,7 @@ def run_efficient_frontier(
     max_ret_w = current_weights.copy()
     max_ret = current_return
 
-    n_samples = 20000
+    n_samples = 5000
     for _ in range(n_samples):
         w = np.random.dirichlet(np.ones(n_assets))
         ret = w @ returns
@@ -462,7 +462,7 @@ def run_efficient_frontier(
     all_sharpes = []
     all_weights = []
 
-    for _ in range(max(n_samples, 10000)):
+    for _ in range(n_samples):
         w = np.random.dirichlet(np.ones(n_assets))
         ret = float(w @ returns)
         risk = float(np.sqrt(w @ cov_matrix @ w))
