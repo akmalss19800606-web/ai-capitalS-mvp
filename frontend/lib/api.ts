@@ -62,24 +62,46 @@ export const auth = {
 };
 
 export const portfolios = {
-  list: () => apiRequest('/portfolios/'),
+  list: () => apiRequest('/portfolios'),
   get: (id: number) => apiRequest(`/portfolios/${id}`),
   create: (data: { name: string; description?: string; total_value?: number }) =>
-    apiRequest('/portfolios/', { method: 'POST', body: JSON.stringify(data) }),
+    apiRequest('/portfolios', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: { name?: string; description?: string; total_value?: number }) =>
     apiRequest(`/portfolios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiRequest(`/portfolios/${id}`, { method: 'DELETE' }),
 };
 
 export const decisions = {
-  byPortfolio: (portfolioId: number) => apiRequest(`/decisions/portfolio/${portfolioId}`),
+  list: (params?: {
+    status?: string;
+    decision_type?: string;
+    priority?: string;
+    category?: string;
+    portfolio_id?: number;
+    search?: string;
+    sort_by?: string;
+    sort_order?: string;
+    page?: number;
+    per_page?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return apiRequest(`/decisions${query ? '?' + query : ''}`);
+  },
   get: (id: number) => apiRequest(`/decisions/${id}`),
-  create: (data: any) => apiRequest('/decisions/', { method: 'POST', body: JSON.stringify(data) }),
+  create: (data: any) => apiRequest('/decisions', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) => apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateStatus: (id: number, status: string) =>
     apiRequest(`/decisions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
-  update: (id: number, data: any) =>
-    apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiRequest(`/decisions/${id}`, { method: 'DELETE' }),
+  stats: () => apiRequest('/decisions/stats'),
 };
 
 export const dashboard = {
