@@ -1,6 +1,6 @@
 """
 Обновлённый db/base.py — импорт всех моделей для auto-create tables.
-Фаза 2, Сессия 1 — добавлены модели AI-аналитики.
+Фаза 2, Сессия 2 — добавлены модели StressTest и Retrospective.
 """
 from app.db.session import Base
 from app.db.models.user import User
@@ -13,4 +13,7 @@ from app.db.models.olap import (
 )
 from app.db.models.ai_analytics import (
     MonteCarloSimulation, ShapAnalysis, PortfolioOptimization,
+)
+from app.db.models.stress_retrospective import (
+    StressTest, Retrospective,
 )

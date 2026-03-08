@@ -256,4 +256,36 @@ export const aiAnalytics = {
   getFrontier: (id: number) => apiRequest(`/analytics/frontier/${id}`),
   listFrontier: (portfolioId?: number) =>
     apiRequest(`/analytics/frontier${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+
+  // Stress Testing (Phase 2, Session 2)
+  getStressScenarios: () => apiRequest('/analytics/stress-scenarios'),
+  runStressTest: (data: {
+    portfolio_id: number;
+    scenario: string;
+    severity?: number;
+    custom_shocks?: Array<{ factor: string; shock_pct: number; description?: string }>;
+  }) => apiRequest('/analytics/stress-test', { method: 'POST', body: JSON.stringify(data) }),
+  getStressTest: (id: number) => apiRequest(`/analytics/stress-test/${id}`),
+  listStressTests: (portfolioId?: number) =>
+    apiRequest(`/analytics/stress-test${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+
+  // Retrospective Analysis (Phase 2, Session 2)
+  runRetrospective: (data: {
+    analysis_type: string;
+    decision_id?: number;
+    portfolio_id?: number;
+    forecast_return: number;
+    actual_return: number;
+  }) => apiRequest('/analytics/retrospective', { method: 'POST', body: JSON.stringify(data) }),
+  getRetrospective: (id: number) => apiRequest(`/analytics/retrospective/${id}`),
+  listRetrospectives: (params?: { decision_id?: number; portfolio_id?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/analytics/retrospective${q ? '?' + q : ''}`);
+  },
 };

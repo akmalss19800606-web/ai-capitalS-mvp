@@ -99,6 +99,34 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Стресс-тест',
+    path: '/stress-testing',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polygon points="13 8 8 14 11 14 11 18 16 12 13 12 13 8" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Ретроспектива',
+    path: '/retrospective',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Due Diligence',
     path: '/due-diligence',
     icon: (
