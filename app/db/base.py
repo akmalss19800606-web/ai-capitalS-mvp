@@ -1,7 +1,7 @@
 """
 Обновлённый db/base.py — импорт всех моделей для auto-create tables.
-Фаза 3, Сессия 3 — добавлены модели MfaSettings, SsoProvider, UserSession,
-AbacPolicy, CustomRole, DecisionAccess.
+Фаза 3, Сессия 4 — добавлены модели ThreadComment, TaskItem,
+Notification, UserPreferences.
 """
 from app.db.session import Base
 from app.db.models.user import User
@@ -24,4 +24,8 @@ from app.db.models.dashboard_config import DashboardConfig, DashboardWidget
 from app.db.models.auth_security import (
     MfaSettings, SsoProvider, UserSession,
     AbacPolicy, CustomRole, DecisionAccess,
+)
+# Фаза 3, Сессия 4: Совместная работа + Персонализация
+from app.db.models.collaboration import (
+    ThreadComment, TaskItem, Notification, UserPreferences,
 )

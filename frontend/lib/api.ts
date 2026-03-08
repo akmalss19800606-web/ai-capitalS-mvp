@@ -446,6 +446,101 @@ export const sessions = {
     apiRequest('/auth/sessions/logout-all', { method: 'POST' }),
 };
 
+// ─── Фаза 3, Сессия 4: Совместная работа (COLLAB-TEAM-001) ─────────────────
+
+export const collaboration = {
+  // Threaded discussions (001.1, 001.2)
+  listThreads: (decisionId: number) =>
+    apiRequest(`/decisions/${decisionId}/threads`),
+  createComment: (decisionId: number, data: {
+    body: string;
+    parent_id?: number;
+    mentions?: number[];
+  }) => apiRequest(`/decisions/${decisionId}/threads`, { method: 'POST', body: JSON.stringify(data) }),
+  updateComment: (decisionId: number, commentId: number, data: {
+    body?: string;
+    is_resolved?: boolean;
+  }) => apiRequest(`/decisions/${decisionId}/threads/${commentId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteComment: (decisionId: number, commentId: number) =>
+    apiRequest(`/decisions/${decisionId}/threads/${commentId}`, { method: 'DELETE' }),
+
+  // Task management (001.3)
+  listTasks: (decisionId: number, params?: {
+    status?: string;
+    assignee_id?: number;
+    task_type?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/decisions/${decisionId}/tasks${q ? '?' + q : ''}`);
+  },
+  createTask: (decisionId: number, data: {
+    title: string;
+    description?: string;
+    task_type?: string;
+    priority?: string;
+    assignee_id?: number;
+    due_date?: string;
+  }) => apiRequest(`/decisions/${decisionId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
+  updateTask: (taskId: number, data: {
+    title?: string;
+    description?: string;
+    status?: string;
+    priority?: string;
+    assignee_id?: number;
+    due_date?: string;
+  }) => apiRequest(`/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteTask: (taskId: number) =>
+    apiRequest(`/tasks/${taskId}`, { method: 'DELETE' }),
+  myTasks: (status?: string) =>
+    apiRequest(`/tasks/my${status ? '?status=' + status : ''}`),
+};
+
+// ─── Фаза 3, Сессия 4: Уведомления (COLLAB-TEAM-001.5) ─────────────────────
+
+export const notifications = {
+  list: (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/notifications${q ? '?' + q : ''}`);
+  },
+  markRead: (notificationIds: number[]) =>
+    apiRequest('/notifications/read', { method: 'POST', body: JSON.stringify({ notification_ids: notificationIds }) }),
+  markAllRead: () =>
+    apiRequest('/notifications/read-all', { method: 'POST' }),
+  delete: (id: number) =>
+    apiRequest(`/notifications/${id}`, { method: 'DELETE' }),
+};
+
+// ─── Фаза 3, Сессия 4: Персонализация (VIS-PERS-001) ───────────────────────
+
+export const preferences = {
+  get: () => apiRequest('/preferences'),
+  update: (data: {
+    view_mode?: string;
+    theme?: string;
+    accent_color?: string;
+    font_size?: string;
+    pinned_nav_items?: string[];
+    default_dashboard_id?: number;
+    email_notifications?: boolean;
+    in_app_notifications?: boolean;
+    language?: string;
+  }) => apiRequest('/preferences', { method: 'PUT', body: JSON.stringify(data) }),
+  roleViews: () => apiRequest('/preferences/roles'),
+  roleConfig: () => apiRequest('/preferences/role-config'),
+};
+
 // ─── Фаза 3, Сессия 3: Контроль доступа ABAC (COLLAB-ACCESS-001) ───────────
 
 export const accessControl = {

@@ -1,6 +1,6 @@
 """
-Обновлённый main.py — добавлены роутеры MFA, Sessions, Access Control.
-Фаза 3, Сессия 3.
+Обновлённый main.py — добавлены роутеры Collaboration, Notifications, Preferences.
+Фаза 3, Сессия 4.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +27,10 @@ from app.api.v1.routers.dashboards import router as dashboards_router
 from app.api.v1.routers.mfa import router as mfa_router
 from app.api.v1.routers.sessions import router as sessions_router
 from app.api.v1.routers.access_control import router as access_control_router
+# Фаза 3, Сессия 4: Совместная работа + Персонализация
+from app.api.v1.routers.collaboration import router as collaboration_router
+from app.api.v1.routers.notifications import router as notifications_router
+from app.api.v1.routers.preferences import router as preferences_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -68,3 +72,7 @@ app.include_router(dashboards_router, prefix='/api/v1')
 app.include_router(mfa_router, prefix='/api/v1')
 app.include_router(sessions_router, prefix='/api/v1')
 app.include_router(access_control_router, prefix='/api/v1')
+# Фаза 3, Сессия 4
+app.include_router(collaboration_router, prefix='/api/v1')
+app.include_router(notifications_router, prefix='/api/v1')
+app.include_router(preferences_router, prefix='/api/v1')
