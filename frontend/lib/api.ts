@@ -368,3 +368,48 @@ export const charts = {
   heatmap: (portfolioId?: number) =>
     apiRequest(`/charts/heatmap${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
 };
+
+// ─── Фаза 3, Сессия 2: Конструктор дашбордов (VIS-DASH-001) ────────────────
+
+export const dashboardBuilder = {
+  // Каталог типов виджетов
+  widgetTypes: () => apiRequest('/dashboards/widget-types'),
+
+  // CRUD дашбордов
+  list: () => apiRequest('/dashboards'),
+  get: (id: number) => apiRequest(`/dashboards/${id}`),
+  create: (data: any) =>
+    apiRequest('/dashboards', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: any) =>
+    apiRequest(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id: number) =>
+    apiRequest(`/dashboards/${id}`, { method: 'DELETE' }),
+
+  // Виджеты
+  addWidget: (dashboardId: number, data: any) =>
+    apiRequest(`/dashboards/${dashboardId}/widgets`, { method: 'POST', body: JSON.stringify(data) }),
+  updateWidget: (widgetId: number, data: any) =>
+    apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWidget: (widgetId: number) =>
+    apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'DELETE' }),
+
+  // Layout (drag-and-drop)
+  updateLayout: (dashboardId: number, layout: any[]) =>
+    apiRequest(`/dashboards/${dashboardId}/layout`, { method: 'PUT', body: JSON.stringify(layout) }),
+
+  // Данные для виджетов (VIS-DASH-001.1 кросс-фильтрация, 001.2 drill-down)
+  widgetData: (widgetType: string, params?: {
+    metric?: string;
+    portfolio_id?: number;
+    drill_into?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/dashboards/widget-data/${widgetType}${q ? '?' + q : ''}`);
+  },
+};

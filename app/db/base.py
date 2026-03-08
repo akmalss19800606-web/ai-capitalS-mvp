@@ -1,6 +1,6 @@
 """
 Обновлённый db/base.py — импорт всех моделей для auto-create tables.
-Фаза 2, Сессия 4 — добавлены модели ReportTemplate, ReportInstance.
+Фаза 3, Сессия 2 — добавлены модели DashboardConfig, DashboardWidget.
 """
 from app.db.session import Base
 from app.db.models.user import User
@@ -19,3 +19,4 @@ from app.db.models.stress_retrospective import (
 )
 from app.db.models.dd_scoring import DueDiligenceScore
 from app.db.models.reports import ReportTemplate, ReportInstance
+from app.db.models.dashboard_config import DashboardConfig, DashboardWidget
