@@ -720,3 +720,82 @@ export const apiGateway = {
   getUsageLogs: (limit?: number) =>
     apiRequest(`/gateway/usage/logs${limit ? '?limit=' + limit : ''}`),
 };
+
+// ─── Фаза 4, Сессия 3: Адаптеры внешних систем (EXCH-ADAPT-001) ───────
+
+export const marketAdapters = {
+  // Sources (EXCH-ADAPT-001.1)
+  createSource: (data: { name: string; provider: string; api_key?: string; config?: any; sync_interval_minutes?: number }) =>
+    apiRequest('/adapters/sources', { method: 'POST', body: JSON.stringify(data) }),
+  listSources: () => apiRequest('/adapters/sources'),
+  updateSource: (id: number, data: any) =>
+    apiRequest(`/adapters/sources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSource: (id: number) =>
+    apiRequest(`/adapters/sources/${id}`, { method: 'DELETE' }),
+
+  // Market Data
+  getQuote: (symbol: string, sourceId?: number) =>
+    apiRequest(`/adapters/market/quote/${symbol}${sourceId ? '?source_id=' + sourceId : ''}`),
+  getMacro: (indicator: string, sourceId?: number, country?: string) =>
+    apiRequest(`/adapters/market/macro/${indicator}?${sourceId ? 'source_id=' + sourceId + '&' : ''}country=${country || 'US'}`),
+  getCache: (sourceId: number, dataType?: string) =>
+    apiRequest(`/adapters/market/cache/${sourceId}${dataType ? '?data_type=' + dataType : ''}`),
+
+  // ETL (EXCH-ADAPT-001.2)
+  runEtl: (sourceId: number) =>
+    apiRequest(`/adapters/etl/run/${sourceId}`, { method: 'POST' }),
+  runEtlAll: () => apiRequest('/adapters/etl/run-all', { method: 'POST' }),
+  getEtlStatus: () => apiRequest('/adapters/etl/status'),
+  cleanupCache: () => apiRequest('/adapters/etl/cleanup', { method: 'POST' }),
+
+  // CRM Contacts (EXCH-ADAPT-001.3)
+  createContact: (data: any) =>
+    apiRequest('/adapters/crm/contacts', { method: 'POST', body: JSON.stringify(data) }),
+  listContacts: (type?: string, search?: string) =>
+    apiRequest(`/adapters/crm/contacts?${type ? 'contact_type=' + type + '&' : ''}${search ? 'search=' + search : ''}`),
+  updateContact: (id: number, data: any) =>
+    apiRequest(`/adapters/crm/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContact: (id: number) =>
+    apiRequest(`/adapters/crm/contacts/${id}`, { method: 'DELETE' }),
+
+  // CRM Deals
+  createDeal: (data: any) =>
+    apiRequest('/adapters/crm/deals', { method: 'POST', body: JSON.stringify(data) }),
+  listDeals: (stage?: string) =>
+    apiRequest(`/adapters/crm/deals${stage ? '?stage=' + stage : ''}`),
+  updateDeal: (id: number, data: any) =>
+    apiRequest(`/adapters/crm/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDeal: (id: number) =>
+    apiRequest(`/adapters/crm/deals/${id}`, { method: 'DELETE' }),
+  getPipelineSummary: () => apiRequest('/adapters/crm/pipeline'),
+
+  // DMS (EXCH-ADAPT-001.4)
+  createDocument: (data: any) =>
+    apiRequest('/adapters/dms/documents', { method: 'POST', body: JSON.stringify(data) }),
+  listDocuments: (category?: string, search?: string) =>
+    apiRequest(`/adapters/dms/documents?${category ? 'category=' + category + '&' : ''}${search ? 'search=' + search : ''}`),
+  updateDocument: (id: number, data: any) =>
+    apiRequest(`/adapters/dms/documents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDocument: (id: number) =>
+    apiRequest(`/adapters/dms/documents/${id}`, { method: 'DELETE' }),
+  addDocVersion: (id: number, data: any) =>
+    apiRequest(`/adapters/dms/documents/${id}/versions`, { method: 'POST', body: JSON.stringify(data) }),
+  listDocVersions: (id: number) =>
+    apiRequest(`/adapters/dms/documents/${id}/versions`),
+  searchDocuments: (data: { query: string; category?: string }) =>
+    apiRequest('/adapters/dms/search', { method: 'POST', body: JSON.stringify(data) }),
+  getDmsStats: () => apiRequest('/adapters/dms/stats'),
+
+  // Comparable (EXCH-ADAPT-001.5)
+  createComparable: (data: any) =>
+    apiRequest('/adapters/comparable', { method: 'POST', body: JSON.stringify(data) }),
+  listComparables: (sector?: string) =>
+    apiRequest(`/adapters/comparable${sector ? '?sector=' + sector : ''}`),
+  updateComparable: (id: number, data: any) =>
+    apiRequest(`/adapters/comparable/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteComparable: (id: number) =>
+    apiRequest(`/adapters/comparable/${id}`, { method: 'DELETE' }),
+  getAnalysis: (sector?: string) =>
+    apiRequest(`/adapters/comparable/analysis${sector ? '?sector=' + sector : ''}`),
+  getSectors: () => apiRequest('/adapters/comparable/sectors'),
+};

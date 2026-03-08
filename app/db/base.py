@@ -37,3 +37,8 @@ from app.db.models.data_exchange import (
 from app.db.models.api_gateway import (
     ApiKey, WebhookSubscription, WebhookDeliveryLog, ApiUsageLog,
 )
+# Фаза 4, Сессия 3: Адаптеры внешних систем
+from app.db.models.market_adapters import (
+    MarketDataSource, MarketDataCache, CrmContact, CrmDeal,
+    Document, DocumentVersion, ComparableCompany,
+)

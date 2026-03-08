@@ -35,6 +35,8 @@ from app.api.v1.routers.preferences import router as preferences_router
 from app.api.v1.routers.data_exchange import router as data_exchange_router
 # Фаза 4, Сессия 2: API Gateway + Webhooks
 from app.api.v1.routers.api_gateway import router as api_gateway_router
+# Фаза 4, Сессия 3: Адаптеры внешних систем
+from app.api.v1.routers.market_adapters import router as market_adapters_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -88,3 +90,5 @@ app.include_router(preferences_router, prefix='/api/v1')
 app.include_router(data_exchange_router, prefix='/api/v1')
 # Фаза 4, Сессия 2
 app.include_router(api_gateway_router, prefix='/api/v1')
+# Фаза 4, Сессия 3
+app.include_router(market_adapters_router, prefix='/api/v1')
