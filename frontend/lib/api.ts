@@ -352,3 +352,19 @@ export const reports = {
   decisionMemo: (decisionId: number) =>
     apiRequest(`/reports/decision-memo?decision_id=${decisionId}`, { method: 'POST' }),
 };
+
+// ─── Фаза 3, Сессия 1: Расширенные визуализации (VIS-CHART-001) ────────────
+
+export const charts = {
+  waterfall: (portfolioId?: number) =>
+    apiRequest(`/charts/waterfall${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+
+  tornado: (portfolioId?: number) =>
+    apiRequest(`/charts/tornado${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+
+  bubble: (portfolioId?: number) =>
+    apiRequest(`/charts/bubble${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+
+  heatmap: (portfolioId?: number) =>
+    apiRequest(`/charts/heatmap${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+};

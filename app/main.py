@@ -1,6 +1,6 @@
 """
-Обновлённый main.py — добавлен роутер reports.
-Фаза 2, Сессия 4.
+Обновлённый main.py — добавлен роутер charts.
+Фаза 3, Сессия 1.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,6 +22,7 @@ from app.api.v1.routers.ai_analytics import router as ai_analytics_router
 from app.api.v1.routers.stress_retrospective import router as stress_retro_router
 from app.api.v1.routers.dd_scoring import router as dd_scoring_router
 from app.api.v1.routers.reports import router as reports_router
+from app.api.v1.routers.charts import router as charts_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -58,3 +59,4 @@ app.include_router(ai_analytics_router, prefix='/api/v1')
 app.include_router(stress_retro_router, prefix='/api/v1')
 app.include_router(dd_scoring_router, prefix='/api/v1')
 app.include_router(reports_router, prefix='/api/v1')
+app.include_router(charts_router, prefix='/api/v1')

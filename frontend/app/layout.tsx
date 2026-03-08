@@ -155,6 +155,19 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Визуализации',
+    path: '/charts',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M18 20V10M12 20V4M6 20v-6" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Отчёты',
     path: '/report',
     icon: (
