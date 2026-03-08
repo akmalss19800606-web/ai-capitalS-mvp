@@ -24,7 +24,6 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
           const data = await refreshRes.json();
           localStorage.setItem('token', data.access_token);
           if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-          // Retry original request
           headers['Authorization'] = `Bearer ${data.access_token}`;
           const retryRes = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
           if (!retryRes.ok) throw new Error(await retryRes.text());
@@ -102,6 +101,46 @@ export const decisions = {
     apiRequest(`/decisions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: number) => apiRequest(`/decisions/${id}`, { method: 'DELETE' }),
   stats: () => apiRequest('/decisions/stats'),
+
+  // ─── Фаза 1, Сессия 2: Версионирование и аудит ────────────────────────────
+  history: (id: number, page?: number) =>
+    apiRequest(`/decisions/${id}/history${page ? '?page=' + page : ''}`),
+  diff: (id: number, versionA: number, versionB: number) =>
+    apiRequest(`/decisions/${id}/diff/${versionA}/${versionB}`),
+  rollback: (id: number, versionNumber: number, reason?: string) =>
+    apiRequest(`/decisions/${id}/rollback/${versionNumber}`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: reason || null }),
+    }),
+  audit: (id: number, page?: number) =>
+    apiRequest(`/decisions/${id}/audit${page ? '?page=' + page : ''}`),
+
+  // ─── Фаза 1, Сессия 2: Граф связей ────────────────────────────────────────
+  relationships: (id: number) =>
+    apiRequest(`/decisions/${id}/relationships`),
+  addRelationship: (id: number, data: { to_decision_id: number; relationship_type: string; description?: string }) =>
+    apiRequest(`/decisions/${id}/relationships`, { method: 'POST', body: JSON.stringify(data) }),
+  removeRelationship: (id: number, relId: number) =>
+    apiRequest(`/decisions/${id}/relationships/${relId}`, { method: 'DELETE' }),
+  graph: (id: number, depth?: number) =>
+    apiRequest(`/decisions/${id}/graph${depth ? '?depth=' + depth : ''}`),
+  impact: (id: number) =>
+    apiRequest(`/decisions/${id}/impact`),
+};
+
+export const auditGlobal = {
+  events: (params?: { entity_type?: string; action?: string; page?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return apiRequest(`/audit/events${query ? '?' + query : ''}`);
+  },
 };
 
 export const dashboard = {

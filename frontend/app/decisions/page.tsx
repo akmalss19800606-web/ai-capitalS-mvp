@@ -1748,14 +1748,21 @@ export default function DecisionsPage() {
                       <td style={{ padding: '13px 14px', borderBottom: '1px solid #f8fafc' }}>
                         <div>
                           <p
+                            onClick={() => router.push(`/decisions/${d.id}`)}
                             style={{
                               fontSize: '13px',
                               fontWeight: '600',
-                              color: '#1e293b',
+                              color: '#3b82f6',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               maxWidth: '160px',
+                              cursor: 'pointer',
+                              textDecoration: 'none',
+                              background: 'none',
+                              border: 'none',
+                              padding: 0,
+                              textAlign: 'left',
                             }}
                           >
                             {d.asset_name}
@@ -1850,6 +1857,29 @@ export default function DecisionsPage() {
                         }}
                       >
                         <div style={{ display: 'flex', gap: '5px', justifyContent: 'flex-end' }}>
+                          {/* Detail page */}
+                          <button
+                            onClick={() => router.push(`/decisions/${d.id}`)}
+                            title="Подробнее"
+                            style={{
+                              padding: '5px 9px',
+                              borderRadius: '6px',
+                              border: '1px solid #c7d2fe',
+                              backgroundColor: '#eef2ff',
+                              color: '#6366f1',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <span style={{ fontSize: '11px' }}>Открыть</span>
+                          </button>
                           {/* Edit */}
                           <button
                             onClick={() => setEditDecision(d)}
