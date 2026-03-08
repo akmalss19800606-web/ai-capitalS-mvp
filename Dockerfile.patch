@@ -1,0 +1,11 @@
+# ─── Инструкция по обновлению backend/Dockerfile ───────────────────────
+# Добавьте эти строки в Dockerfile ПЕРЕД строкой `COPY . .`
+# (после `pip install -r requirements.txt`)
+#
+# Строки для добавления в requirements.txt:
+#   numpy>=1.26.0
+#   scipy>=1.12.0
+#   scikit-learn>=1.4.0
+#
+# Если в Dockerfile уже есть `pip install -r requirements.txt`,
+# то достаточно обновить requirements.txt и пересобрать образ.

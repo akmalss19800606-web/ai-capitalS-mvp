@@ -213,3 +213,47 @@ export const olap = {
   portfolioTrend: () => apiRequest('/analytics/olap/portfolio-trend'),
   events: () => apiRequest('/analytics/olap/events'),
 };
+
+// ─── Фаза 2, Сессия 1: AI-аналитика (Monte Carlo, SHAP, Efficient Frontier) ─
+
+export const aiAnalytics = {
+  // Monte Carlo
+  runMonteCarlo: (data: {
+    decision_id: number;
+    initial_investment: number;
+    time_horizon_months?: number;
+    num_iterations?: number;
+  }) => apiRequest('/analytics/monte-carlo', { method: 'POST', body: JSON.stringify(data) }),
+  getMonteCarlo: (id: number) => apiRequest(`/analytics/monte-carlo/${id}`),
+  listMonteCarlo: (decisionId?: number) =>
+    apiRequest(`/analytics/monte-carlo${decisionId ? '?decision_id=' + decisionId : ''}`),
+
+  // SHAP
+  runShap: (data: {
+    decision_id?: number;
+    portfolio_id?: number;
+    analysis_type?: string;
+  }) => apiRequest('/analytics/shap', { method: 'POST', body: JSON.stringify(data) }),
+  getShap: (id: number) => apiRequest(`/analytics/shap/${id}`),
+  listShap: (params?: { decision_id?: number; portfolio_id?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) searchParams.append(key, String(value));
+      });
+    }
+    const query = searchParams.toString();
+    return apiRequest(`/analytics/shap${query ? '?' + query : ''}`);
+  },
+
+  // Efficient Frontier
+  runFrontier: (data: {
+    portfolio_id: number;
+    risk_free_rate?: number;
+    optimization_target?: string;
+    num_frontier_points?: number;
+  }) => apiRequest('/analytics/frontier', { method: 'POST', body: JSON.stringify(data) }),
+  getFrontier: (id: number) => apiRequest(`/analytics/frontier/${id}`),
+  listFrontier: (portfolioId?: number) =>
+    apiRequest(`/analytics/frontier${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+};
