@@ -315,3 +315,40 @@ export const ddScoring = {
 
   benchmarkTemplates: () => apiRequest('/dd/benchmarks/templates'),
 };
+
+// ─── Фаза 2, Сессия 4: Отчёты и генератор ──────────────────────────────────
+
+export const reports = {
+  listTemplates: () => apiRequest('/reports/templates'),
+
+  generate: (data: {
+    template_key: string;
+    title?: string;
+    portfolio_id?: number;
+    decision_id?: number;
+    selected_sections?: string[];
+    selected_metrics?: string[];
+    period_label?: string;
+  }) => apiRequest('/reports/generate', { method: 'POST', body: JSON.stringify(data) }),
+
+  listHistory: (params?: { template_key?: string; portfolio_id?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/reports/history${q ? '?' + q : ''}`);
+  },
+
+  get: (id: number) => apiRequest(`/reports/history/${id}`),
+
+  delete: (id: number) => apiRequest(`/reports/history/${id}`, { method: 'DELETE' }),
+
+  portfolioSummary: (portfolioId: number) =>
+    apiRequest(`/reports/portfolio-summary?portfolio_id=${portfolioId}`, { method: 'POST' }),
+
+  decisionMemo: (decisionId: number) =>
+    apiRequest(`/reports/decision-memo?decision_id=${decisionId}`, { method: 'POST' }),
+};
