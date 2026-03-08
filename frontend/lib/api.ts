@@ -799,3 +799,170 @@ export const marketAdapters = {
     apiRequest(`/adapters/comparable/analysis${sector ? '?sector=' + sector : ''}`),
   getSectors: () => apiRequest('/adapters/comparable/sectors'),
 };
+
+// ─── Фаза 4, Сессия 4: Архитектурные принципы (9.2–9.4) ────────────────
+
+export const architecturalPrinciples = {
+  // Event Sourcing (9.2.2)
+  recordEvent: (data: {
+    aggregate_type: string;
+    aggregate_id: number;
+    event_type: string;
+    event_data?: any;
+    previous_state?: any;
+    new_state?: any;
+    correlation_id?: string;
+    causation_id?: string;
+    metadata?: any;
+  }) => apiRequest('/arch/events', { method: 'POST', body: JSON.stringify(data) }),
+
+  getEventsTimeline: (params?: {
+    aggregate_type?: string;
+    event_type?: string;
+    correlation_id?: string;
+    limit?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/arch/events${q ? '?' + q : ''}`);
+  },
+
+  getEventStats: () => apiRequest('/arch/events/stats'),
+
+  getAggregateEvents: (aggregateType: string, aggregateId: number, limit?: number) =>
+    apiRequest(`/arch/events/${aggregateType}/${aggregateId}${limit ? '?limit=' + limit : ''}`),
+
+  getAggregateState: (aggregateType: string, aggregateId: number) =>
+    apiRequest(`/arch/events/${aggregateType}/${aggregateId}/state`),
+
+  // HITL + Объяснимость (9.2.1, 9.2.3)
+  createHitlReview: (data: {
+    ai_output_type: string;
+    ai_output_id?: number;
+    ai_output_summary?: string;
+    ai_confidence?: number;
+    explanation_text?: string;
+    explanation_factors?: Array<{ factor: string; weight: number; direction: string }>;
+  }) => apiRequest('/arch/hitl/reviews', { method: 'POST', body: JSON.stringify(data) }),
+
+  listHitlReviews: (params?: { status?: string; ai_output_type?: string; limit?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/arch/hitl/reviews${q ? '?' + q : ''}`);
+  },
+
+  actOnReview: (id: number, data: { status: string; comment?: string }) =>
+    apiRequest(`/arch/hitl/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  getHitlStats: () => apiRequest('/arch/hitl/stats'),
+
+  getDisclaimers: (appliesTo?: string) =>
+    apiRequest(`/arch/hitl/disclaimers${appliesTo ? '?applies_to=' + appliesTo : ''}`),
+
+  // Воспроизводимость (9.2.4)
+  createSnapshot: (data: {
+    analysis_type: string;
+    analysis_id?: number;
+    input_data: any;
+    parameters: any;
+    result_data: any;
+    engine_version?: string;
+    notes?: string;
+  }) => apiRequest('/arch/snapshots', { method: 'POST', body: JSON.stringify(data) }),
+
+  listSnapshots: (analysisType?: string, limit?: number) => {
+    const sp = new URLSearchParams();
+    if (analysisType) sp.append('analysis_type', analysisType);
+    if (limit) sp.append('limit', String(limit));
+    const q = sp.toString();
+    return apiRequest(`/arch/snapshots${q ? '?' + q : ''}`);
+  },
+
+  getSnapshot: (id: number) => apiRequest(`/arch/snapshots/${id}`),
+
+  reproduceSnapshot: (id: number) =>
+    apiRequest(`/arch/snapshots/${id}/reproduce`, { method: 'POST' }),
+
+  getSnapshotStats: () => apiRequest('/arch/snapshots/stats'),
+
+  // Event Bus (9.3.1, 9.3.3)
+  publishMessage: (data: {
+    channel: string;
+    event_type: string;
+    payload?: any;
+    producer?: string;
+  }) => apiRequest('/arch/bus/publish', { method: 'POST', body: JSON.stringify(data) }),
+
+  consumeMessages: (data: { channel: string; consumer: string; max_messages?: number }) =>
+    apiRequest('/arch/bus/consume', { method: 'POST', body: JSON.stringify(data) }),
+
+  getBusChannels: () => apiRequest('/arch/bus/channels'),
+
+  getChannelMessages: (channel: string, status?: string, limit?: number) => {
+    const sp = new URLSearchParams();
+    if (status) sp.append('status', status);
+    if (limit) sp.append('limit', String(limit));
+    const q = sp.toString();
+    return apiRequest(`/arch/bus/messages/${channel}${q ? '?' + q : ''}`);
+  },
+
+  getDeadLetterQueue: (limit?: number) =>
+    apiRequest(`/arch/bus/dead-letter${limit ? '?limit=' + limit : ''}`),
+
+  retryDeadLetter: (id: number) =>
+    apiRequest(`/arch/bus/dead-letter/${id}/retry`, { method: 'POST' }),
+
+  markMessageFailed: (id: number, errorMessage?: string) =>
+    apiRequest(`/arch/bus/messages/${id}/fail${errorMessage ? '?error_message=' + encodeURIComponent(errorMessage) : ''}`, { method: 'POST' }),
+
+  getBusStats: () => apiRequest('/arch/bus/stats'),
+
+  // Ограничения системы (9.4)
+  createConstraint: (data: {
+    constraint_key: string;
+    title: string;
+    description: string;
+    category?: string;
+    severity?: string;
+    display_in_ui?: boolean;
+    display_in_reports?: boolean;
+  }) => apiRequest('/arch/constraints', { method: 'POST', body: JSON.stringify(data) }),
+
+  listConstraints: (category?: string, activeOnly?: boolean) => {
+    const sp = new URLSearchParams();
+    if (category) sp.append('category', category);
+    if (activeOnly !== undefined) sp.append('active_only', String(activeOnly));
+    const q = sp.toString();
+    return apiRequest(`/arch/constraints${q ? '?' + q : ''}`);
+  },
+
+  updateConstraint: (id: number, data: {
+    title?: string;
+    description?: string;
+    category?: string;
+    severity?: string;
+    is_active?: boolean;
+    display_in_ui?: boolean;
+    display_in_reports?: boolean;
+  }) => apiRequest(`/arch/constraints/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteConstraint: (id: number) =>
+    apiRequest(`/arch/constraints/${id}`, { method: 'DELETE' }),
+
+  seedConstraints: () =>
+    apiRequest('/arch/constraints/seed', { method: 'POST' }),
+
+  getConstraintsForUi: () => apiRequest('/arch/constraints/ui'),
+
+  getConstraintsForReports: () => apiRequest('/arch/constraints/reports'),
+};

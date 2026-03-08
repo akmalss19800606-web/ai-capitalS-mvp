@@ -260,6 +260,21 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Архитектура',
+    path: '/architecture',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Безопасность',
     path: '/settings/security',
     icon: (

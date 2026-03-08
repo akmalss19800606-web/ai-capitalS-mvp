@@ -42,3 +42,8 @@ from app.db.models.market_adapters import (
     MarketDataSource, MarketDataCache, CrmContact, CrmDeal,
     Document, DocumentVersion, ComparableCompany,
 )
+# Фаза 4, Сессия 4: Архитектурные принципы
+from app.db.models.architectural_principles import (
+    SystemEvent, HitlReview, AnalyticsSnapshot,
+    EventBusMessage, SystemConstraint,
+)
