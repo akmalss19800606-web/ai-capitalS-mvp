@@ -19,6 +19,20 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: ai_capital_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build: .
     container_name: ai_capital_backend
@@ -26,10 +40,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql://ai_user:ai_password@db:5432/ai_capital
+      REDIS_URL: redis://redis:6379/0
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY}
@@ -44,9 +61,10 @@ services:
     depends_on:
       - backend
     ports:
-            - "10000:10000"
+      - "10000:10000"
     environment:
-            BACKEND_URL: "http://ai_capital_backend:8000"
+      BACKEND_URL: "http://ai_capital_backend:8000"
 
 volumes:
   pgdata:
+  redisdata:

@@ -9,7 +9,7 @@ from app.schemas.portfolio import PortfolioCreate, PortfolioRead, PortfolioUpdat
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 
-@router.post("/", response_model=PortfolioRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=PortfolioRead, status_code=status.HTTP_201_CREATED)
 def create_portfolio(
     portfolio_in: PortfolioCreate,
     db: Session = Depends(get_db),
@@ -21,7 +21,7 @@ def create_portfolio(
     db.refresh(portfolio)
     return portfolio
 
-@router.get("/", response_model=List[PortfolioRead])
+@router.get("", response_model=List[PortfolioRead])
 def get_portfolios(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

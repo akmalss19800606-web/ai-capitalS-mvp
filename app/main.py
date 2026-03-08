@@ -1,4 +1,4 @@
-﻿from fastapi import FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.routers.health import router as health_router
@@ -8,12 +8,15 @@ from app.api.v1.routers.portfolios import router as portfolios_router
 from app.api.v1.routers.decisions import router as decisions_router
 from app.api.v1.routers.ai import router as ai_router
 from app.api.v1.routers.roles import router as roles_router
+from app.api.v1.routers.dashboard import router as dashboard_router
 from app.db.session import engine
 from app.db.base import Base
+from app.core.config import settings
 
 app = FastAPI(
-    title='AI Capital Management MVP',
-    version='0.1.0',
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    redirect_slashes=False,
 )
 
 app.add_middleware(
@@ -33,3 +36,4 @@ app.include_router(portfolios_router, prefix='/api/v1')
 app.include_router(decisions_router, prefix='/api/v1')
 app.include_router(ai_router, prefix='/api/v1')
 app.include_router(roles_router, prefix='/api/v1')
+app.include_router(dashboard_router, prefix='/api/v1')
