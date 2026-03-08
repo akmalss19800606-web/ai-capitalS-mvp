@@ -1,6 +1,6 @@
 """
-Обновлённый main.py — добавлен роутер stress_retrospective.
-Фаза 2, Сессия 2.
+Обновлённый main.py — добавлен роутер dd_scoring.
+Фаза 2, Сессия 3.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +20,7 @@ from app.api.v1.routers.etl import router as etl_router
 from app.api.v1.routers.olap import router as olap_router
 from app.api.v1.routers.ai_analytics import router as ai_analytics_router
 from app.api.v1.routers.stress_retrospective import router as stress_retro_router
+from app.api.v1.routers.dd_scoring import router as dd_scoring_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -54,3 +55,4 @@ app.include_router(etl_router, prefix='/api/v1')
 app.include_router(olap_router, prefix='/api/v1')
 app.include_router(ai_analytics_router, prefix='/api/v1')
 app.include_router(stress_retro_router, prefix='/api/v1')
+app.include_router(dd_scoring_router, prefix='/api/v1')

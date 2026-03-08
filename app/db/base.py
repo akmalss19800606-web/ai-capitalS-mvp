@@ -1,6 +1,6 @@
 """
 Обновлённый db/base.py — импорт всех моделей для auto-create tables.
-Фаза 2, Сессия 2 — добавлены модели StressTest и Retrospective.
+Фаза 2, Сессия 3 — добавлена модель DueDiligenceScore.
 """
 from app.db.session import Base
 from app.db.models.user import User
@@ -17,3 +17,4 @@ from app.db.models.ai_analytics import (
 from app.db.models.stress_retrospective import (
     StressTest, Retrospective,
 )
+from app.db.models.dd_scoring import DueDiligenceScore

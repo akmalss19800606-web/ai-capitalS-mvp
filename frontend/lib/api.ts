@@ -289,3 +289,29 @@ export const aiAnalytics = {
     return apiRequest(`/analytics/retrospective${q ? '?' + q : ''}`);
   },
 };
+
+// ─── Фаза 2, Сессия 3: Due Diligence Scoring ───────────────────────────────
+
+export const ddScoring = {
+  run: (data: {
+    decision_id?: number;
+    company_name: string;
+    industry?: string;
+    geography?: string;
+    revenue_mln?: number;
+    profit_margin_pct?: number;
+    debt_to_equity?: number;
+    years_in_business?: number;
+    employee_count?: number;
+  }) => apiRequest('/dd/scoring', { method: 'POST', body: JSON.stringify(data) }),
+
+  get: (id: number) => apiRequest(`/dd/scoring/${id}`),
+
+  list: (decisionId?: number) =>
+    apiRequest(`/dd/scoring${decisionId ? '?decision_id=' + decisionId : ''}`),
+
+  updateChecklist: (id: number, data: { item_id: string; status: string; note?: string }) =>
+    apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  benchmarkTemplates: () => apiRequest('/dd/benchmarks/templates'),
+};
