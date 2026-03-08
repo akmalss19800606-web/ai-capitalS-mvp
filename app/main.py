@@ -31,6 +31,8 @@ from app.api.v1.routers.access_control import router as access_control_router
 from app.api.v1.routers.collaboration import router as collaboration_router
 from app.api.v1.routers.notifications import router as notifications_router
 from app.api.v1.routers.preferences import router as preferences_router
+# Фаза 4, Сессия 1: Универсальный импорт/экспорт
+from app.api.v1.routers.data_exchange import router as data_exchange_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -76,3 +78,5 @@ app.include_router(access_control_router, prefix='/api/v1')
 app.include_router(collaboration_router, prefix='/api/v1')
 app.include_router(notifications_router, prefix='/api/v1')
 app.include_router(preferences_router, prefix='/api/v1')
+# Фаза 4, Сессия 1
+app.include_router(data_exchange_router, prefix='/api/v1')

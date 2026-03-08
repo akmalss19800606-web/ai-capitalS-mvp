@@ -541,6 +541,78 @@ export const preferences = {
   roleConfig: () => apiRequest('/preferences/role-config'),
 };
 
+// ─── Фаза 4, Сессия 1: Универсальный импорт/экспорт (EXCH-IO-001) ────────
+
+export const dataExchange = {
+  // Импорт
+  uploadImport: async (file: File, targetEntity: string = 'decisions') => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('target_entity', targetEntity);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_URL}/exchange/import/upload`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  saveMapping: (jobId: number, mappings: Array<{
+    source_field: string;
+    target_field: string;
+    transform_rule?: string;
+    default_value?: string;
+    is_required?: boolean;
+  }>) => apiRequest(`/exchange/import/${jobId}/mapping`, {
+    method: 'POST',
+    body: JSON.stringify({ mappings }),
+  }),
+
+  executeImport: async (jobId: number, file: File) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const formData = new FormData();
+    formData.append('file', file);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_URL}/exchange/import/${jobId}/execute`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  listImports: (status?: string) =>
+    apiRequest(`/exchange/import${status ? '?status=' + status : ''}`),
+
+  getImport: (id: number) => apiRequest(`/exchange/import/${id}`),
+
+  deleteImport: (id: number) =>
+    apiRequest(`/exchange/import/${id}`, { method: 'DELETE' }),
+
+  targetFields: (entity: string) =>
+    apiRequest(`/exchange/import/target-fields/${entity}`),
+
+  // Экспорт
+  createExport: (data: {
+    export_format: string;
+    target_entity: string;
+    filters?: Record<string, any>;
+  }) => apiRequest('/exchange/export', { method: 'POST', body: JSON.stringify(data) }),
+
+  listExports: () => apiRequest('/exchange/export'),
+
+  getExport: (id: number) => apiRequest(`/exchange/export/${id}`),
+
+  deleteExport: (id: number) =>
+    apiRequest(`/exchange/export/${id}`, { method: 'DELETE' }),
+};
+
 // ─── Фаза 3, Сессия 3: Контроль доступа ABAC (COLLAB-ACCESS-001) ───────────
 
 export const accessControl = {

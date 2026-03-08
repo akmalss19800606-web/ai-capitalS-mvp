@@ -29,3 +29,7 @@ from app.db.models.auth_security import (
 from app.db.models.collaboration import (
     ThreadComment, TaskItem, Notification, UserPreferences,
 )
+# Фаза 4, Сессия 1: Универсальный импорт/экспорт
+from app.db.models.data_exchange import (
+    ImportJob, ImportFieldMapping, ExportJob,
+)

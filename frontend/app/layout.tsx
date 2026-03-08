@@ -198,6 +198,24 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Импорт/Экспорт',
+    path: '/data-exchange',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M16 3h5v5" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <path d="M8 21H3v-5" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+            <path d="M21 14v5a2 2 0 0 1-2 2h-5" />
+            <path d="M3 10V5a2 2 0 0 1 2-2h5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Совместная работа',
     path: '/collaboration',
     icon: (
