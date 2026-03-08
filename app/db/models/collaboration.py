@@ -34,7 +34,19 @@ class ThreadComment(Base):
 
     # relationships
     author = relationship("User", foreign_keys=[author_id])
-    children = relationship("ThreadComment", backref="parent", remote_side=[id], cascade="all, delete-orphan")
+    children = relationship(
+        "ThreadComment",
+        foreign_keys="[ThreadComment.parent_id]",
+        back_populates="parent_ref",
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
+    parent_ref = relationship(
+        "ThreadComment",
+        foreign_keys="[ThreadComment.parent_id]",
+        back_populates="children",
+        remote_side="[ThreadComment.id]",
+    )
 
 
 class TaskItem(Base):

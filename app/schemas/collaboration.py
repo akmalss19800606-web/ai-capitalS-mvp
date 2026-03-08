@@ -37,6 +37,9 @@ class ThreadCommentResponse(BaseModel):
         from_attributes = True
 
 
+ThreadCommentResponse.model_rebuild()
+
+
 # ───────────────── TaskItem (COLLAB-TEAM-001.3) ─────────────────────────────
 
 class TaskItemCreate(BaseModel):
