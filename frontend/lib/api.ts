@@ -62,10 +62,10 @@ export const auth = {
 };
 
 export const portfolios = {
-  list: () => apiRequest('/portfolios'),
+  list: () => apiRequest('/portfolios/'),
   get: (id: number) => apiRequest(`/portfolios/${id}`),
-    create: (data: { name: string; description?: string; total_value?: number }) =>
-    apiRequest('/portfolios', { method: 'POST', body: JSON.stringify(data) }),
+  create: (data: { name: string; description?: string; total_value?: number }) =>
+    apiRequest('/portfolios/', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: number, data: { name?: string; description?: string; total_value?: number }) =>
     apiRequest(`/portfolios/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) => apiRequest(`/portfolios/${id}`, { method: 'DELETE' }),

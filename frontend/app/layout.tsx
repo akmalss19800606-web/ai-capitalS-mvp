@@ -56,6 +56,23 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Согласование',
+    path: '/workflows',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <rect x="2" y="6" width="6" height="6" rx="1" />
+            <rect x="16" y="6" width="6" height="6" rx="1" />
+            <rect x="9" y="14" width="6" height="6" rx="1" />
+            <path d="M8 9h8" />
+            <path d="M12 9v5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'AI-Аналитика',
     path: '/ai-analytics',
     icon: (
