@@ -1031,7 +1031,7 @@ export default function AIAnalyticsPage() {
     setDataError(null);
     try {
       const [decsRes, portsRes] = await Promise.all([
-        decisions.list({ per_page: 200 }),
+        decisions.list({ per_page: 100 }),
         portfolios.list(),
       ]);
       const decsArr: Decision[] = Array.isArray(decsRes) ? decsRes : (decsRes?.items || decsRes?.decisions || []);
