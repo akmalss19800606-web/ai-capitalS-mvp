@@ -10,7 +10,6 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
 
   const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
 
-  // If 401 and we have a refresh token, try to refresh
   if (res.status === 401 && typeof window !== 'undefined') {
     const refreshToken = localStorage.getItem('refresh_token');
     if (refreshToken) {
@@ -102,7 +101,7 @@ export const decisions = {
   delete: (id: number) => apiRequest(`/decisions/${id}`, { method: 'DELETE' }),
   stats: () => apiRequest('/decisions/stats'),
 
-  // ─── Фаза 1, Сессия 2: Версионирование и аудит ────────────────────────────
+  // Фаза 1, Сессия 2: Версионирование и аудит
   history: (id: number, page?: number) =>
     apiRequest(`/decisions/${id}/history${page ? '?page=' + page : ''}`),
   diff: (id: number, versionA: number, versionB: number) =>
@@ -115,7 +114,7 @@ export const decisions = {
   audit: (id: number, page?: number) =>
     apiRequest(`/decisions/${id}/audit${page ? '?page=' + page : ''}`),
 
-  // ─── Фаза 1, Сессия 2: Граф связей ────────────────────────────────────────
+  // Фаза 1, Сессия 2: Граф связей
   relationships: (id: number) =>
     apiRequest(`/decisions/${id}/relationships`),
   addRelationship: (id: number, data: { to_decision_id: number; relationship_type: string; description?: string }) =>
@@ -162,39 +161,19 @@ export const ai = {
   }) => apiRequest('/ai/recommend', { method: 'POST', body: JSON.stringify(data) }),
 };
 
-// ─── Фаза 1, Сессия 3: Workflow Engine ──────────────────────────────────────
-
+// Фаза 1, Сессия 3: Workflow Engine
 export const workflows = {
-  // Шаблоны (definitions)
   listDefinitions: (isActive?: boolean) => {
     const params = isActive !== undefined ? `?is_active=${isActive}` : '';
     return apiRequest(`/workflows/definitions${params}`);
   },
-  getDefinition: (id: number) =>
-    apiRequest(`/workflows/definitions/${id}`),
-  createDefinition: (data: {
-    name: string;
-    description?: string;
-    trigger_type: string;
-    trigger_condition?: Record<string, any>;
-    is_active?: boolean;
-    is_default?: boolean;
-    steps_template: Array<{
-      order: number;
-      name: string;
-      step_type?: string;
-      role?: string;
-      sla_hours?: number;
-      description?: string;
-    }>;
-  }) =>
+  getDefinition: (id: number) => apiRequest(`/workflows/definitions/${id}`),
+  createDefinition: (data: any) =>
     apiRequest('/workflows/definitions', { method: 'POST', body: JSON.stringify(data) }),
   updateDefinition: (id: number, data: any) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDefinition: (id: number) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'DELETE' }),
-
-  // Экземпляры (instances)
   listInstances: (params?: { status?: string; decision_id?: number }) => {
     const searchParams = new URLSearchParams();
     if (params) {
@@ -209,15 +188,28 @@ export const workflows = {
   },
   launchInstance: (data: { definition_id: number; decision_id: number }) =>
     apiRequest('/workflows/instances', { method: 'POST', body: JSON.stringify(data) }),
-  getInstance: (id: number) =>
-    apiRequest(`/workflows/instances/${id}`),
+  getInstance: (id: number) => apiRequest(`/workflows/instances/${id}`),
   cancelInstance: (id: number) =>
     apiRequest(`/workflows/instances/${id}/cancel`, { method: 'POST' }),
-
-  // Действия по шагам
   stepAction: (stepId: number, data: { action: string; comment?: string }) =>
     apiRequest(`/workflows/steps/${stepId}/action`, { method: 'POST', body: JSON.stringify(data) }),
-
-  // Мои задачи
   myTasks: () => apiRequest('/workflows/my-tasks'),
+};
+
+// ─── Фаза 1, Сессия 4: OLAP / ETL / Analytics ──────────────────────────────
+
+export const etl = {
+  run: () => apiRequest('/etl/run', { method: 'POST' }),
+  status: () => apiRequest('/etl/status'),
+  refreshViews: () => apiRequest('/etl/refresh-views', { method: 'POST' }),
+};
+
+export const olap = {
+  overview: () => apiRequest('/analytics/olap/overview'),
+  timeSeries: (granularity?: string) =>
+    apiRequest(`/analytics/olap/time-series${granularity ? '?granularity=' + granularity : ''}`),
+  breakdown: (dimension: string) =>
+    apiRequest(`/analytics/olap/breakdown?dimension=${dimension}`),
+  portfolioTrend: () => apiRequest('/analytics/olap/portfolio-trend'),
+  events: () => apiRequest('/analytics/olap/events'),
 };

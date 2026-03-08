@@ -73,6 +73,21 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Аналитика',
+    path: '/analytics',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M3 3l3 3M21 3l-3 3M3 21l3-3M21 21l-3-3" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'AI-Аналитика',
     path: '/ai-analytics',
     icon: (
