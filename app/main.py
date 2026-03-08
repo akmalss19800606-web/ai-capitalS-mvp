@@ -33,6 +33,8 @@ from app.api.v1.routers.notifications import router as notifications_router
 from app.api.v1.routers.preferences import router as preferences_router
 # Фаза 4, Сессия 1: Универсальный импорт/экспорт
 from app.api.v1.routers.data_exchange import router as data_exchange_router
+# Фаза 4, Сессия 2: API Gateway + Webhooks
+from app.api.v1.routers.api_gateway import router as api_gateway_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -49,6 +51,10 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+# Фаза 4, Сессия 2: Rate Limiting Middleware (EXCH-GW-001.1)
+from app.middleware.rate_limiter import RateLimitMiddleware
+app.add_middleware(RateLimitMiddleware, rate_limit=120, window_seconds=60)
 
 Base.metadata.create_all(bind=engine)
 
@@ -80,3 +86,5 @@ app.include_router(notifications_router, prefix='/api/v1')
 app.include_router(preferences_router, prefix='/api/v1')
 # Фаза 4, Сессия 1
 app.include_router(data_exchange_router, prefix='/api/v1')
+# Фаза 4, Сессия 2
+app.include_router(api_gateway_router, prefix='/api/v1')

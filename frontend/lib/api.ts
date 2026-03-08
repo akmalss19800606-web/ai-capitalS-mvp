@@ -657,3 +657,66 @@ export const accessControl = {
   revokeDecisionAccess: (decisionId: number, userId: number) =>
     apiRequest(`/access/decisions/${decisionId}/revoke/${userId}`, { method: 'DELETE' }),
 };
+
+// ─── Фаза 4, Сессия 2: API Gateway + Webhooks (EXCH-GW-001) ─────────────
+
+export const apiGateway = {
+  // API Keys (EXCH-GW-001.5)
+  createApiKey: (data: {
+    name: string;
+    scopes?: string[];
+    rate_limit?: number;
+    expires_days?: number;
+  }) => apiRequest('/gateway/api-keys', { method: 'POST', body: JSON.stringify(data) }),
+
+  listApiKeys: () => apiRequest('/gateway/api-keys'),
+
+  updateApiKey: (id: number, data: {
+    name?: string;
+    scopes?: string[];
+    is_active?: boolean;
+    rate_limit?: number;
+  }) => apiRequest(`/gateway/api-keys/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteApiKey: (id: number) =>
+    apiRequest(`/gateway/api-keys/${id}`, { method: 'DELETE' }),
+
+  // Webhooks (EXCH-GW-001.3)
+  listWebhooks: () => apiRequest('/gateway/webhooks'),
+
+  getAvailableEvents: () => apiRequest('/gateway/webhooks/events'),
+
+  createWebhook: (data: {
+    name: string;
+    url: string;
+    events: string[];
+    secret?: string;
+    headers?: Record<string, string>;
+    retry_count?: number;
+  }) => apiRequest('/gateway/webhooks', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateWebhook: (id: number, data: {
+    name?: string;
+    url?: string;
+    secret?: string;
+    events?: string[];
+    is_active?: boolean;
+    headers?: Record<string, string>;
+    retry_count?: number;
+  }) => apiRequest(`/gateway/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  deleteWebhook: (id: number) =>
+    apiRequest(`/gateway/webhooks/${id}`, { method: 'DELETE' }),
+
+  testWebhook: (id: number) =>
+    apiRequest(`/gateway/webhooks/${id}/test`, { method: 'POST' }),
+
+  getWebhookDeliveries: (id: number, limit?: number) =>
+    apiRequest(`/gateway/webhooks/${id}/deliveries${limit ? '?limit=' + limit : ''}`),
+
+  // Usage Monitoring (EXCH-GW-001.4)
+  getUsageSummary: () => apiRequest('/gateway/usage/summary'),
+
+  getUsageLogs: (limit?: number) =>
+    apiRequest(`/gateway/usage/logs${limit ? '?limit=' + limit : ''}`),
+};

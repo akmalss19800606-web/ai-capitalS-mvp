@@ -33,3 +33,7 @@ from app.db.models.collaboration import (
 from app.db.models.data_exchange import (
     ImportJob, ImportFieldMapping, ExportJob,
 )
+# Фаза 4, Сессия 2: API Gateway + Webhooks
+from app.db.models.api_gateway import (
+    ApiKey, WebhookSubscription, WebhookDeliveryLog, ApiUsageLog,
+)
