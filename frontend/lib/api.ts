@@ -161,3 +161,63 @@ export const ai = {
     portfolio_id: number;
   }) => apiRequest('/ai/recommend', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+// ─── Фаза 1, Сессия 3: Workflow Engine ──────────────────────────────────────
+
+export const workflows = {
+  // Шаблоны (definitions)
+  listDefinitions: (isActive?: boolean) => {
+    const params = isActive !== undefined ? `?is_active=${isActive}` : '';
+    return apiRequest(`/workflows/definitions${params}`);
+  },
+  getDefinition: (id: number) =>
+    apiRequest(`/workflows/definitions/${id}`),
+  createDefinition: (data: {
+    name: string;
+    description?: string;
+    trigger_type: string;
+    trigger_condition?: Record<string, any>;
+    is_active?: boolean;
+    is_default?: boolean;
+    steps_template: Array<{
+      order: number;
+      name: string;
+      step_type?: string;
+      role?: string;
+      sla_hours?: number;
+      description?: string;
+    }>;
+  }) =>
+    apiRequest('/workflows/definitions', { method: 'POST', body: JSON.stringify(data) }),
+  updateDefinition: (id: number, data: any) =>
+    apiRequest(`/workflows/definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDefinition: (id: number) =>
+    apiRequest(`/workflows/definitions/${id}`, { method: 'DELETE' }),
+
+  // Экземпляры (instances)
+  listInstances: (params?: { status?: string; decision_id?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== '' && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return apiRequest(`/workflows/instances${query ? '?' + query : ''}`);
+  },
+  launchInstance: (data: { definition_id: number; decision_id: number }) =>
+    apiRequest('/workflows/instances', { method: 'POST', body: JSON.stringify(data) }),
+  getInstance: (id: number) =>
+    apiRequest(`/workflows/instances/${id}`),
+  cancelInstance: (id: number) =>
+    apiRequest(`/workflows/instances/${id}/cancel`, { method: 'POST' }),
+
+  // Действия по шагам
+  stepAction: (stepId: number, data: { action: string; comment?: string }) =>
+    apiRequest(`/workflows/steps/${stepId}/action`, { method: 'POST', body: JSON.stringify(data) }),
+
+  // Мои задачи
+  myTasks: () => apiRequest('/workflows/my-tasks'),
+};
