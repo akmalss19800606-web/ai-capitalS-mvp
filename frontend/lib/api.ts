@@ -56,7 +56,17 @@ export const auth = {
     if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
     return data;
   },
+  mfaVerify: (mfaTempToken: string, code: string) =>
+    apiRequest('/auth/mfa-verify', {
+      method: 'POST',
+      body: JSON.stringify({ mfa_temp_token: mfaTempToken, code }),
+    }),
   me: () => apiRequest('/auth/me'),
+  ssoProviders: () => apiRequest('/auth/sso/providers'),
+  createSsoProvider: (data: any) =>
+    apiRequest('/auth/sso/providers', { method: 'POST', body: JSON.stringify(data) }),
+  deleteSsoProvider: (id: number) =>
+    apiRequest(`/auth/sso/providers/${id}`, { method: 'DELETE' }),
 };
 
 export const portfolios = {
@@ -412,4 +422,71 @@ export const dashboardBuilder = {
     const q = sp.toString();
     return apiRequest(`/dashboards/widget-data/${widgetType}${q ? '?' + q : ''}`);
   },
+};
+
+// ─── Фаза 3, Сессия 3: MFA (COLLAB-AUTH-001.1) ─────────────────────────────
+
+export const mfa = {
+  status: () => apiRequest('/auth/mfa/status'),
+  setup: () =>
+    apiRequest('/auth/mfa/setup', { method: 'POST' }),
+  confirm: (code: string) =>
+    apiRequest('/auth/mfa/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
+  disable: (code: string) =>
+    apiRequest('/auth/mfa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
+};
+
+// ─── Фаза 3, Сессия 3: Управление сессиями (COLLAB-AUTH-001.4) ─────────────
+
+export const sessions = {
+  list: () => apiRequest('/auth/sessions'),
+  forceLogout: (sessionId: number) =>
+    apiRequest(`/auth/sessions/${sessionId}/logout`, { method: 'POST' }),
+  logoutAll: () =>
+    apiRequest('/auth/sessions/logout-all', { method: 'POST' }),
+};
+
+// ─── Фаза 3, Сессия 3: Контроль доступа ABAC (COLLAB-ACCESS-001) ───────────
+
+export const accessControl = {
+  // ABAC-политики
+  listPolicies: (resourceType?: string) =>
+    apiRequest(`/access/policies${resourceType ? '?resource_type=' + resourceType : ''}`),
+  createPolicy: (data: {
+    name: string;
+    resource_type: string;
+    action: string;
+    conditions?: any;
+    effect?: string;
+    priority?: number;
+    description?: string;
+  }) => apiRequest('/access/policies', { method: 'POST', body: JSON.stringify(data) }),
+  updatePolicy: (id: number, data: any) =>
+    apiRequest(`/access/policies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePolicy: (id: number) =>
+    apiRequest(`/access/policies/${id}`, { method: 'DELETE' }),
+  checkAccess: (data: { resource_type: string; action: string; resource_attrs?: any }) =>
+    apiRequest('/access/check', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Кастомные роли
+  listRoles: () => apiRequest('/access/roles'),
+  createRole: (data: { name: string; permissions: any; description?: string }) =>
+    apiRequest('/access/roles', { method: 'POST', body: JSON.stringify(data) }),
+  updateRole: (id: number, data: any) =>
+    apiRequest(`/access/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRole: (id: number) =>
+    apiRequest(`/access/roles/${id}`, { method: 'DELETE' }),
+  seedRoles: () =>
+    apiRequest('/access/roles/seed', { method: 'POST' }),
+
+  // Доступ к решениям
+  listDecisionAccess: (decisionId: number) =>
+    apiRequest(`/access/decisions/${decisionId}/access`),
+  grantDecisionAccess: (decisionId: number, data: {
+    user_id: number;
+    access_level?: string;
+    can_view_financials?: boolean;
+  }) => apiRequest(`/access/decisions/${decisionId}/grant`, { method: 'POST', body: JSON.stringify(data) }),
+  revokeDecisionAccess: (decisionId: number, userId: number) =>
+    apiRequest(`/access/decisions/${decisionId}/revoke/${userId}`, { method: 'DELETE' }),
 };

@@ -1,6 +1,6 @@
 """
-Обновлённый main.py — добавлен роутер dashboards.
-Фаза 3, Сессия 2.
+Обновлённый main.py — добавлены роутеры MFA, Sessions, Access Control.
+Фаза 3, Сессия 3.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -24,6 +24,9 @@ from app.api.v1.routers.dd_scoring import router as dd_scoring_router
 from app.api.v1.routers.reports import router as reports_router
 from app.api.v1.routers.charts import router as charts_router
 from app.api.v1.routers.dashboards import router as dashboards_router
+from app.api.v1.routers.mfa import router as mfa_router
+from app.api.v1.routers.sessions import router as sessions_router
+from app.api.v1.routers.access_control import router as access_control_router
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
@@ -62,3 +65,6 @@ app.include_router(dd_scoring_router, prefix='/api/v1')
 app.include_router(reports_router, prefix='/api/v1')
 app.include_router(charts_router, prefix='/api/v1')
 app.include_router(dashboards_router, prefix='/api/v1')
+app.include_router(mfa_router, prefix='/api/v1')
+app.include_router(sessions_router, prefix='/api/v1')
+app.include_router(access_control_router, prefix='/api/v1')

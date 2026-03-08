@@ -198,6 +198,20 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Безопасность',
+    path: '/settings/security',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" opacity="0" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Настройки',
     path: '/settings',
     icon: (
