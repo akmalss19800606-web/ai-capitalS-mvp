@@ -8,7 +8,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
-ENV BACKEND_URL=https://ai-capital-backend.onrender.com
+ENV BACKEND_URL=http://ai_capital_backend:8000
 RUN npm run build
 
 FROM node:20-alpine AS runner

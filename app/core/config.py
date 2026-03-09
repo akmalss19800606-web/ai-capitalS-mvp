@@ -1,9 +1,8 @@
 """
-Конфигурация приложения.
-Этап 0, Сессия 0.1 — Безопасность: SECRET_KEY обязателен, валидация .env.
+Обновлённый config.py — добавлены переменные AI-провайдеров.
+Этапы 2.1–3.1.
 
-ВАЖНО: SECRET_KEY больше НЕ имеет дефолтного значения.
-Если .env не содержит SECRET_KEY, приложение НЕ запустится.
+ИНСТРУКЦИЯ: Замените существующий app/core/config.py целиком.
 """
 import os
 import secrets
@@ -12,26 +11,35 @@ from pydantic import field_validator
 
 
 class Settings(BaseSettings):
-    # ── Security ──
+    # --- Security ---
     SECRET_KEY: str  # Обязательный! Нет дефолта — требует .env
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 день
 
-    # ── Database ──
+    # --- Database ---
     DATABASE_URL: str = "postgresql+psycopg2://ai_user:ai_password@db:5432/ai_capital"
 
-    # ── Redis ──
+    # --- Redis ---
     REDIS_URL: str = "redis://redis:6379/0"
 
-    # ── AI Services ──
+    # --- AI Services (существующие) ---
     GROQ_API_KEY: str = ""
     ALPHA_VANTAGE_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
 
-    # ── CORS ──
+    # --- AI-провайдеры Этап 3 ---
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+    OLLAMA_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "llama3.1:8b"
+    HF_API_KEY: str = ""
+    HF_CHAT_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
+
+    # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:10000"
 
-    # ── App ──
+    # --- App ---
     APP_NAME: str = "AI Capital Management"
     APP_VERSION: str = "3.0.0"
     DEBUG: bool = False
@@ -46,19 +54,20 @@ class Settings(BaseSettings):
         if v in ("", "super-secret-key-change-in-production", "changeme", "secret"):
             raise ValueError(
                 "SECRET_KEY не может быть пустым или дефолтным! "
-                "Сгенерируйте: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Сгенерируйте: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         if len(v) < 32:
             raise ValueError(
                 "SECRET_KEY должен быть минимум 32 символа. "
-                "Сгенерируйте: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Сгенерируйте: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         return v
 
     @property
     def cors_origins_list(self) -> list[str]:
-        """Парсит CORS_ORIGINS из строки в список."""
         return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
+
+
 
     @property
     def database_url_sync(self) -> str:

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { getStoredLocale } from '@/lib/i18n';
 import './globals.css';
 
 const NO_SIDEBAR_PATHS = ['/login', '/register'];
@@ -14,19 +15,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [htmlLang, setHtmlLang] = useState('ru');
 
   /* Close mobile sidebar on route change */
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  /* Persist collapsed state */
+  /* Persist collapsed state + locale */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
       if (saved === 'true') setSidebarCollapsed(true);
+      setHtmlLang(getStoredLocale());
     }
   }, []);
+
+  /* Listen for locale changes (from useLocale hook) */
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const lang = document.documentElement.lang;
+      if (lang && lang !== htmlLang) setHtmlLang(lang);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+    return () => observer.disconnect();
+  }, [htmlLang]);
 
   const toggleCollapse = () => {
     setSidebarCollapsed(prev => {
@@ -39,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const sidebarWidth = sidebarCollapsed ? 68 : 256;
 
   return (
-    <html lang="ru">
+    <html lang={htmlLang}>
       <head>
         <title>AI Capital Management</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />

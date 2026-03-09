@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { portfolios as portfoliosApi } from '@/lib/api';
+import { useLocale } from '@/lib/i18n';
 
 interface Portfolio {
   id: number;
@@ -11,51 +12,9 @@ interface Portfolio {
   created_at: string;
 }
 
-const tools = [
-  {
-    label: 'Due Diligence',
-    path: '/due-diligence',
-    desc: 'Проверка компании',
-    color: '#1e293b',
-    bg: '#f1f5f9',
-    border: '#e2e8f0',
-  },
-  {
-    label: 'Рынок УЗ',
-    path: '/market-uz',
-    desc: 'Анализ рынков',
-    color: '#3b82f6',
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-  },
-  {
-    label: 'Калькулятор ROI',
-    path: '/calculator',
-    desc: 'ROI и сравнение',
-    color: '#16a34a',
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
-  },
-  {
-    label: 'Макро УЗ',
-    path: '/macro-uz',
-    desc: 'Курс сума и ЦБ',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
-    border: '#ddd6fe',
-  },
-  {
-    label: 'PDF Отчёт',
-    path: '/report',
-    desc: 'Скачать отчёт',
-    color: '#d97706',
-    bg: '#fffbeb',
-    border: '#fde68a',
-  },
-];
-
 export default function PortfoliosPage() {
   const router = useRouter();
+  const { t } = useLocale();
   const [portfolioList, setPortfolioList] = useState<Portfolio[]>([]);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -72,7 +31,11 @@ export default function PortfoliosPage() {
     portfoliosApi
       .list()
       .then((data) => setPortfolioList(data || []))
-      .catch(() => router.push('/login'))
+      .catch((err) => {
+        console.error('Portfolio load error:', err);
+        /* Do NOT redirect to login on API error — only redirect if no token */
+        setPortfolioList([]);
+      })
       .finally(() => setInitialLoading(false));
   }, []);
 
@@ -90,19 +53,19 @@ export default function PortfoliosPage() {
       setNewDesc('');
       setNewValue('');
     } catch {
-      alert('Ошибка создания портфеля');
+      alert(t.error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Удалить этот портфель и все его данные?')) return;
+    if (!confirm(t.delete + '?')) return;
     try {
       await portfoliosApi.delete(id);
       setPortfolioList((prev) => prev.filter((p) => p.id !== id));
     } catch {
-      alert('Ошибка удаления портфеля');
+      alert(t.error);
     }
   };
 
@@ -140,10 +103,10 @@ export default function PortfoliosPage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Мои портфели
+            {t.nav.items.portfolios}
           </h1>
           <p style={{ color: '#64748b', marginTop: '4px', fontSize: '13px' }}>
-            Управление инвестиционными портфелями · AI Capital Management
+            {t.dashboard.portfoliosSub} · AI Capital Management
           </p>
         </div>
         <button
@@ -161,46 +124,8 @@ export default function PortfoliosPage() {
             gap: '6px',
           }}
         >
-          ← Главная панель
+          ← {t.nav.items.dashboard}
         </button>
-      </div>
-
-      {/* Quick tools */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-          gap: '10px',
-          marginBottom: '24px',
-        }}
-      >
-        {tools.map((tool, i) => (
-          <button
-            key={i}
-            onClick={() => router.push(tool.path)}
-            style={{
-              padding: '12px 14px',
-              borderRadius: '10px',
-              border: `1px solid ${tool.border}`,
-              backgroundColor: tool.bg,
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'all 0.15s',
-            }}
-          >
-            <p
-              style={{
-                fontSize: '13px',
-                fontWeight: '700',
-                color: tool.color,
-                marginBottom: '2px',
-              }}
-            >
-              {tool.label}
-            </p>
-            <p style={{ fontSize: '11px', color: '#64748b' }}>{tool.desc}</p>
-          </button>
-        ))}
       </div>
 
       {/* Create form */}
@@ -222,14 +147,14 @@ export default function PortfoliosPage() {
             color: '#1e293b',
           }}
         >
-          Создать новый портфель
+          + {t.nav.items.portfolios}
         </p>
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            placeholder="Название портфеля *"
+            placeholder="*"
             style={{
               flex: '1 1 180px',
               padding: '10px 14px',
@@ -244,7 +169,7 @@ export default function PortfoliosPage() {
           <input
             value={newDesc}
             onChange={(e) => setNewDesc(e.target.value)}
-            placeholder="Описание (опционально)"
+            placeholder="..."
             style={{
               flex: '2 1 180px',
               padding: '10px 14px',
@@ -259,7 +184,7 @@ export default function PortfoliosPage() {
           <input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            placeholder="Нач. стоимость ($)"
+            placeholder="UZS"
             type="number"
             min="0"
             style={{
@@ -289,7 +214,7 @@ export default function PortfoliosPage() {
               whiteSpace: 'nowrap',
             }}
           >
-            {loading ? 'Создание...' : '+ Создать'}
+            {loading ? t.loading : '+ ' + t.save}
           </button>
         </div>
       </div>
@@ -306,7 +231,7 @@ export default function PortfoliosPage() {
             color: '#94a3b8',
           }}
         >
-          <p style={{ fontSize: '14px' }}>Загрузка портфелей...</p>
+          <p style={{ fontSize: '14px' }}>{t.loading}</p>
         </div>
       ) : portfolioList.length === 0 ? (
         <div
@@ -332,10 +257,7 @@ export default function PortfoliosPage() {
           >
             <path d="M20 7h-4V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM10 5h4v2h-4V5z" />
           </svg>
-          <p style={{ fontSize: '16px', fontWeight: '500' }}>У вас пока нет портфелей</p>
-          <p style={{ fontSize: '13px', marginTop: '6px' }}>
-            Создайте первый портфель с помощью формы выше
-          </p>
+          <p style={{ fontSize: '16px', fontWeight: '500' }}>{t.dashboard.noDecisions}</p>
         </div>
       ) : (
         <div
@@ -407,7 +329,7 @@ export default function PortfoliosPage() {
                     borderRadius: '4px',
                     lineHeight: '1',
                   }}
-                  title="Удалить портфель"
+                  title={t.delete}
                 >
                   ×
                 </button>
@@ -422,7 +344,7 @@ export default function PortfoliosPage() {
                   minHeight: '18px',
                 }}
               >
-                {p.description || 'Без описания'}
+                {p.description || '—'}
               </p>
 
               {/* Footer */}
@@ -437,7 +359,7 @@ export default function PortfoliosPage() {
               >
                 <div>
                   <p style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '2px' }}>
-                    Стоимость портфеля
+                    {t.dashboard.portfolioValue}
                   </p>
                   <p
                     style={{
@@ -447,7 +369,7 @@ export default function PortfoliosPage() {
                       letterSpacing: '-0.02em',
                     }}
                   >
-                    ${(p.total_value || 0).toLocaleString()}
+                    {(p.total_value || 0).toLocaleString()} UZS
                   </p>
                 </div>
                 <button
@@ -466,19 +388,7 @@ export default function PortfoliosPage() {
                     gap: '4px',
                   }}
                 >
-                  Открыть
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
+                  →
                 </button>
               </div>
             </div>

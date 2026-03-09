@@ -1,7 +1,9 @@
 """
 Обновлённый db/base.py — импорт всех моделей для auto-create tables.
-Фаза 3, Сессия 4 — добавлены модели ThreadComment, TaskItem,
-Notification, UserPreferences.
+Этапы 2.1–3.1: добавлены модели макроданных, биржи, ИПЦ,
+компаний, AI Chat Log.
+
+ИНСТРУКЦИЯ: Замените существующий app/db/base.py целиком.
 """
 from app.db.session import Base
 from app.db.models.user import User
@@ -47,3 +49,12 @@ from app.db.models.architectural_principles import (
     SystemEvent, HitlReview, AnalyticsSnapshot,
     EventBusMessage, SystemConstraint,
 )
+# ═══ Этап 2, Сессия 2.1: Макроданные + Курсы валют ═══
+from app.db.models.macro_data import MacroIndicator, CurrencyRate
+# ═══ Этап 2, Сессия 2.2: Биржа UZSE + ИПЦ ═══
+from app.db.models.stock_exchange import StockQuote, StockEmitter
+from app.db.models.cpi_data import CPIRecord
+# ═══ Этап 2, Сессия 2.3: Поиск компаний по ИНН ═══
+from app.db.models.company_lookup import CompanyProfile
+# ═══ Этап 3, Сессия 3.1: AI Chat Log ═══
+from app.db.models.ai_chat_log import AIChatLog

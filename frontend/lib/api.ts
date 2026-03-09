@@ -966,3 +966,202 @@ export const architecturalPrinciples = {
 
   getConstraintsForReports: () => apiRequest('/arch/constraints/reports'),
 };
+
+// ─── Этап 2, Сессия 2.1: Макроэкономические данные (MACRO-DATA-001) ─────────
+
+export const macroData = {
+  // Категории показателей
+  categories: () => apiRequest('/macro/categories'),
+
+  // Показатели по категории
+  indicators: (params?: {
+    category?: string;
+    year_from?: number;
+    year_to?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/macro/indicators${q ? '?' + q : ''}`);
+  },
+
+  // Временной ряд одного показателя
+  indicator: (code: string) => apiRequest(`/macro/indicator/${code}`),
+
+  // Сводка для дашборда
+  dashboard: () => apiRequest('/macro/dashboard'),
+
+  // Синхронизация данных
+  sync: () => apiRequest('/macro/sync', { method: 'POST' }),
+
+  // История курса валюты
+  currencyHistory: (params?: {
+    code?: string;
+    days?: number;
+    date_from?: string;
+    date_to?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/macro/currency-history${q ? '?' + q : ''}`);
+  },
+
+  // Загрузить историю курсов с cbu.uz
+  syncCurrencyHistory: (code: string = 'USD', days: number = 90) =>
+    apiRequest(`/macro/currency-history/sync?code=${code}&days=${days}`, { method: 'POST' }),
+};
+
+// ─── Этап 2, Сессия 2.2: Биржа UZSE + ИПЦ ─────────────────────────────────
+
+export const stockExchange = {
+  // Сводка по рынку
+  overview: () => apiRequest('/stock'),
+
+  // Список эмитентов
+  issuers: (params?: { sector?: string; market?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.sector) sp.append('sector', params.sector);
+    if (params?.market) sp.append('market', params.market);
+    const q = sp.toString();
+    return apiRequest(`/stock/issuers${q ? '?' + q : ''}`);
+  },
+
+  // Список сделок
+  trades: (params?: { trade_date?: string; issuer_code?: string; limit?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.trade_date) sp.append('trade_date', params.trade_date);
+    if (params?.issuer_code) sp.append('issuer_code', params.issuer_code);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    const q = sp.toString();
+    return apiRequest(`/stock/trades${q ? '?' + q : ''}`);
+  },
+
+  // Дневные сводки
+  dailySummary: (params?: { trade_date?: string; issuer_code?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.trade_date) sp.append('trade_date', params.trade_date);
+    if (params?.issuer_code) sp.append('issuer_code', params.issuer_code);
+    const q = sp.toString();
+    return apiRequest(`/stock/daily-summary${q ? '?' + q : ''}`);
+  },
+
+  // Синхронизация с UZSE
+  sync: () => apiRequest('/stock/sync', { method: 'POST' }),
+
+  // Инициализация каталога эмитентов
+  initCatalog: () => apiRequest('/stock/init-catalog', { method: 'POST' }),
+};
+
+// ─── ИПЦ / Инфляция (stat.uz SDMX) ────────────────────────────────────────
+
+export const cpiData = {
+  // Сводка ИПЦ
+  overview: () => apiRequest('/cpi'),
+
+  // Временной ряд
+  timeSeries: (params?: { indicator_code?: string; comparison_type?: string; limit?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.indicator_code) sp.append('indicator_code', params.indicator_code);
+    if (params?.comparison_type) sp.append('comparison_type', params.comparison_type);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    const q = sp.toString();
+    return apiRequest(`/cpi/time-series${q ? '?' + q : ''}`);
+  },
+
+  // Список доступных наборов
+  datasets: () => apiRequest('/cpi/datasets'),
+
+  // Записи с фильтрацией
+  records: (params?: {
+    indicator_code?: string;
+    comparison_type?: string;
+    period_from?: string;
+    period_to?: string;
+    limit?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/cpi/records${q ? '?' + q : ''}`);
+  },
+
+  // Синхронизация одного набора
+  sync: (datasetKey: string = 'cpi_monthly') =>
+    apiRequest(`/cpi/sync?dataset_key=${datasetKey}`, { method: 'POST' }),
+
+  // Синхронизация всех наборов
+  syncAll: () => apiRequest('/cpi/sync-all', { method: 'POST' }),
+};
+
+// ─── Этап 2, Сессия 2.3: Поиск компаний по ИНН ────────────────────────────
+
+export const companyLookup = {
+  // Поиск компании (ИНН или название)
+  search: (query: string, searchOnline: boolean = true) =>
+    apiRequest('/company/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, search_online: searchOnline }),
+    }),
+
+  // Список компаний из кэша
+  list: (params?: { search?: string; status?: string; region?: string; limit?: number; offset?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/company/list${q ? '?' + q : ''}`);
+  },
+
+  // Профиль по ИНН
+  get: (inn: string) => apiRequest(`/company/${inn}`),
+
+  // Инициализация каталога
+  init: () => apiRequest('/company/init', { method: 'POST' }),
+};
+
+// ─── Этап 2, Сессия 2.4: Объединённый дашборд с реальными данными ──────────
+
+export const dashboardRealData = {
+  // Полная сводка: валюты, биржа, ИПЦ, компании, макро
+  get: () => apiRequest('/dashboard/realdata'),
+};
+
+// ─── Этап 3, Сессия 3.1: AI Gateway — оркестрация ИИ-провайдеров ───────────
+
+export const aiGateway = {
+  // Отправить запрос к AI (с автоматическим fallback)
+  chat: (data: {
+    messages: { role: string; content: string }[];
+    provider?: string;
+    specialization?: string;
+    temperature?: number;
+    max_tokens?: number;
+    system_prompt?: string;
+    use_cache?: boolean;
+  }) => apiRequest('/ai-gateway/chat', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Список провайдеров со статусами
+  providers: () => apiRequest('/ai-gateway/providers'),
+
+  // Проверка здоровья провайдеров
+  health: () => apiRequest('/ai-gateway/health'),
+
+  // Статистика использования
+  stats: () => apiRequest('/ai-gateway/stats'),
+};

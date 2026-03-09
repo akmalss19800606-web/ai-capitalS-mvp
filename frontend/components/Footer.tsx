@@ -1,8 +1,10 @@
 'use client';
+import { useLocale } from '@/lib/i18n';
 
 /* ─── Bloomberg-style Footer ─── */
 export default function Footer() {
   const year = new Date().getFullYear();
+  const { t } = useLocale();
 
   return (
     <footer style={{
@@ -32,7 +34,7 @@ export default function Footer() {
             </svg>
           </div>
           <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-            &copy; {year} AI Capital Management
+            {t.copyright(year)}
           </span>
         </div>
 
@@ -42,9 +44,9 @@ export default function Footer() {
           display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
           justifyContent: 'center',
         }}>
-          <span>Автор: Солиев Акмал Идиевич</span>
+          <span>{t.author}</span>
           <span style={{ color: '#d1d5db' }}>|</span>
-          <span>Свидетельство №009932, РАНХиГС</span>
+          <span>{t.certificate}</span>
         </div>
 
         {/* Right: contacts */}
@@ -89,7 +91,7 @@ export default function Footer() {
               <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
               <circle cx="12" cy="10" r="3"/>
             </svg>
-            г. Ташкент
+            {t.city}
           </span>
         </div>
       </div>

@@ -31,3 +31,7 @@ Thumbs.db
 # Docker volumes
 postgres_data/
 redis_data/
+
+backend/
+combined_fix/
+combined_sessions_2_1_to_3_1/

@@ -2,6 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { getActiveNavItem, HamburgerButton } from './Sidebar';
+import { useLocale, setStoredLocale, getStoredLocale } from '@/lib/i18n';
 
 /* ─── Header Component ─── */
 interface HeaderProps {
@@ -18,7 +19,7 @@ async function fetchUserSafe(): Promise<{ full_name: string; email: string } | n
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return { full_name: data.full_name || 'Пользователь', email: data.email || '' };
+    return { full_name: data.full_name || '', email: data.email || '' };
   } catch {
     return null;
   }
@@ -27,15 +28,18 @@ async function fetchUserSafe(): Promise<{ full_name: string; email: string } | n
 export default function Header({ onHamburgerClick }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t } = useLocale();
   const [user, setUser] = useState<{ full_name: string; email: string } | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const activeItem = getActiveNavItem(pathname);
+  const langRef = useRef<HTMLDivElement>(null);
+  const activeItem = getActiveNavItem(pathname, t);
 
   useEffect(() => {
     fetchUserSafe().then(u => {
       if (u) setUser(u);
-      else setUser({ full_name: 'Пользователь', email: '' });
+      else setUser({ full_name: t.header.defaultUser, email: '' });
     });
   }, [pathname]);
 
@@ -43,6 +47,9 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -58,6 +65,13 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
   const initials = user?.full_name
     ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
+
+  const langs = [
+    { code: 'ru', label: 'Русский', flag: 'RU' },
+    { code: 'uz', label: "O'zbek", flag: 'UZ' },
+    { code: 'en', label: 'English', flag: 'EN' },
+  ];
+  const currentLang = getStoredLocale();
 
   return (
     <header style={{
@@ -83,28 +97,76 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
             <span style={{ color: '#2563eb', display: 'flex', alignItems: 'center' }}>
               {activeItem.icon}
             </span>
-            <span style={{
-              fontSize: '15px', fontWeight: 600, color: '#111827',
-            }}>
+            <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
               {activeItem.label}
             </span>
           </div>
         )}
       </div>
 
-      {/* Right: status + user */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* Right: language + status + user */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Language switcher */}
+        <div ref={langRef} style={{ position: 'relative' }}>
+          <button onClick={() => setLangOpen(!langOpen)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              background: 'none', border: '1px solid #e5e7eb',
+              cursor: 'pointer', padding: '5px 10px', borderRadius: '8px',
+              fontSize: '12px', fontWeight: 500, color: '#374151',
+              transition: 'border-color 0.15s, background-color 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+            onMouseLeave={e => { if (!langOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/>
+            </svg>
+            {langs.find(l => l.code === currentLang)?.flag || 'RU'}
+          </button>
+
+          {langOpen && (
+            <div style={{
+              position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+              width: '140px', backgroundColor: '#fff', borderRadius: '10px',
+              border: '1px solid #e5e7eb', boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+              padding: '4px', zIndex: 100,
+            }}>
+              {langs.map(l => (
+                <button key={l.code}
+                  onClick={() => { setStoredLocale(l.code as any); setLangOpen(false); }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '7px 10px', border: 'none', borderRadius: '6px',
+                    cursor: 'pointer', backgroundColor: currentLang === l.code ? '#eff6ff' : 'transparent',
+                    fontSize: '12px', color: currentLang === l.code ? '#2563eb' : '#374151',
+                    fontWeight: currentLang === l.code ? 600 : 400,
+                    textAlign: 'left', transition: 'background-color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (currentLang !== l.code) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                  onMouseLeave={e => { if (currentLang !== l.code) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
+                  <span style={{ fontWeight: 600, minWidth: '24px' }}>{l.flag}</span>
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* System status */}
         <div className="header-status" style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '4px 10px', borderRadius: '6px', backgroundColor: '#f0fdf4',
         }}>
           <div style={{
-            width: '6px', height: '6px', borderRadius: '50%',
-            backgroundColor: '#22c55e',
+            width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e',
           }} />
           <span style={{ fontSize: '12px', color: '#15803d', fontWeight: 500 }}>
-            Система активна
+            {t.systemActive}
           </span>
         </div>
 
@@ -141,12 +203,10 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
                 fontSize: '13px', fontWeight: 600, color: '#111827',
                 whiteSpace: 'nowrap', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
-                {user?.full_name || 'Загрузка...'}
+                {user?.full_name || t.loading}
               </div>
-              <div style={{
-                fontSize: '10px', color: '#9ca3af', marginTop: '1px',
-              }}>
-                Свидетельство №009932
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '1px' }}>
+                {t.certificateShort}
               </div>
             </div>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af"
@@ -191,7 +251,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
                   <circle cx="12" cy="12" r="3"/>
                   <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                 </svg>
-                Настройки
+                {t.header.settings}
               </button>
 
               <button onClick={() => { setDropdownOpen(false); router.push('/settings/security'); }}
@@ -210,7 +270,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                   <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
-                Безопасность
+                {t.header.security}
               </button>
 
               <div style={{ margin: '4px 0', borderTop: '1px solid #f3f4f6' }} />
@@ -232,7 +292,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
                   <polyline points="16 17 21 12 16 7"/>
                   <line x1="21" y1="12" x2="9" y2="12"/>
                 </svg>
-                Выйти из системы
+                {t.header.logout}
               </button>
             </div>
           )}
