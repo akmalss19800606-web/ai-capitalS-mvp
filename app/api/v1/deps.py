@@ -1,3 +1,7 @@
+"""
+Зависимости FastAPI — подключение к БД и авторизация.
+Этап 0, Сессия 0.1: Добавлена проверка is_active в get_current_user.
+"""
 from typing import Generator
 
 from fastapi import Depends, HTTPException, status
@@ -31,10 +35,24 @@ def get_current_user(
     payload = decode_token(token)
     if payload is None:
         raise credentials_exception
-    user_id: int = payload.get("sub")
+
+    # Блокировка MFA-pending токенов (они не дают доступ к API)
+    if payload.get("type") == "mfa_pending":
+        raise credentials_exception
+
+    user_id = payload.get("sub")
     if user_id is None:
         raise credentials_exception
+
     user = db.query(User).filter(User.id == int(user_id)).first()
     if user is None:
         raise credentials_exception
+
+    # Проверка is_active (Этап 0, Сессия 0.1)
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Аккаунт деактивирован. Обратитесь к администратору.",
+        )
+
     return user

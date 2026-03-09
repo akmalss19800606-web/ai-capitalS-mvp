@@ -56,12 +56,72 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Согласование',
+    path: '/workflows',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <rect x="2" y="6" width="6" height="6" rx="1" />
+            <rect x="16" y="6" width="6" height="6" rx="1" />
+            <rect x="9" y="14" width="6" height="6" rx="1" />
+            <path d="M8 9h8" />
+            <path d="M12 9v5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Аналитика',
+    path: '/analytics',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M3 3l3 3M21 3l-3 3M3 21l3-3M21 21l-3-3" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'AI-Аналитика',
     path: '/ai-analytics',
     icon: (
       <Icon
         paths={
           <path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8L12 2z" />
+        }
+      />
+    ),
+  },
+  {
+    label: 'Стресс-тест',
+    path: '/stress-testing',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polygon points="13 8 8 14 11 14 11 18 16 12 13 12 13 8" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Ретроспектива',
+    path: '/retrospective',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </>
         }
       />
     ),
@@ -95,6 +155,35 @@ const NAV_ITEMS = [
     ),
   },
   {
+    label: 'Визуализации',
+    path: '/charts',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M18 20V10M12 20V4M6 20v-6" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Дашборды',
+    path: '/dashboard-builder',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <rect x="3" y="3" width="7" height="9" rx="1" />
+            <rect x="14" y="3" width="7" height="5" rx="1" />
+            <rect x="14" y="12" width="7" height="9" rx="1" />
+            <rect x="3" y="16" width="7" height="5" rx="1" />
+          </>
+        }
+      />
+    ),
+  },
+  {
     label: 'Отчёты',
     path: '/report',
     icon: (
@@ -103,6 +192,97 @@ const NAV_ITEMS = [
           <>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
             <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Импорт/Экспорт',
+    path: '/data-exchange',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M16 3h5v5" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <path d="M8 21H3v-5" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+            <path d="M21 14v5a2 2 0 0 1-2 2h-5" />
+            <path d="M3 10V5a2 2 0 0 1 2-2h5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'API Gateway',
+    path: '/api-gateway',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Адаптеры',
+    path: '/market-adapters',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z" />
+            <path d="M2 12h20" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Совместная работа',
+    path: '/collaboration',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Архитектура',
+    path: '/architecture',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </>
+        }
+      />
+    ),
+  },
+  {
+    label: 'Безопасность',
+    path: '/settings/security',
+    icon: (
+      <Icon
+        paths={
+          <>
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" opacity="0" />
           </>
         }
       />

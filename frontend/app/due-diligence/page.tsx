@@ -1,160 +1,937 @@
-﻿'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { apiRequest } from '@/lib/api';
+'use client';
 
-const industries = [
-  "Оптовая торговля продовольствием",
-  "Строительство и недвижимость",
-  "Производство и переработка",
-  "Транспорт и логистика",
-  "IT и технологии",
-  "Сельское хозяйство",
-  "Финансы и банкинг",
-  "Розничная торговля",
-  "Туризм и гостиничный бизнес",
-  "Образование",
-];
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell, Legend,
+} from 'recharts';
+import { ddScoring, decisions } from '@/lib/api';
 
-const examples = [
-  { company: "Узбекнефтегаз", industry: "Производство и переработка" },
-  { company: "Kapitalbank", industry: "Финансы и банкинг" },
-  { company: "Оптовый рынок муки Ташкент", industry: "Оптовая торговля продовольствием" },
-  { company: "Artel Electronics", industry: "Производство и переработка" },
-];
+// ─── Color Palette ─────────────────────────────────────────────────────────
+const C = {
+  bg: '#f8fafc',
+  text: '#1e293b',
+  textMuted: '#64748b',
+  textLight: '#94a3b8',
+  primary: '#3b82f6',
+  primaryLight: '#eff6ff',
+  success: '#22c55e',
+  successLight: '#f0fdf4',
+  error: '#ef4444',
+  errorLight: '#fef2f2',
+  warning: '#f59e0b',
+  warningLight: '#fffbeb',
+  purple: '#8b5cf6',
+  purpleLight: '#f5f3ff',
+  cyan: '#06b6d4',
+  border: '#e2e8f0',
+  white: '#ffffff',
+  cardShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+} as const;
 
-const STATUS_MAP: Record<string, { label: string; bg: string; border: string; text: string; icon: string }> = {
-  'НАДЁЖНО':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
-  'НАДЕЖНО':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
-  'TRUSTED':      { label: 'НАДЁЖНО',      bg: '#f0fdf4', border: '#86efac', text: '#16a34a', icon: '✅' },
-  'ВЫСОКИЙ РИСК': { label: 'ВЫСОКИЙ РИСК', bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', icon: '🚨' },
-  'HIGH RISK':    { label: 'ВЫСОКИЙ РИСК', bg: '#fef2f2', border: '#fca5a5', text: '#dc2626', icon: '🚨' },
-  'ОСТОРОЖНО':    { label: 'ОСТОРОЖНО',    bg: '#fffbeb', border: '#fcd34d', text: '#d97706', icon: '⚠️' },
-  'CAUTION':      { label: 'ОСТОРОЖНО',    bg: '#fffbeb', border: '#fcd34d', text: '#d97706', icon: '⚠️' },
+// ─── Shared Styles ──────────────────────────────────────────────────────────
+const card: React.CSSProperties = {
+  backgroundColor: C.white,
+  borderRadius: '12px',
+  boxShadow: C.cardShadow,
+  padding: '20px',
 };
 
-const getStatusStyle = (status: string) => {
-  return STATUS_MAP[status] || STATUS_MAP['ОСТОРОЖНО'];
+const btnPrimary: React.CSSProperties = {
+  backgroundColor: C.primary,
+  color: C.white,
+  borderRadius: '8px',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '10px 20px',
+  fontSize: '14px',
+  fontWeight: 600,
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  transition: 'background 0.15s',
 };
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '9px 12px',
+  border: `1px solid ${C.border}`,
+  borderRadius: '8px',
+  fontSize: '14px',
+  color: C.text,
+  backgroundColor: C.white,
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block',
+  fontSize: '13px',
+  fontWeight: 600,
+  color: C.textMuted,
+  marginBottom: '6px',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
+
+// ─── SVG Icons ──────────────────────────────────────────────────────────────
+const IconSearch = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const IconClipboard = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+  </svg>
+);
+
+const IconSpinner = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.primary} strokeWidth="2.5" strokeLinecap="round">
+    <path d="M12 2 a10 10 0 0 1 10 10" opacity="1" />
+    <path d="M22 12 a10 10 0 0 1-10 10" opacity="0.4" />
+    <path d="M12 22 a10 10 0 0 1-10-10" opacity="0.2" />
+    <path d="M2 12 a10 10 0 0 1 10-10" opacity="0.1" />
+    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+  </svg>
+);
+
+const IconAlert = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.error} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+const IconEmpty = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={C.textLight} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" /><path d="M8 12h8M12 8v8" />
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const IconX = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.error} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const IconFlag = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.error} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />
+  </svg>
+);
+
+const IconTrend = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" />
+  </svg>
+);
+
+// ─── Shared UI Components ───────────────────────────────────────────────────
+function LoadingState({ text = 'Вычисление...' }: { text?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '14px' }}>
+      <IconSpinner />
+      <span style={{ color: C.textMuted, fontSize: '14px', fontWeight: 500 }}>{text}</span>
+    </div>
+  );
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div style={{ ...card, backgroundColor: C.errorLight, border: '1px solid #fecaca', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <IconAlert />
+      <div>
+        <div style={{ fontWeight: 600, color: C.error, fontSize: '14px', marginBottom: '4px' }}>Ошибка</div>
+        <div style={{ color: '#b91c1c', fontSize: '13px', lineHeight: 1.5 }}>{message}</div>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ text = 'Введите параметры и запустите DD-скоринг' }: { text?: string }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '14px' }}>
+      <IconEmpty />
+      <span style={{ color: C.textMuted, fontSize: '14px', textAlign: 'center', maxWidth: '300px', lineHeight: 1.6 }}>{text}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: '0 0 14px 0' }}>{children}</h3>
+  );
+}
+
+// ─── Score Badge ────────────────────────────────────────────────────────────
+function ScoreBadge({ score, size = 'sm' }: { score: number; size?: 'sm' | 'lg' }) {
+  const color = score >= 75 ? C.success : score >= 55 ? C.warning : C.error;
+  const bg = score >= 75 ? C.successLight : score >= 55 ? C.warningLight : C.errorLight;
+  const isLg = size === 'lg';
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      backgroundColor: bg, color, fontWeight: 700,
+      fontSize: isLg ? '28px' : '14px',
+      padding: isLg ? '8px 18px' : '3px 10px',
+      borderRadius: isLg ? '12px' : '8px',
+      minWidth: isLg ? '80px' : '42px',
+    }}>
+      {score.toFixed(1)}
+    </span>
+  );
+}
+
+// ─── Risk Level Badge ───────────────────────────────────────────────────────
+function RiskBadge({ level }: { level: string }) {
+  const map: Record<string, { label: string; color: string; bg: string }> = {
+    low: { label: 'Низкий', color: C.success, bg: C.successLight },
+    medium: { label: 'Умеренный', color: C.warning, bg: C.warningLight },
+    high: { label: 'Высокий', color: '#ea580c', bg: '#fff7ed' },
+    critical: { label: 'Критический', color: C.error, bg: C.errorLight },
+  };
+  const m = map[level] || map.medium;
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: '5px',
+      backgroundColor: m.bg, color: m.color, fontWeight: 700,
+      fontSize: '13px', padding: '4px 12px', borderRadius: '8px',
+    }}>
+      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: m.color }} />
+      {m.label}
+    </span>
+  );
+}
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+interface CategoryDetail {
+  category: string; subcategory: string; score: number;
+  weight: number; findings: string; recommendation: string;
+}
+interface ChecklistItem {
+  id: string; category: string; item: string;
+  status: string; priority: string; note: string | null;
+}
+interface BenchmarkItem {
+  benchmark_name: string; benchmark_score: number;
+  delta: number; percentile: number;
+}
+interface RedFlagItem { flag: string; severity: string; description: string; }
+
+interface DDResult {
+  id: number;
+  decision_id?: number;
+  company_name: string;
+  industry?: string;
+  geography?: string;
+  total_score: number;
+  risk_level: string;
+  financial_score: number;
+  legal_score: number;
+  operational_score: number;
+  market_score: number;
+  management_score: number;
+  esg_score: number;
+  category_details: CategoryDetail[];
+  checklist: ChecklistItem[];
+  checklist_completion_pct: number;
+  benchmarks: BenchmarkItem[];
+  red_flags: RedFlagItem[];
+  recommendation: string;
+  created_at: string;
+}
+
+interface Decision { id: number; title: string; }
+
+// ─── Industries List ────────────────────────────────────────────────────────
+const INDUSTRIES = [
+  'Оптовая торговля продовольствием',
+  'Строительство и недвижимость',
+  'Производство и переработка',
+  'Транспорт и логистика',
+  'IT и технологии',
+  'Сельское хозяйство',
+  'Финансы и банкинг',
+  'Розничная торговля',
+  'Туризм и гостиничный бизнес',
+  'Образование',
+];
+
+const GEOGRAPHIES = [
+  'Узбекистан', 'Казахстан', 'Кыргызстан', 'Таджикистан',
+  'Туркменистан', 'Россия', 'Турция', 'ОАЭ', 'Сингапур', 'США',
+];
+
+// ─── Radar Colors ───────────────────────────────────────────────────────────
+const RADAR_FILL = '#3b82f6';
+const RADAR_STROKE = '#2563eb';
+
+// ─── Category Colors ────────────────────────────────────────────────────────
+const CATEGORY_COLORS: Record<string, string> = {
+  'Финансы': '#3b82f6',
+  'Юридические': '#8b5cf6',
+  'Операционные': '#06b6d4',
+  'Рыночные': '#22c55e',
+  'Управление': '#f59e0b',
+  'ESG': '#ec4899',
+};
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+const TABS = ['Обзор', 'Чеклист', 'Бенчмарки', 'Детализация'] as const;
+type Tab = typeof TABS[number];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ═══════════════════════════════════════════════════════════════════════════
 export default function DueDiligencePage() {
-  const router = useRouter();
+  // ─── State ────────────────────────────────────────────────────────────
+  const [decisionsList, setDecisionsList] = useState<Decision[]>([]);
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
-  const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
+  const [geography, setGeography] = useState('Узбекистан');
+  const [decisionId, setDecisionId] = useState<number | ''>('');
+  const [revenueMln, setRevenueMln] = useState('');
+  const [profitMargin, setProfitMargin] = useState('');
+  const [debtToEquity, setDebtToEquity] = useState('');
+  const [yearsInBiz, setYearsInBiz] = useState('');
+  const [employeeCount, setEmployeeCount] = useState('');
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) router.push('/login');
+  const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<DDResult | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('Обзор');
+  const [checklistFilter, setChecklistFilter] = useState<string>('all');
+
+  // ─── Load Decisions ───────────────────────────────────────────────────
+  const loadData = useCallback(async () => {
+    setLoadingData(true);
+    try {
+      const res = await decisions.list({ per_page: 100 });
+      const items = Array.isArray(res) ? res : (res?.items || []);
+      setDecisionsList(items.map((d: any) => ({ id: d.id, title: d.title })));
+    } catch (e: any) {
+      console.error('Load decisions error:', e);
+    } finally {
+      setLoadingData(false);
+    }
   }, []);
 
-  const handleCheck = async () => {
+  useEffect(() => { loadData(); }, [loadData]);
+
+  // ─── Run Scoring ──────────────────────────────────────────────────────
+  const runScoring = async () => {
     if (!companyName.trim()) return;
     setLoading(true);
-    setResult(null);
+    setError(null);
     try {
-      const res = await apiRequest('/ai/due-diligence', {
-        method: 'POST',
-        body: JSON.stringify({ company_name: companyName, industry, country: 'Uzbekistan' })
-      });
+      const payload: any = {
+        company_name: companyName.trim(),
+        geography,
+      };
+      if (industry) payload.industry = industry;
+      if (decisionId) payload.decision_id = Number(decisionId);
+      if (revenueMln) payload.revenue_mln = Number(revenueMln);
+      if (profitMargin) payload.profit_margin_pct = Number(profitMargin);
+      if (debtToEquity) payload.debt_to_equity = Number(debtToEquity);
+      if (yearsInBiz) payload.years_in_business = Number(yearsInBiz);
+      if (employeeCount) payload.employee_count = Number(employeeCount);
+
+      const res = await ddScoring.run(payload);
       setResult(res);
-    } catch (e) {
-      alert('Ошибка анализа. Попробуйте ещё раз.');
+      setActiveTab('Обзор');
+    } catch (e: any) {
+      setError(e.message || 'Ошибка при DD-скоринге');
     } finally {
       setLoading(false);
     }
   };
 
+  // ─── Checklist Update ─────────────────────────────────────────────────
+  const handleChecklistUpdate = async (itemId: string, newStatus: string) => {
+    if (!result) return;
+    try {
+      const updated = await ddScoring.updateChecklist(result.id, {
+        item_id: itemId,
+        status: newStatus,
+      });
+      setResult(updated);
+    } catch (e: any) {
+      setError(e.message || 'Ошибка обновления чеклиста');
+    }
+  };
+
+  // ─── Radar Data ───────────────────────────────────────────────────────
+  const radarData = result ? [
+    { category: 'Финансы', score: result.financial_score, fullMark: 100 },
+    { category: 'Юридические', score: result.legal_score, fullMark: 100 },
+    { category: 'Операционные', score: result.operational_score, fullMark: 100 },
+    { category: 'Рыночные', score: result.market_score, fullMark: 100 },
+    { category: 'Управление', score: result.management_score, fullMark: 100 },
+    { category: 'ESG', score: result.esg_score, fullMark: 100 },
+  ] : [];
+
+  // ─── Score Cards ──────────────────────────────────────────────────────
+  const scoreCards = result ? [
+    { label: 'Финансы', score: result.financial_score, color: CATEGORY_COLORS['Финансы'] },
+    { label: 'Юридические', score: result.legal_score, color: CATEGORY_COLORS['Юридические'] },
+    { label: 'Операционные', score: result.operational_score, color: CATEGORY_COLORS['Операционные'] },
+    { label: 'Рыночные', score: result.market_score, color: CATEGORY_COLORS['Рыночные'] },
+    { label: 'Управление', score: result.management_score, color: CATEGORY_COLORS['Управление'] },
+    { label: 'ESG', score: result.esg_score, color: CATEGORY_COLORS['ESG'] },
+  ] : [];
+
+  // ─── Filtered Checklist ───────────────────────────────────────────────
+  const filteredChecklist = (result?.checklist || []).filter(item => {
+    if (checklistFilter === 'all') return true;
+    if (checklistFilter === 'pending') return item.status === 'pending';
+    if (checklistFilter === 'done') return item.status === 'passed' || item.status === 'failed' || item.status === 'na';
+    return item.category === checklistFilter;
+  });
+
+  const checklistCategories = [...new Set((result?.checklist || []).map(i => i.category))];
+
+  // ─── Benchmark bar chart data ─────────────────────────────────────────
+  const benchData = (result?.benchmarks || []).map(b => ({
+    name: b.benchmark_name.length > 28 ? b.benchmark_name.slice(0, 25) + '...' : b.benchmark_name,
+    fullName: b.benchmark_name,
+    delta: b.delta,
+    benchmark: b.benchmark_score,
+    percentile: b.percentile,
+    color: b.delta >= 0 ? C.success : b.delta < -5 ? C.error : C.warning,
+  }));
+
+  // ═════════════════════════════════════════════════════════════════════
+  // RENDER
+  // ═════════════════════════════════════════════════════════════════════
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-        <button onClick={() => router.push('/')} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>← Назад</button>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b' }}>Due Diligence AI</h1>
-          <p style={{ color: '#64748b', fontSize: '14px' }}>Проверка компании или отрасли перед инвестицией</p>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', backgroundColor: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: C.text }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
 
-      <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>Введите данные для проверки</h2>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '16px' }}>
-          <input
-            value={companyName}
-            onChange={e => setCompanyName(e.target.value)}
-            placeholder="Название компании или рынка"
-            style={{ flex: 2, minWidth: '200px', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-          />
-          <select
-            value={industry}
-            onChange={e => setIndustry(e.target.value)}
-            style={{ flex: 1, minWidth: '200px', padding: '11px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-          >
-            <option value="">Выберите отрасль</option>
-            {industries.map((ind, i) => <option key={i} value={ind}>{ind}</option>)}
-          </select>
-          <button onClick={handleCheck} disabled={loading || !companyName.trim()} style={{ padding: '11px 24px', borderRadius: '8px', backgroundColor: '#1e293b', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: (loading || !companyName.trim()) ? 0.6 : 1, minWidth: '160px' }}>
-            {loading ? 'Анализирую...' : 'Проверить'}
-          </button>
-        </div>
-        <div>
-          <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>Примеры:</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-            {examples.map((ex, i) => (
-              <button key={i} onClick={() => { setCompanyName(ex.company); setIndustry(ex.industry); }} style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#475569', fontSize: '12px', cursor: 'pointer' }}>
-                {ex.company}
-              </button>
-            ))}
+        {/* Page Header */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: C.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple }}>
+              <IconClipboard />
+            </div>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, color: C.text, margin: 0 }}>Due Diligence</h1>
           </div>
+          <p style={{ margin: 0, color: C.textMuted, fontSize: '14px' }}>
+            Автоматический скоринг, чеклист проверки и сравнение с отраслевыми бенчмарками
+          </p>
         </div>
-      </div>
 
-      {loading && (
-        <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '48px', border: '1px solid #e2e8f0', textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔍</div>
-          <p style={{ fontSize: '16px', fontWeight: '600', color: '#1e293b' }}>AI проводит Due Diligence...</p>
-          <p style={{ fontSize: '13px', color: '#64748b', marginTop: '8px' }}>Анализируем финансовую прозрачность, риски и репутацию</p>
-          <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
-            {['Финансы', 'Регуляторы', 'Репутация', 'ESG'].map((s, i) => (
-              <span key={i} style={{ padding: '4px 10px', borderRadius: '12px', backgroundColor: '#f1f5f9', fontSize: '11px', color: '#64748b' }}>{s}</span>
-            ))}
-          </div>
-        </div>
-      )}
+        {loadingData ? (
+          <div style={card}><LoadingState text="Загрузка данных..." /></div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
 
-      {result && !loading && (
-        <div>
-          {(() => {
-            const sc = getStatusStyle(result.status);
-            return (
-              <div style={{ backgroundColor: sc.bg, borderRadius: '12px', padding: '20px 24px', border: `1px solid ${sc.border}`, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ fontSize: '36px' }}>{sc.icon}</div>
-                <div>
-                  <p style={{ fontSize: '13px', color: sc.text, fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Статус проверки</p>
-                  <p style={{ fontSize: '24px', fontWeight: '800', color: sc.text }}>{sc.label}</p>
-                  <p style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>{result.company}{result.industry ? ` · ${result.industry}` : ''}</p>
+            {/* ─── LEFT PANEL: Input Form ──────────────────────────────── */}
+            <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <SectionTitle>Параметры скоринга</SectionTitle>
+
+              <div>
+                <label style={labelStyle}>Название компании *</label>
+                <input
+                  style={inputStyle}
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  placeholder="Например: ООО «Агро Плюс»"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Отрасль</label>
+                <select style={inputStyle} value={industry} onChange={e => setIndustry(e.target.value)}>
+                  <option value="">Не указана</option>
+                  {INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>География</label>
+                <select style={inputStyle} value={geography} onChange={e => setGeography(e.target.value)}>
+                  {GEOGRAPHIES.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Привязка к решению</label>
+                <select style={inputStyle} value={decisionId} onChange={e => setDecisionId(e.target.value === '' ? '' : Number(e.target.value))}>
+                  <option value="">Нет привязки</option>
+                  {decisionsList.map(d => <option key={d.id} value={d.id}>{d.title}</option>)}
+                </select>
+              </div>
+
+              {/* Optional financials */}
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: '12px' }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: C.textLight, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Финансовые показатели (опционально)
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Выручка (млн)</label>
+                    <input style={inputStyle} type="number" value={revenueMln} onChange={e => setRevenueMln(e.target.value)} placeholder="100" />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Маржа (%)</label>
+                    <input style={inputStyle} type="number" value={profitMargin} onChange={e => setProfitMargin(e.target.value)} placeholder="15" />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>D/E</label>
+                    <input style={inputStyle} type="number" step="0.1" value={debtToEquity} onChange={e => setDebtToEquity(e.target.value)} placeholder="1.5" />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Лет в бизнесе</label>
+                    <input style={inputStyle} type="number" value={yearsInBiz} onChange={e => setYearsInBiz(e.target.value)} placeholder="5" />
+                  </div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Сотрудников</label>
+                    <input style={inputStyle} type="number" value={employeeCount} onChange={e => setEmployeeCount(e.target.value)} placeholder="50" />
+                  </div>
                 </div>
               </div>
-            );
-          })()}
 
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>🤖</div>
-              <div>
-                <p style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>Детальный отчёт Due Diligence</p>
-                <p style={{ color: '#94a3b8', fontSize: '12px' }}>Powered by Groq LLaMA · AI Capital Management</p>
-              </div>
+              <button
+                style={{ ...btnPrimary, opacity: !companyName.trim() || loading ? 0.6 : 1, justifyContent: 'center', backgroundColor: C.purple }}
+                onClick={runScoring}
+                disabled={!companyName.trim() || loading}
+              >
+                {loading ? <IconSpinner /> : <IconSearch />}
+                {loading ? 'Анализ...' : 'Запустить DD-скоринг'}
+              </button>
             </div>
-            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <p style={{ fontSize: '14px', color: '#1e293b', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>{result.analysis}</p>
-            </div>
-            <div style={{ marginTop: '16px', padding: '12px 16px', backgroundColor: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
-              <p style={{ fontSize: '12px', color: '#3b82f6' }}>⚠️ Данный анализ носит информационный характер и создан на основе AI. Перед принятием инвестиционного решения рекомендуется провести независимую проверку.</p>
+
+            {/* ─── RIGHT PANEL: Results ─────────────────────────────── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {error && <ErrorState message={error} />}
+
+              {!result && !loading && !error && (
+                <div style={card}>
+                  <EmptyState text="Введите название компании, параметры и запустите автоматический DD-скоринг для оценки рисков" />
+                </div>
+              )}
+
+              {loading && (
+                <div style={card}><LoadingState text="Выполняется DD-скоринг..." /></div>
+              )}
+
+              {result && !loading && (
+                <>
+                  {/* Score Header */}
+                  <div style={{ ...card, borderLeft: `4px solid ${result.risk_level === 'low' ? C.success : result.risk_level === 'medium' ? C.warning : C.error}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: 700, color: C.text, marginBottom: '4px' }}>
+                          {result.company_name}
+                        </div>
+                        <div style={{ fontSize: '13px', color: C.textMuted }}>
+                          {result.industry && <span>{result.industry} &middot; </span>}
+                          {result.geography}
+                          {result.decision_id && <span> &middot; Решение #{result.decision_id}</span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <ScoreBadge score={result.total_score} size="lg" />
+                        <RiskBadge level={result.risk_level} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tabs */}
+                  <div style={{ display: 'flex', gap: '4px', backgroundColor: C.white, borderRadius: '10px', padding: '4px', boxShadow: C.cardShadow }}>
+                    {TABS.map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        style={{
+                          flex: 1,
+                          padding: '9px 16px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          transition: 'all 0.15s',
+                          backgroundColor: activeTab === tab ? C.primary : 'transparent',
+                          color: activeTab === tab ? C.white : C.textMuted,
+                        }}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* ─── TAB: Обзор ───────────────────────────────── */}
+                  {activeTab === 'Обзор' && (
+                    <>
+                      {/* Score Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        {scoreCards.map(sc => (
+                          <div key={sc.label} style={{ ...card, textAlign: 'center' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                              {sc.label}
+                            </div>
+                            <div style={{ fontSize: '26px', fontWeight: 700, color: sc.score >= 75 ? C.success : sc.score >= 55 ? sc.color : C.error }}>
+                              {sc.score.toFixed(1)}
+                            </div>
+                            <div style={{ width: '100%', height: '4px', backgroundColor: C.border, borderRadius: '2px', marginTop: '8px' }}>
+                              <div style={{ width: `${Math.min(100, sc.score)}%`, height: '100%', backgroundColor: sc.score >= 75 ? C.success : sc.score >= 55 ? sc.color : C.error, borderRadius: '2px', transition: 'width 0.4s' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Radar + Red Flags side by side */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        {/* Radar */}
+                        <div style={card}>
+                          <SectionTitle>Радарная диаграмма</SectionTitle>
+                          <ResponsiveContainer width="100%" height={300}>
+                            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="75%">
+                              <PolarGrid stroke={C.border} />
+                              <PolarAngleAxis dataKey="category" tick={{ fontSize: 12, fill: C.text }} />
+                              <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 10, fill: C.textLight }} />
+                              <Radar
+                                name="Скоринг"
+                                dataKey="score"
+                                stroke={RADAR_STROKE}
+                                fill={RADAR_FILL}
+                                fillOpacity={0.25}
+                                strokeWidth={2}
+                              />
+                              <Tooltip
+                                content={({ active, payload }: any) => {
+                                  if (!active || !payload?.length) return null;
+                                  const d = payload[0]?.payload;
+                                  return (
+                                    <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '8px 12px', boxShadow: C.cardShadow, fontSize: '13px' }}>
+                                      <div style={{ fontWeight: 600, marginBottom: '2px' }}>{d?.category}</div>
+                                      <div style={{ color: C.primary, fontWeight: 600 }}>{d?.score?.toFixed(1)} / 100</div>
+                                    </div>
+                                  );
+                                }}
+                              />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+
+                        {/* Red Flags + Recommendation */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                          {/* Red Flags */}
+                          {(result.red_flags || []).length > 0 && (
+                            <div style={card}>
+                              <SectionTitle>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                  <IconFlag /> Красные флаги ({result.red_flags.length})
+                                </span>
+                              </SectionTitle>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {result.red_flags.map((f, i) => {
+                                  const sevColor = f.severity === 'critical' ? C.error : f.severity === 'high' ? '#ea580c' : C.warning;
+                                  const sevBg = f.severity === 'critical' ? C.errorLight : f.severity === 'high' ? '#fff7ed' : C.warningLight;
+                                  const sevLabel = f.severity === 'critical' ? 'КРИТ.' : f.severity === 'high' ? 'ВЫСОК.' : 'СРЕДН.';
+                                  return (
+                                    <div key={i} style={{ backgroundColor: sevBg, borderRadius: '8px', padding: '10px 14px', borderLeft: `3px solid ${sevColor}` }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 700, color: sevColor, backgroundColor: C.white, padding: '2px 6px', borderRadius: '4px' }}>{sevLabel}</span>
+                                        <span style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>{f.flag}</span>
+                                      </div>
+                                      <div style={{ fontSize: '12px', color: C.textMuted, lineHeight: 1.5 }}>{f.description}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Recommendation */}
+                          <div style={{ ...card, backgroundColor: C.primaryLight, borderLeft: `4px solid ${C.primary}` }}>
+                            <SectionTitle>Рекомендация</SectionTitle>
+                            <p style={{ margin: 0, fontSize: '13px', lineHeight: 1.7, color: C.text }}>{result.recommendation}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ─── TAB: Чеклист ────────────────────────────── */}
+                  {activeTab === 'Чеклист' && (
+                    <div style={card}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                        <SectionTitle>
+                          Чеклист DD ({result.checklist_completion_pct?.toFixed(0)}% завершено)
+                        </SectionTitle>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {['all', 'pending', 'done', ...checklistCategories].map(f => (
+                            <button
+                              key={f}
+                              onClick={() => setChecklistFilter(f)}
+                              style={{
+                                padding: '5px 10px', border: 'none', borderRadius: '6px',
+                                cursor: 'pointer', fontSize: '12px', fontWeight: 500,
+                                backgroundColor: checklistFilter === f ? C.primary : C.bg,
+                                color: checklistFilter === f ? C.white : C.textMuted,
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {f === 'all' ? 'Все' : f === 'pending' ? 'Ожидают' : f === 'done' ? 'Завершены' : f}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div style={{ width: '100%', height: '6px', backgroundColor: C.border, borderRadius: '3px', marginBottom: '16px' }}>
+                        <div style={{
+                          width: `${result.checklist_completion_pct || 0}%`,
+                          height: '100%',
+                          backgroundColor: (result.checklist_completion_pct || 0) >= 80 ? C.success : (result.checklist_completion_pct || 0) >= 50 ? C.warning : C.primary,
+                          borderRadius: '3px',
+                          transition: 'width 0.3s',
+                        }} />
+                      </div>
+
+                      {/* Items */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {filteredChecklist.map(item => {
+                          const statusColors: Record<string, { bg: string; border: string }> = {
+                            pending: { bg: C.bg, border: C.border },
+                            passed: { bg: C.successLight, border: '#bbf7d0' },
+                            failed: { bg: C.errorLight, border: '#fecaca' },
+                            na: { bg: '#f1f5f9', border: C.border },
+                          };
+                          const sc = statusColors[item.status] || statusColors.pending;
+                          const prioColor = item.priority === 'critical' ? C.error : item.priority === 'high' ? '#ea580c' : item.priority === 'medium' ? C.warning : C.textLight;
+
+                          return (
+                            <div key={item.id} style={{
+                              display: 'flex', alignItems: 'center', gap: '10px',
+                              backgroundColor: sc.bg, border: `1px solid ${sc.border}`,
+                              borderRadius: '8px', padding: '10px 14px',
+                              transition: 'all 0.15s',
+                            }}>
+                              {/* Status indicator */}
+                              <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                                <button
+                                  onClick={() => handleChecklistUpdate(item.id, item.status === 'passed' ? 'pending' : 'passed')}
+                                  title="Пройден"
+                                  style={{
+                                    width: '26px', height: '26px', borderRadius: '6px', border: `1.5px solid ${item.status === 'passed' ? C.success : C.border}`,
+                                    backgroundColor: item.status === 'passed' ? C.successLight : C.white,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}
+                                >
+                                  {item.status === 'passed' && <IconCheck />}
+                                </button>
+                                <button
+                                  onClick={() => handleChecklistUpdate(item.id, item.status === 'failed' ? 'pending' : 'failed')}
+                                  title="Не пройден"
+                                  style={{
+                                    width: '26px', height: '26px', borderRadius: '6px', border: `1.5px solid ${item.status === 'failed' ? C.error : C.border}`,
+                                    backgroundColor: item.status === 'failed' ? C.errorLight : C.white,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  }}
+                                >
+                                  {item.status === 'failed' && <IconX />}
+                                </button>
+                              </div>
+
+                              {/* Content */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '13px', fontWeight: 500, color: C.text, lineHeight: 1.4 }}>{item.item}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                                  <span style={{ fontSize: '11px', color: C.textLight }}>{item.category}</span>
+                                  <span style={{ fontSize: '10px', fontWeight: 600, color: prioColor, backgroundColor: C.white, padding: '1px 5px', borderRadius: '4px', border: `1px solid ${prioColor}20` }}>
+                                    {item.priority === 'critical' ? 'КРИТ' : item.priority === 'high' ? 'ВЫСОК' : item.priority === 'medium' ? 'СРЕДН' : 'НИЗК'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* N/A button */}
+                              <button
+                                onClick={() => handleChecklistUpdate(item.id, item.status === 'na' ? 'pending' : 'na')}
+                                title="Неприменимо"
+                                style={{
+                                  padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 600,
+                                  border: `1px solid ${item.status === 'na' ? C.textMuted : C.border}`,
+                                  backgroundColor: item.status === 'na' ? '#e2e8f0' : C.white,
+                                  color: item.status === 'na' ? C.text : C.textLight,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                N/A
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─── TAB: Бенчмарки ──────────────────────────── */}
+                  {activeTab === 'Бенчмарки' && (
+                    <>
+                      {/* Delta bar chart */}
+                      <div style={card}>
+                        <SectionTitle>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            <IconTrend /> Отклонение от бенчмарков
+                          </span>
+                        </SectionTitle>
+                        <ResponsiveContainer width="100%" height={Math.max(200, benchData.length * 50)}>
+                          <BarChart
+                            data={benchData}
+                            layout="vertical"
+                            margin={{ top: 4, right: 40, left: 160, bottom: 4 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke={C.border} horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} unit="" />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: C.text }} width={155} />
+                            <Tooltip
+                              content={({ active, payload }: any) => {
+                                if (!active || !payload?.length) return null;
+                                const d = payload[0]?.payload;
+                                return (
+                                  <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 14px', boxShadow: C.cardShadow, fontSize: '13px' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>{d?.fullName}</div>
+                                    <div style={{ color: C.textMuted }}>Бенчмарк: {d?.benchmark}</div>
+                                    <div style={{ color: d?.delta >= 0 ? C.success : C.error, fontWeight: 600 }}>
+                                      Дельта: {d?.delta > 0 ? '+' : ''}{d?.delta?.toFixed(1)}
+                                    </div>
+                                    <div style={{ color: C.textMuted }}>Перцентиль: {d?.percentile}%</div>
+                                  </div>
+                                );
+                              }}
+                            />
+                            <Bar dataKey="delta" name="Дельта" radius={[0, 4, 4, 0]}>
+                              {benchData.map((entry, index) => (
+                                <Cell key={`bench-${index}`} fill={entry.color} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      {/* Benchmarks Table */}
+                      <div style={card}>
+                        <SectionTitle>Таблица бенчмарков</SectionTitle>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                            <thead>
+                              <tr>
+                                {['Категория', 'Бенчмарк', 'Дельта', 'Перцентиль'].map(h => (
+                                  <th key={h} style={{
+                                    textAlign: h === 'Категория' ? 'left' : 'right',
+                                    padding: '10px 12px',
+                                    borderBottom: `2px solid ${C.border}`,
+                                    color: C.textMuted, fontWeight: 600, fontSize: '12px',
+                                    textTransform: 'uppercase', letterSpacing: '0.04em',
+                                    whiteSpace: 'nowrap',
+                                  }}>
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(result.benchmarks || []).map((b, i) => (
+                                <tr key={i} style={{ backgroundColor: i % 2 === 0 ? C.bg : C.white }}>
+                                  <td style={{ padding: '10px 12px', fontWeight: 500, color: C.text }}>{b.benchmark_name}</td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right', color: C.textMuted }}>{b.benchmark_score}</td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: b.delta >= 0 ? C.success : C.error }}>
+                                    {b.delta > 0 ? '+' : ''}{b.delta.toFixed(1)}
+                                  </td>
+                                  <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                                    <span style={{
+                                      display: 'inline-block',
+                                      padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600,
+                                      backgroundColor: b.percentile >= 60 ? C.successLight : b.percentile >= 40 ? C.warningLight : C.errorLight,
+                                      color: b.percentile >= 60 ? C.success : b.percentile >= 40 ? C.warning : C.error,
+                                    }}>
+                                      {b.percentile}%
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* ─── TAB: Детализация ────────────────────────── */}
+                  {activeTab === 'Детализация' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
+                        const items = (result.category_details || []).filter(d => d.category === cat);
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={cat} style={{ ...card, borderTop: `3px solid ${color}` }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                              <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: 0 }}>{cat}</h3>
+                              <ScoreBadge score={
+                                cat === 'Финансы' ? result.financial_score :
+                                cat === 'Юридические' ? result.legal_score :
+                                cat === 'Операционные' ? result.operational_score :
+                                cat === 'Рыночные' ? result.market_score :
+                                cat === 'Управление' ? result.management_score :
+                                result.esg_score
+                              } />
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {items.map((d, idx) => (
+                                <div key={idx} style={{ backgroundColor: C.bg, borderRadius: '8px', padding: '12px 14px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>{d.subcategory}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ fontSize: '11px', color: C.textLight }}>Вес: {(d.weight * 100).toFixed(0)}%</span>
+                                      <span style={{
+                                        fontSize: '13px', fontWeight: 700,
+                                        color: d.score >= 75 ? C.success : d.score >= 55 ? C.warning : C.error,
+                                      }}>
+                                        {d.score.toFixed(1)}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div style={{ width: '100%', height: '4px', backgroundColor: C.border, borderRadius: '2px', marginBottom: '6px' }}>
+                                    <div style={{
+                                      width: `${Math.min(100, d.score)}%`,
+                                      height: '100%',
+                                      backgroundColor: d.score >= 75 ? C.success : d.score >= 55 ? color : C.error,
+                                      borderRadius: '2px',
+                                    }} />
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: C.textMuted, lineHeight: 1.5 }}>
+                                    {d.findings}
+                                  </div>
+                                  <div style={{ fontSize: '12px', color: d.score >= 60 ? C.success : C.warning, marginTop: '4px', fontStyle: 'italic' }}>
+                                    {d.recommendation}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
