@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 /* ─── Base ─── */
 * {
@@ -50,4 +50,14 @@ a {
 ::selection {
   background: #dbeafe;
   color: #1e40af;
+}
+
+
+/* ─── Этап 0.2: Responsive tables for mobile ─── */
+@media (max-width: 768px) {
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+  .page-content { padding: 12px !important; }
+}
+@media (max-width: 480px) {
+  .page-content { padding: 8px !important; }
 }
