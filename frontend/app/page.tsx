@@ -267,8 +267,8 @@ export default function OverviewDashboard() {
             }
           : prev
       );
-    } catch {
-      router.push('/login');
+    } catch (err) {
+      console.error('Dashboard load error:', err);
     } finally {
       setLoadingData(false);
     }
