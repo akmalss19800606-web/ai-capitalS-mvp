@@ -1,5 +1,72 @@
 ﻿@import "tailwindcss";
 
+/* ─── CSS Custom Properties (из design-tokens.ts) ─── */
+:root {
+  /* Primary */
+  --color-primary-50:  #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1e40af;
+
+  /* Success */
+  --color-success-50:  #f0fdf4;
+  --color-success-600: #16a34a;
+  --color-success-700: #15803d;
+
+  /* Warning */
+  --color-warning-50:  #fffbeb;
+  --color-warning-600: #ca8a04;
+
+  /* Error */
+  --color-error-50:  #fef2f2;
+  --color-error-600: #dc2626;
+
+  /* Neutral */
+  --color-neutral-0:   #ffffff;
+  --color-neutral-50:  #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+
+  /* Semantic */
+  --bg-app:     var(--color-neutral-50);
+  --bg-card:    var(--color-neutral-0);
+  --bg-sidebar: var(--color-neutral-0);
+  --text-primary:   var(--color-neutral-900);
+  --text-secondary: var(--color-neutral-600);
+  --text-muted:     var(--color-neutral-400);
+  --border:         var(--color-neutral-200);
+  --border-light:   var(--color-neutral-100);
+  --accent:         var(--color-primary-600);
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Transitions */
+  --transition-fast: all 0.1s ease;
+  --transition-normal: all 0.2s ease;
+}
+
 /* ─── Base ─── */
 * {
   box-sizing: border-box;
@@ -8,12 +75,14 @@
 }
 
 body {
-  background-color: #f8fafc;
-  color: #111827;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 input, textarea, select {
@@ -32,28 +101,49 @@ a {
 }
 
 /* ─── Scrollbar ─── */
-::-webkit-scrollbar {
-  width: 5px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
 
 /* ─── Selection ─── */
 ::selection {
-  background: #dbeafe;
-  color: #1e40af;
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
 }
 
+/* ─── Focus Ring (accessibility) ─── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
-/* ─── Этап 0.2: Responsive tables for mobile ─── */
+/* ─── Utility: Page Content ─── */
+.page-content {
+  padding: 24px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* ─── Utility: Fade-in animation ─── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+/* ─── Utility: Slide-in from left ─── */
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slideInLeft 0.25s ease forwards;
+}
+
+/* ─── Responsive tables for mobile (Этап 0.2) ─── */
 @media (max-width: 768px) {
   table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
   .page-content { padding: 12px !important; }
