@@ -1,8 +1,11 @@
-'use client';
+﻿'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { dashboard, portfolios as portfoliosApi } from '@/lib/api';
 import { useLocale } from '@/lib/i18n';
+import { colors, semantic, shadows, radius, spacing, typography, transitions, statusColors } from '@/lib/design-tokens';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 
 /* ─── Types ─── */
 interface DashboardData {
@@ -86,17 +89,17 @@ const STATUS_LABELS: Record<string, string> = {
   in_progress: 'В работе', completed: 'Завершено', rejected: 'Отклонено',
 };
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  draft: { bg: '#f1f5f9', text: '#64748b' },
-  review: { bg: '#fef3c7', text: '#b45309' },
-  approved: { bg: '#dcfce7', text: '#15803d' },
-  in_progress: { bg: '#dbeafe', text: '#1d4ed8' },
-  completed: { bg: '#ede9fe', text: '#6d28d9' },
-  rejected: { bg: '#fee2e2', text: '#b91c1c' },
+  draft: { bg: colors.neutral[100], text: colors.neutral[500] },
+  review: { bg: colors.warning[50], text: colors.warning[700] },
+  approved: { bg: colors.success[50], text: colors.success[700] },
+  in_progress: { bg: colors.primary[50], text: colors.primary[600] },
+  completed: { bg: colors.success[50], text: colors.success[700] },
+  rejected: { bg: colors.error[50], text: colors.error[700] },
 };
 const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  BUY: { label: 'Покупка', color: '#15803d' },
-  SELL: { label: 'Продажа', color: '#b91c1c' },
-  HOLD: { label: 'Удержание', color: '#b45309' },
+  BUY: { label: 'Покупка', color: colors.success[700] },
+  SELL: { label: 'Продажа', color: colors.error[700] },
+  HOLD: { label: 'Удержание', color: colors.warning[700] },
 };
 
 /* ─── Helpers ─── */
@@ -133,19 +136,19 @@ function KpiCard({ title, value, sub, accent, icon }: {
 }) {
   return (
     <div style={{
-      backgroundColor: '#fff', borderRadius: '12px', padding: '20px',
-      border: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: '8px',
+      backgroundColor: semantic.bgCard, borderRadius: radius.xl, padding: spacing[5],
+      border: `1px solid ${semantic.border}`, display: 'flex', flexDirection: 'column', gap: '8px',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '12px', color: '#6b7280', fontWeight: 500, lineHeight: 1.3 }}>{title}</span>
+        <span style={{ fontSize: '12px', color: semantic.textSecondary, fontWeight: 500, lineHeight: 1.3 }}>{title}</span>
         <div style={{
-          width: '34px', height: '34px', borderRadius: '8px',
+          width: '34px', height: '34px', borderRadius: radius.lg,
           backgroundColor: `${accent}12`, display: 'flex',
           alignItems: 'center', justifyContent: 'center', color: accent, flexShrink: 0,
         }}>{icon}</div>
       </div>
-      <span style={{ fontSize: '24px', fontWeight: 700, color: '#111827', lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</span>
-      {sub && <span style={{ fontSize: '11px', color: '#9ca3af' }}>{sub}</span>}
+      <span style={{ fontSize: '24px', fontWeight: 700, color: semantic.textPrimary, lineHeight: 1, letterSpacing: '-0.02em' }}>{value}</span>
+      {sub && <span style={{ fontSize: '11px', color: semantic.textMuted }}>{sub}</span>}
     </div>
   );
 }
@@ -155,24 +158,24 @@ function Section({ title, action, badge, children }: {
 }) {
   return (
     <div style={{
-      backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e5e7eb', overflow: 'hidden',
+      backgroundColor: semantic.bgCard, borderRadius: radius.xl, border: `1px solid ${semantic.border}`, overflow: 'hidden',
     }}>
       <div style={{
         padding: '14px 20px', borderBottom: '1px solid #f3f4f6',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{title}</span>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: semantic.textPrimary }}>{title}</span>
           {badge && (
             <span style={{
-              padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600,
-              backgroundColor: '#dcfce7', color: '#15803d',
+              padding: '2px 8px', borderRadius: radius.xl, fontSize: '11px', fontWeight: 600,
+              backgroundColor: '#dcfce7', color: colors.success[700],
             }}>{badge}</span>
           )}
         </div>
         {action && (
           <button onClick={action.onClick} style={{
-            fontSize: '12px', color: '#2563eb', background: 'none', border: 'none',
+            fontSize: '12px', color: colors.primary[600], background: 'none', border: 'none',
             cursor: 'pointer', fontWeight: 500,
           }}>{action.label}</button>
         )}
@@ -188,11 +191,11 @@ function CurrencyWidget({ rates, loading }: { rates: CurrencyRate[]; loading: bo
     <Section title="Курсы валют ЦБ" badge="live">
       <div style={{ padding: '4px 0' }}>
         {loading ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+          <div style={{ padding: '20px', textAlign: 'center', color: semantic.textMuted, fontSize: '13px' }}>
             Загрузка курсов...
           </div>
         ) : rates.length === 0 ? (
-          <div style={{ padding: '20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>
+          <div style={{ padding: '20px', textAlign: 'center', color: semantic.textMuted, fontSize: '13px' }}>
             Нет данных
           </div>
         ) : rates.map((r, i) => {
@@ -204,16 +207,16 @@ function CurrencyWidget({ rates, loading }: { rates: CurrencyRate[]; loading: bo
               borderBottom: i < rates.length - 1 ? '1px solid #f9fafb' : 'none',
             }}>
               <div style={{
-                width: '36px', height: '36px', borderRadius: '8px',
+                width: '36px', height: '36px', borderRadius: radius.lg,
                 backgroundColor: '#f3f4f6', display: 'flex',
                 alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 fontSize: '11px', fontWeight: 700, color: '#374151',
               }}>{r.code}</div>
               <div style={{ flex: 1, marginLeft: '12px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>{r.name_ru}</div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: semantic.textPrimary }}>{r.name_ru}</div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: semantic.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
                   {formatNumber(r.rate, 2)}
                 </div>
                 {r.diff !== 0 && (
@@ -240,35 +243,35 @@ function StockWidget({ data, onClick }: { data: StockMarketData; onClick: () => 
     <Section title="Биржа UZSE" action={{ label: 'Подробнее →', onClick }}>
       {!hasData ? (
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Данные не загружены</p>
+          <p style={{ fontSize: '13px', color: semantic.textMuted, marginBottom: '8px' }}>Данные не загружены</p>
           <button onClick={onClick} style={{
-            padding: '6px 14px', borderRadius: '6px', border: 'none',
-            backgroundColor: '#2563eb', color: '#fff', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+            padding: '6px 14px', borderRadius: radius.md, border: 'none',
+            backgroundColor: colors.primary[600], color: semantic.textInverse, fontSize: '12px', fontWeight: 500, cursor: 'pointer',
           }}>Перейти и синхронизировать</button>
         </div>
       ) : (
         <div style={{ padding: '16px 20px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Эмитенты</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>{data.total_issuers}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Эмитенты</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: semantic.textPrimary }}>{data.total_issuers}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Сделки</div>
-              <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827' }}>{formatNumber(data.total_trades)}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Сделки</div>
+              <div style={{ fontSize: '20px', fontWeight: 700, color: semantic.textPrimary }}>{formatNumber(data.total_trades)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Объём (шт)</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatNumber(data.total_volume)}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Объём (шт)</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: semantic.textPrimary }}>{formatNumber(data.total_volume)}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Оборот (UZS)</div>
-              <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatUZS(data.total_turnover)}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Оборот (UZS)</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: semantic.textPrimary }}>{formatUZS(data.total_turnover)}</div>
             </div>
           </div>
           {data.top_issuers.length > 0 && (
             <>
-              <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary, fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Лидеры по обороту
               </div>
               {data.top_issuers.slice(0, 3).map((issuer, i) => (
@@ -277,13 +280,13 @@ function StockWidget({ data, onClick }: { data: StockMarketData; onClick: () => 
                   borderBottom: i < Math.min(data.top_issuers.length, 3) - 1 ? '1px solid #f3f4f6' : 'none',
                 }}>
                   <div style={{
-                    width: '24px', height: '24px', borderRadius: '6px',
+                    width: '24px', height: '24px', borderRadius: radius.md,
                     background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: '10px', fontWeight: 700, flexShrink: 0,
+                    color: semantic.textInverse, fontSize: '10px', fontWeight: 700, flexShrink: 0,
                   }}>{i + 1}</div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 500, color: semantic.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {issuer.name}
                     </div>
                   </div>
@@ -295,7 +298,7 @@ function StockWidget({ data, onClick }: { data: StockMarketData; onClick: () => 
             </>
           )}
           {data.last_trade_date && (
-            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '10px' }}>
+            <div style={{ fontSize: '11px', color: semantic.textMuted, marginTop: '10px' }}>
               Последняя сделка: {data.last_trade_date}
             </div>
           )}
@@ -312,25 +315,25 @@ function CpiWidget({ data, onClick }: { data: CpiData; onClick: () => void }) {
     <Section title="Инфляция (ИПЦ)" action={{ label: 'Подробнее →', onClick }}>
       {!hasData ? (
         <div style={{ padding: '20px', textAlign: 'center' }}>
-          <p style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '8px' }}>Данные не загружены</p>
+          <p style={{ fontSize: '13px', color: semantic.textMuted, marginBottom: '8px' }}>Данные не загружены</p>
           <button onClick={onClick} style={{
-            padding: '6px 14px', borderRadius: '6px', border: 'none',
-            backgroundColor: '#7c3aed', color: '#fff', fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+            padding: '6px 14px', borderRadius: radius.md, border: 'none',
+            backgroundColor: '#7c3aed', color: semantic.textInverse, fontSize: '12px', fontWeight: 500, cursor: 'pointer',
           }}>Перейти и синхронизировать</button>
         </div>
       ) : (
         <div style={{ padding: '16px 20px' }}>
           {data.headline_value && (
             <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary, marginBottom: '4px' }}>
                 ИПЦ {data.headline_period || ''}
               </div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 700, color: '#111827', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '28px', fontWeight: 700, color: semantic.textPrimary, fontVariantNumeric: 'tabular-nums' }}>
                   {data.headline_value.toFixed(1)}%
                 </span>
                 {data.headline_comparison && (
-                  <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                  <span style={{ fontSize: '11px', color: semantic.textSecondary }}>
                     ({data.headline_comparison})
                   </span>
                 )}
@@ -339,17 +342,17 @@ function CpiWidget({ data, onClick }: { data: CpiData; onClick: () => void }) {
           )}
           <div style={{ display: 'flex', gap: '20px' }}>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Индикаторов</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{data.categories_count}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Индикаторов</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: semantic.textPrimary }}>{data.categories_count}</div>
             </div>
             <div>
-              <div style={{ fontSize: '11px', color: '#6b7280' }}>Записей</div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>{formatNumber(data.data_points)}</div>
+              <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Записей</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: semantic.textPrimary }}>{formatNumber(data.data_points)}</div>
             </div>
             {data.latest_year && (
               <div>
-                <div style={{ fontSize: '11px', color: '#6b7280' }}>Период</div>
-                <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827' }}>до {data.latest_year}</div>
+                <div style={{ fontSize: '11px', color: semantic.textSecondary }}>Период</div>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: semantic.textPrimary }}>до {data.latest_year}</div>
               </div>
             )}
           </div>
@@ -366,7 +369,7 @@ function CompanyWidget({ data, onClick }: { data: CompanyData; onClick: () => vo
       <div style={{ padding: '16px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
           <div style={{
-            width: '40px', height: '40px', borderRadius: '10px',
+            width: '40px', height: '40px', borderRadius: radius.xl,
             backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -374,16 +377,16 @@ function CompanyWidget({ data, onClick }: { data: CompanyData; onClick: () => vo
             </svg>
           </div>
           <div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>По ИНН или названию</div>
-            <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: semantic.textPrimary }}>По ИНН или названию</div>
+            <div style={{ fontSize: '11px', color: semantic.textMuted }}>
               {data.total_cached > 0 ? `${data.total_cached} компаний в кэше` : 'soliq.uz, orginfo.uz'}
             </div>
           </div>
         </div>
         <button onClick={onClick} style={{
-          width: '100%', padding: '10px 16px', borderRadius: '8px',
-          border: '1px solid #e5e7eb', backgroundColor: '#fafafa',
-          color: '#6b7280', fontSize: '13px', cursor: 'pointer', textAlign: 'left',
+          width: '100%', padding: '10px 16px', borderRadius: radius.lg,
+          border: `1px solid ${semantic.border}`, backgroundColor: '#fafafa',
+          color: semantic.textSecondary, fontSize: '13px', cursor: 'pointer', textAlign: 'left',
           display: 'flex', alignItems: 'center', gap: '8px',
           transition: 'border-color 0.15s, background-color 0.15s',
         }}
@@ -494,17 +497,17 @@ export default function OverviewDashboard() {
       {/* Page header */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
         <div>
-          <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, color: semantic.textPrimary, letterSpacing: '-0.02em' }}>
             {t.dashboardPage.title}
           </h1>
-          <p style={{ color: '#6b7280', marginTop: '4px', fontSize: '13px' }}>
+          <p style={{ color: semantic.textSecondary, marginTop: '4px', fontSize: '13px' }}>
             {dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <button onClick={() => router.push('/portfolios')} style={{
-            padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb',
-            backgroundColor: '#fff', color: '#374151', fontSize: '13px', fontWeight: 500,
+            padding: '8px 16px', borderRadius: radius.lg, border: `1px solid ${semantic.border}`,
+            backgroundColor: semantic.bgCard, color: '#374151', fontSize: '13px', fontWeight: 500,
             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
             transition: 'border-color 0.15s',
           }}
@@ -515,8 +518,8 @@ export default function OverviewDashboard() {
             {t.dashboardPage.portfolios}
           </button>
           <button onClick={() => router.push('/decisions')} style={{
-            padding: '8px 16px', borderRadius: '8px', border: 'none',
-            backgroundColor: '#2563eb', color: '#fff', fontSize: '13px', fontWeight: 500,
+            padding: '8px 16px', borderRadius: radius.lg, border: 'none',
+            backgroundColor: colors.primary[600], color: semantic.textInverse, fontSize: '13px', fontWeight: 500,
             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
             transition: 'background-color 0.15s',
           }}
@@ -586,7 +589,7 @@ export default function OverviewDashboard() {
           <Section title={t.dashboardPage.recentDecisions} action={{ label: t.dashboardPage.allDecisions, onClick: () => router.push('/decisions') }}>
             <div style={{ minHeight: '120px' }}>
               {loading ? (
-                <div style={{ padding: '32px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>{t.dashboardPage.loading}</div>
+                <div style={{ padding: '32px 20px', textAlign: 'center', color: semantic.textMuted, fontSize: '13px' }}>{t.dashboardPage.loading}</div>
               ) : !data?.recent_decisions?.length ? (
                 <div style={{ padding: '32px 20px', textAlign: 'center' }}>
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"
@@ -594,11 +597,11 @@ export default function OverviewDashboard() {
                     <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
                     <rect x="9" y="3" width="6" height="4" rx="1" />
                   </svg>
-                  <p style={{ fontSize: '13px', color: '#9ca3af' }}>{t.dashboardPage.noDecisions}</p>
+                  <p style={{ fontSize: '13px', color: semantic.textMuted }}>{t.dashboardPage.noDecisions}</p>
                   <p style={{ fontSize: '12px', color: '#d1d5db', marginTop: '4px' }}>{t.dashboardPage.createFirst}</p>
                 </div>
               ) : data.recent_decisions.map((d, i) => {
-                const typeInfo = TYPE_LABELS[d.decision_type] || { label: d.decision_type, color: '#6b7280' };
+                const typeInfo = TYPE_LABELS[d.decision_type] || { label: d.decision_type, color: semantic.textSecondary };
                 const statusInfo = STATUS_COLORS[d.status] || { bg: '#f3f4f6', text: '#6b7280' };
                 return (
                   <div key={d.id} style={{
@@ -607,17 +610,17 @@ export default function OverviewDashboard() {
                     borderBottom: i < data.recent_decisions.length - 1 ? '1px solid #f9fafb' : 'none',
                   }}>
                     <div style={{
-                      width: '38px', height: '38px', borderRadius: '8px',
+                      width: '38px', height: '38px', borderRadius: radius.lg,
                       backgroundColor: `${typeInfo.color}10`, display: 'flex',
                       alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     }}>
                       <span style={{ fontSize: '10px', fontWeight: 700, color: typeInfo.color }}>{typeInfo.label}</span>
                     </div>
                     <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {d.asset_name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({d.asset_symbol})</span>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: semantic.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {d.asset_name} <span style={{ color: semantic.textMuted, fontWeight: 400 }}>({d.asset_symbol})</span>
                       </div>
-                      <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                      <div style={{ fontSize: '11px', color: semantic.textMuted, marginTop: '2px' }}>
                         {formatUZS(d.total_value || d.price * d.amount)} · {d.amount} шт · {formatDate(d.created_at)}
                       </div>
                     </div>
@@ -638,17 +641,17 @@ export default function OverviewDashboard() {
           <Section title={t.dashboardPage.portfoliosSection} action={{ label: t.dashboardPage.manage, onClick: () => router.push('/portfolios') }}>
             <div style={{ minHeight: '100px' }}>
               {loading ? (
-                <div style={{ padding: '32px 20px', textAlign: 'center', color: '#9ca3af', fontSize: '13px' }}>{t.dashboardPage.loading}</div>
+                <div style={{ padding: '32px 20px', textAlign: 'center', color: semantic.textMuted, fontSize: '13px' }}>{t.dashboardPage.loading}</div>
               ) : !data?.portfolios?.length ? (
                 <div style={{ padding: '32px 20px', textAlign: 'center' }}>
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"
                     strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 10px', display: 'block' }}>
                     <path d="M20 7h-4V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z" />
                   </svg>
-                  <p style={{ fontSize: '13px', color: '#9ca3af' }}>{t.dashboardPage.noPortfolios}</p>
+                  <p style={{ fontSize: '13px', color: semantic.textMuted }}>{t.dashboardPage.noPortfolios}</p>
                   <button onClick={() => router.push('/portfolios')} style={{
-                    marginTop: '8px', padding: '6px 14px', borderRadius: '6px',
-                    backgroundColor: '#2563eb', color: '#fff', border: 'none',
+                    marginTop: '8px', padding: '6px 14px', borderRadius: radius.md,
+                    backgroundColor: colors.primary[600], color: semantic.textInverse, border: 'none',
                     fontSize: '12px', fontWeight: 500, cursor: 'pointer',
                   }}>{t.dashboardPage.createPortfolio}</button>
                 </div>
@@ -663,19 +666,19 @@ export default function OverviewDashboard() {
                   onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   <div style={{
-                    width: '36px', height: '36px', borderRadius: '8px',
+                    width: '36px', height: '36px', borderRadius: radius.lg,
                     background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontWeight: 700, fontSize: '14px', flexShrink: 0,
+                    color: semantic.textInverse, fontWeight: 700, fontSize: '14px', flexShrink: 0,
                   }}>
                     {p.name.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: semantic.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {p.name}
                     </div>
                   </div>
-                  <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                  <div style={{ fontVariantNumeric: 'tabular-nums', fontSize: '13px', fontWeight: 600, color: semantic.textPrimary }}>
                     {formatUZS(p.total_value)}
                   </div>
                 </div>
@@ -694,7 +697,7 @@ export default function OverviewDashboard() {
               <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {realData.macro.gdp_growth_pct != null && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>Рост ВВП</span>
+                    <span style={{ fontSize: '12px', color: semantic.textSecondary }}>Рост ВВП</span>
                     <span style={{ fontSize: '14px', fontWeight: 600, color: realData.macro.gdp_growth_pct >= 0 ? '#15803d' : '#b91c1c' }}>
                       {realData.macro.gdp_growth_pct >= 0 ? '+' : ''}{realData.macro.gdp_growth_pct.toFixed(1)}%
                     </span>
@@ -702,22 +705,22 @@ export default function OverviewDashboard() {
                 )}
                 {realData.macro.inflation_pct != null && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>Инфляция</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#b45309' }}>
+                    <span style={{ fontSize: '12px', color: semantic.textSecondary }}>Инфляция</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: colors.warning[700] }}>
                       {realData.macro.inflation_pct.toFixed(1)}%
                     </span>
                   </div>
                 )}
                 {realData.macro.population_mln != null && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: '#6b7280' }}>Население</span>
-                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                    <span style={{ fontSize: '12px', color: semantic.textSecondary }}>Население</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: semantic.textPrimary }}>
                       {realData.macro.population_mln.toFixed(1)} млн
                     </span>
                   </div>
                 )}
                 {realData.macro.data_year && (
-                  <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: semantic.textMuted, marginTop: '4px' }}>
                     Данные за {realData.macro.data_year} г. | stat.uz
                   </div>
                 )}
@@ -729,15 +732,15 @@ export default function OverviewDashboard() {
           <Section title={t.dashboardPage.quickActions}>
             <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {[
-                { label: t.dashboardPage.actions.dueDiligence, desc: t.dashboardPage.actions.ddDesc, path: '/due-diligence', color: '#111827' },
-                { label: t.dashboardPage.actions.marketUz, desc: t.dashboardPage.actions.marketDesc, path: '/market-uz', color: '#2563eb' },
+                { label: t.dashboardPage.actions.dueDiligence, desc: t.dashboardPage.actions.ddDesc, path: '/due-diligence', color: semantic.textPrimary },
+                { label: t.dashboardPage.actions.marketUz, desc: t.dashboardPage.actions.marketDesc, path: '/market-uz', color: colors.primary[600] },
                 { label: t.dashboardPage.actions.aiAnalytics, desc: t.dashboardPage.actions.aiDesc, path: '/ai-analytics', color: '#7c3aed' },
                 { label: t.dashboardPage.actions.macroData, desc: t.dashboardPage.actions.macroDesc, path: '/macro-uz', color: '#16a34a' },
-                { label: t.dashboardPage.actions.reports, desc: t.dashboardPage.actions.reportsDesc, path: '/report', color: '#b45309' },
+                { label: t.dashboardPage.actions.reports, desc: t.dashboardPage.actions.reportsDesc, path: '/report', color: colors.warning[700] },
               ].map((a) => (
                 <button key={a.path} onClick={() => router.push(a.path)} style={{
                   display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '10px 12px', borderRadius: '8px', border: 'none',
+                  padding: '10px 12px', borderRadius: radius.lg, border: 'none',
                   backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left',
                   width: '100%', transition: 'background-color 0.15s',
                 }}
@@ -749,8 +752,8 @@ export default function OverviewDashboard() {
                     backgroundColor: a.color, flexShrink: 0,
                   }} />
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: 500, color: '#111827' }}>{a.label}</div>
-                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>{a.desc}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: semantic.textPrimary }}>{a.label}</div>
+                    <div style={{ fontSize: '11px', color: semantic.textMuted }}>{a.desc}</div>
                   </div>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d1d5db"
                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
@@ -764,9 +767,9 @@ export default function OverviewDashboard() {
           {/* Data freshness indicator */}
           {realData?.data_freshness && (
             <div style={{
-              padding: '12px 16px', borderRadius: '10px',
+              padding: '12px 16px', borderRadius: radius.xl,
               backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0',
-              fontSize: '12px', color: '#15803d', display: 'flex', alignItems: 'center', gap: '8px',
+              fontSize: '12px', color: colors.success[700], display: 'flex', alignItems: 'center', gap: '8px',
             }}>
               <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#15803d', flexShrink: 0 }} />
               {realData.data_freshness}
