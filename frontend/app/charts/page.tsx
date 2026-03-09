@@ -504,9 +504,9 @@ function BubbleChart({ data }: { data: any }) {
       <div style={{ ...card, padding: '12px 16px', fontSize: '13px', border: `1px solid ${C.border}` }}>
         <p style={{ fontWeight: 600, marginBottom: '6px', color: C.text }}>{d.name}</p>
         <p style={{ color: C.textMuted }}>Категория: <span style={{ fontWeight: 600, color: getCategoryColor(d.category) }}>{d.category}</span></p>
-        <p style={{ color: C.textMuted }}>Доходность: <span style={{ fontWeight: 600, color: C.text }}>{d.x} млн ₽</span></p>
+        <p style={{ color: C.textMuted }}>Доходность: <span style={{ fontWeight: 600, color: C.text }}>{d.x} млн UZS</span></p>
         <p style={{ color: C.textMuted }}>Риск: <span style={{ fontWeight: 600, color: d.y >= 3 ? C.error : d.y === 2 ? C.warning : C.success }}>{riskLabels[d.y] || d.y}</span></p>
-        <p style={{ color: C.textMuted }}>Объём: <span style={{ fontWeight: 600, color: C.text }}>{d.z} млн ₽</span></p>
+        <p style={{ color: C.textMuted }}>Объём: <span style={{ fontWeight: 600, color: C.text }}>{d.z} млн UZS</span></p>
       </div>
     );
   };

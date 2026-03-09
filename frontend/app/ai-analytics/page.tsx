@@ -330,7 +330,7 @@ function MonteCarloTab({ decisionsList }: { decisionsList: Decision[] }) {
         </div>
 
         <div>
-          <label style={labelStyle}>Сумма инвестиции (₽)</label>
+          <label style={labelStyle}>Сумма инвестиции (UZS)</label>
           <input
             type="number"
             style={inputStyle}
@@ -400,9 +400,9 @@ function MonteCarloTab({ decisionsList }: { decisionsList: Decision[] }) {
           <>
             {/* KPI Row */}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <KpiCard label="P5 (пессимист)" value={`${fmt(result.percentile_5)} ₽`} color={C.error} />
-              <KpiCard label="Медиана (P50)" value={`${fmt(result.percentile_50)} ₽`} color={C.primary} />
-              <KpiCard label="P95 (оптимист)" value={`${fmt(result.percentile_95)} ₽`} color={C.success} />
+              <KpiCard label="P5 (пессимист)" value={`${fmt(result.percentile_5)} UZS`} color={C.error} />
+              <KpiCard label="Медиана (P50)" value={`${fmt(result.percentile_50)} UZS`} color={C.primary} />
+              <KpiCard label="P95 (оптимист)" value={`${fmt(result.percentile_95)} UZS`} color={C.success} />
               <KpiCard
                 label="Вер-ть убытка"
                 value={`${(result.probability_of_loss * 100).toFixed(1)}%`}

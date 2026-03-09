@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -417,12 +417,12 @@ export default function StressTestingPage() {
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                     <KpiCard
                       label="Портфель ДО"
-                      value={`${fmt(result.portfolio_value_before)} ₽`}
+                      value={`${fmt(result.portfolio_value_before)} UZS`}
                       color={C.primary}
                     />
                     <KpiCard
                       label="Портфель ПОСЛЕ"
-                      value={`${fmt(result.portfolio_value_after)} ₽`}
+                      value={`${fmt(result.portfolio_value_after)} UZS`}
                       color={C.error}
                     />
                     <KpiCard
@@ -465,8 +465,8 @@ export default function StressTestingPage() {
                               return (
                                 <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 14px', boxShadow: C.cardShadow, fontSize: '13px' }}>
                                   <div style={{ fontWeight: 600, marginBottom: '4px' }}>{d?.asset}</div>
-                                  <div style={{ color: C.textMuted }}>До: {fmt(d?.original_value)} ₽</div>
-                                  <div style={{ color: C.error }}>После: {fmt(d?.stressed_value)} ₽</div>
+                                  <div style={{ color: C.textMuted }}>До: {fmt(d?.original_value)} UZS</div>
+                                  <div style={{ color: C.error }}>После: {fmt(d?.stressed_value)} UZS</div>
                                   <div style={{ color: C.error, fontWeight: 600 }}>Убыток: {d?.loss_pct?.toFixed(1)}%</div>
                                 </div>
                               );
