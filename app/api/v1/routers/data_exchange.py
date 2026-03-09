@@ -142,10 +142,7 @@ def list_imports(
 
 
 @router.get("/import/target-fields/{entity}", response_model=list[TargetFieldInfo])
-def get_entity_target_fields(
-    entity: str,
-    current_user: User = Depends(get_current_user),
-):
+def get_entity_target_fields(entity: str):
     """Получить целевые поля для маппинга."""
     fields = get_target_fields(entity)
     return fields

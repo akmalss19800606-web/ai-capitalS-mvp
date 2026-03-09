@@ -50,9 +50,7 @@ def api_update_preferences(
 
 
 @router.get("/roles")
-def api_list_role_views(
-    current_user: User = Depends(get_current_user),
-):
+def api_list_role_views():
     """Список доступных роль-специфичных представлений."""
     return list_role_views()
 

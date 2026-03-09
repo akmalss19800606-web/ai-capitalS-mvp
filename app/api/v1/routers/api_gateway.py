@@ -135,9 +135,7 @@ def revoke_key(
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/webhooks/events")
-def get_events(
-    current_user: User = Depends(get_current_user),
-):
+def get_events():
     """Получить список доступных событий для подписки."""
     return {"events": get_available_events()}
 

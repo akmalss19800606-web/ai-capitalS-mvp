@@ -217,10 +217,7 @@ def hitl_statistics(
 
 
 @router.get("/hitl/disclaimers")
-def hitl_disclaimers(
-    applies_to: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
-):
+def hitl_disclaimers(applies_to: Optional[str] = None):
     return get_disclaimers(applies_to)
 
 
@@ -319,9 +316,7 @@ def bus_consume(
 
 
 @router.get("/bus/channels")
-def bus_channels(
-    current_user: User = Depends(get_current_user),
-):
+def bus_channels():
     return list_channels()
 
 

@@ -1,7 +1,7 @@
 """
 Обновлённый роутер аутентификации.
-Фаза 3, Сессия 3 — MFA, сессии, SSO-провайдеры.
-Этап 0, Сессия 0.1 — Валидация пароля при регистрации, is_active проверка.
+Фаза 3, Сессия 3 — добавлена поддержка MFA при логине,
+регистрация сессий, SSO-провайдеры (конфигурация).
 """
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,10 +10,7 @@ from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from app.api.v1.deps import get_db, get_current_user
-from app.core.security import (
-    verify_password, create_access_token, create_refresh_token,
-    hash_password, decode_access_token, validate_password_strength,
-)
+from app.core.security import verify_password, create_access_token, create_refresh_token, hash_password, decode_access_token
 from app.db.models.user import User
 from app.db.models.auth_security import SsoProvider
 from app.schemas.user import Token, UserCreate, UserRead
@@ -56,14 +53,6 @@ class SsoProviderCreate(BaseModel):
 
 @router.post("/register", response_model=UserRead)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
-    # Проверка силы пароля (Этап 0, Сессия 0.1)
-    password_error = validate_password_strength(user_in.password)
-    if password_error:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=password_error,
-        )
-
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
         raise HTTPException(
@@ -99,15 +88,9 @@ def login(
             detail="Incorrect email or password",
         )
 
-    # Проверка is_active (Этап 0, Сессия 0.1)
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Аккаунт деактивирован. Обратитесь к администратору.",
-        )
-
     # Проверить нужна ли MFA
     if mfa_service.is_mfa_required(db, user.id):
+        # Выдать временный токен (короткоживущий) для MFA-подтверждения
         from datetime import timedelta
         temp_token = create_access_token(
             data={"sub": str(user.id), "type": "mfa_pending"},
@@ -121,7 +104,7 @@ def login(
             mfa_temp_token=temp_token,
         )
 
-    # MFA не требуется — выдать полные токены
+    # MFA не требуется — выдать полные токены и зарегистрировать сессию
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
     jti = session_service.create_session(db, user.id, ip, ua)
@@ -156,13 +139,7 @@ def mfa_verify(
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Проверка is_active
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Аккаунт деактивирован",
-        )
-
+    # Создать сессию
     ip = request.client.host if request.client else None
     ua = request.headers.get("user-agent")
     jti = session_service.create_session(db, user.id, ip, ua)
@@ -190,12 +167,6 @@ def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    # Проверка is_active при обновлении токена
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Аккаунт деактивирован",
-        )
     new_access = create_access_token(data={"sub": str(user.id)})
     new_refresh = create_refresh_token(data={"sub": str(user.id)})
     return {

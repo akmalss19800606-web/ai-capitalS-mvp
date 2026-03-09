@@ -1,8 +1,8 @@
-﻿"""
-Decision Relationship model вЂ” РіСЂР°С„ РІР·Р°РёРјРѕСЃРІСЏР·РµР№ РјРµР¶РґСѓ СЂРµС€РµРЅРёСЏРјРё.
-РџРѕРґРґРµСЂР¶РёРІР°РµРјС‹Рµ С‚РёРїС‹ СЃРІСЏР·РµР№: depends_on, conflicts_with, alternative_to, duplicates, enables, blocks.
+"""
+Decision Relationship model — граф взаимосвязей между решениями.
+Поддерживаемые типы связей: depends_on, conflicts_with, alternative_to, duplicates, enables, blocks.
 
-Р¤Р°Р·Р° 1, РЎРµСЃСЃРёСЏ 2 вЂ” DM-GRAPH-001 (РіСЂР°С„ Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№)
+Фаза 1, Сессия 2 — DM-GRAPH-001 (граф зависимостей)
 """
 import enum
 from sqlalchemy import Column, Integer, String, DateTime, Enum, ForeignKey, Text, JSON, UniqueConstraint
@@ -12,18 +12,18 @@ from app.db.session import Base
 
 
 class RelationshipType(str, enum.Enum):
-    DEPENDS_ON = "depends_on"           # A Р·Р°РІРёСЃРёС‚ РѕС‚ B
-    CONFLICTS_WITH = "conflicts_with"   # A РєРѕРЅС„Р»РёРєС‚СѓРµС‚ СЃ B
-    ALTERNATIVE_TO = "alternative_to"   # A вЂ” Р°Р»СЊС‚РµСЂРЅР°С‚РёРІР° B
-    DUPLICATES = "duplicates"           # A РґСѓР±Р»РёСЂСѓРµС‚ B
-    ENABLES = "enables"                 # A РґРµР»Р°РµС‚ РІРѕР·РјРѕР¶РЅС‹Рј B
-    BLOCKS = "blocks"                   # A Р±Р»РѕРєРёСЂСѓРµС‚ B
+    DEPENDS_ON = "depends_on"           # A зависит от B
+    CONFLICTS_WITH = "conflicts_with"   # A конфликтует с B
+    ALTERNATIVE_TO = "alternative_to"   # A — альтернатива B
+    DUPLICATES = "duplicates"           # A дублирует B
+    ENABLES = "enables"                 # A делает возможным B
+    BLOCKS = "blocks"                   # A блокирует B
 
 
 class DecisionRelationship(Base):
     """
-    РќР°РїСЂР°РІР»РµРЅРЅР°СЏ СЃРІСЏР·СЊ РјРµР¶РґСѓ РґРІСѓРјСЏ СЂРµС€РµРЅРёСЏРјРё.
-    from_decision_id в†’ to_decision_id СЃ С‚РёРїРѕРј СЃРІСЏР·Рё.
+    Направленная связь между двумя решениями.
+    from_decision_id → to_decision_id с типом связи.
     """
     __tablename__ = "decision_relationships"
 
@@ -41,12 +41,12 @@ class DecisionRelationship(Base):
         index=True,
     )
     relationship_type = Column(Enum(RelationshipType), nullable=False)
-    description = Column(Text, nullable=True)       # РїРѕСЏСЃРЅРµРЅРёРµ СЃРІСЏР·Рё
-    metadata_json = Column(JSON, nullable=True)      # РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅС‹Рµ РґР°РЅРЅС‹Рµ
+    description = Column(Text, nullable=True)       # пояснение связи
+    metadata_json = Column(JSON, nullable=True)      # дополнительные данные
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # РЈРЅРёРєР°Р»СЊРЅРѕСЃС‚СЊ: РѕРґРЅР° СЃРІСЏР·СЊ РѕРїСЂРµРґРµР»С‘РЅРЅРѕРіРѕ С‚РёРїР° РјРµР¶РґСѓ РїР°СЂРѕР№ СЂРµС€РµРЅРёР№
+    # Уникальность: одна связь определённого типа между парой решений
     __table_args__ = (
         UniqueConstraint(
             "from_decision_id", "to_decision_id", "relationship_type",

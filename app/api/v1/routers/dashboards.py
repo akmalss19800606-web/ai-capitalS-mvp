@@ -22,9 +22,7 @@ router = APIRouter(prefix="/dashboards", tags=["Dashboards — Конструк�
 # ─── Widget type catalog ──────────────────────────────────────────────────
 
 @router.get("/widget-types")
-def get_widget_types(
-    current_user: User = Depends(get_current_user),
-):
+def get_widget_types():
     """Каталог доступных типов виджетов."""
     return WIDGET_TYPES
 

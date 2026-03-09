@@ -1,11 +1,7 @@
 """
-main.py — Этап 0, Сессия 0.3: Alembic миграции.
-
-Изменения:
-- Убран Base.metadata.create_all (заменён на Alembic)
-- Добавлен автоматический запуск миграций при старте
+Обновлённый main.py — добавлены роутеры Collaboration, Notifications, Preferences.
+Фаза 3, Сессия 4.
 """
-import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -31,62 +27,41 @@ from app.api.v1.routers.dashboards import router as dashboards_router
 from app.api.v1.routers.mfa import router as mfa_router
 from app.api.v1.routers.sessions import router as sessions_router
 from app.api.v1.routers.access_control import router as access_control_router
+# Фаза 3, Сессия 4: Совместная работа + Персонализация
 from app.api.v1.routers.collaboration import router as collaboration_router
 from app.api.v1.routers.notifications import router as notifications_router
 from app.api.v1.routers.preferences import router as preferences_router
+# Фаза 4, Сессия 1: Универсальный импорт/экспорт
 from app.api.v1.routers.data_exchange import router as data_exchange_router
+# Фаза 4, Сессия 2: API Gateway + Webhooks
 from app.api.v1.routers.api_gateway import router as api_gateway_router
+# Фаза 4, Сессия 3: Адаптеры внешних систем
 from app.api.v1.routers.market_adapters import router as market_adapters_router
+# Фаза 4, Сессия 4: Архитектурные принципы
 from app.api.v1.routers.architectural_principles import router as arch_principles_router
-from app.api.v1.routers.currency_rates import router as currency_rates_router
+from app.db.session import engine
+from app.db.base import Base
 from app.core.config import settings
 
-# ── Логирование ──
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# ── Alembic: автоматический запуск миграций при старте ──
-def run_migrations():
-    """Запускает Alembic upgrade head при старте приложения."""
-    try:
-        from alembic.config import Config
-        from alembic import command
-        import os
-        alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(__file__)), "alembic.ini"))
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic: миграции применены успешно")
-    except Exception as e:
-        logger.error(f"Alembic: ошибка миграции — {e}")
-        logger.warning("Alembic: приложение запускается без миграции")
-
-run_migrations()
-
-# ── Приложение ──
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
 )
 
-# ── Middleware: Security Headers ──
-from app.middleware.security_headers import SecurityHeadersMiddleware
-app.add_middleware(SecurityHeadersMiddleware)
-
-# ── Middleware: CORS ──
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=['*'],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept"],
+    allow_methods=['*'],
+    allow_headers=['*'],
 )
 
-# ── Middleware: Rate Limiting ──
+# Фаза 4, Сессия 2: Rate Limiting Middleware (EXCH-GW-001.1)
 from app.middleware.rate_limiter import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware, rate_limit=120, window_seconds=60)
 
-# ── Роутеры ──
+Base.metadata.create_all(bind=engine)
+
 app.include_router(health_router)
 app.include_router(auth_router, prefix='/api/v1')
 app.include_router(users_router, prefix='/api/v1')
@@ -109,20 +84,15 @@ app.include_router(dashboards_router, prefix='/api/v1')
 app.include_router(mfa_router, prefix='/api/v1')
 app.include_router(sessions_router, prefix='/api/v1')
 app.include_router(access_control_router, prefix='/api/v1')
+# Фаза 3, Сессия 4
 app.include_router(collaboration_router, prefix='/api/v1')
 app.include_router(notifications_router, prefix='/api/v1')
 app.include_router(preferences_router, prefix='/api/v1')
+# Фаза 4, Сессия 1
 app.include_router(data_exchange_router, prefix='/api/v1')
+# Фаза 4, Сессия 2
 app.include_router(api_gateway_router, prefix='/api/v1')
+# Фаза 4, Сессия 3
 app.include_router(market_adapters_router, prefix='/api/v1')
+# Фаза 4, Сессия 4
 app.include_router(arch_principles_router, prefix='/api/v1')
-app.include_router(currency_rates_router, prefix='/api/v1')
-
-# ── Лог при старте ──
-logger.info("=" * 60)
-logger.info(f"  {settings.APP_NAME} v{settings.APP_VERSION}")
-logger.info(f"  CORS origins: {settings.cors_origins_list}")
-logger.info(f"  DEBUG: {settings.DEBUG}")
-logger.info(f"  Migrations: Alembic (auto-upgrade at startup)")
-logger.info(f"  Docs: {'enabled' if settings.DEBUG else 'disabled (set DEBUG=true)'}")
-logger.info("=" * 60)
