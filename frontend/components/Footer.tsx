@@ -1,5 +1,8 @@
 'use client';
 import { useLocale } from '@/lib/i18n';
+import {
+  colors, semantic, spacing, transitions, typography, radius,
+} from '@/lib/design-tokens';
 
 /* ─── Bloomberg-style Footer ─── */
 export default function Footer() {
@@ -8,59 +11,56 @@ export default function Footer() {
 
   return (
     <footer style={{
-      backgroundColor: '#ffffff',
-      borderTop: '1px solid #e5e7eb',
-      padding: '16px 24px',
+      backgroundColor: semantic.bgCard,
+      borderTop: `1px solid ${semantic.border}`,
+      padding: `${spacing[4]} ${spacing[6]}`,
     }}>
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         alignItems: 'center',
-        gap: '12px',
+        gap: spacing[3],
       }}>
-        {/* Left: copyright */}
+        {/* Left: copyright + logo */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
+          display: 'flex', alignItems: 'center', gap: spacing[2],
         }}>
-          <div style={{
-            width: '20px', height: '20px', borderRadius: '5px',
-            background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-              stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-            </svg>
-          </div>
-          <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+          <img
+            src="/logo.png"
+            alt="AC"
+            width={20}
+            height={20}
+            style={{ borderRadius: radius.sm, flexShrink: 0 }}
+          />
+          <span style={{ fontSize: typography.fontSize.xs, color: semantic.textMuted }}>
             {t.copyright(year)}
           </span>
         </div>
 
-        {/* Center: author */}
+        {/* Center: author + certificate */}
         <div style={{
-          fontSize: '11px', color: '#9ca3af', textAlign: 'center',
-          display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+          fontSize: typography.fontSize.xs, color: semantic.textMuted, textAlign: 'center',
+          display: 'flex', alignItems: 'center', gap: spacing[1], flexWrap: 'wrap',
           justifyContent: 'center',
         }}>
           <span>{t.author}</span>
-          <span style={{ color: '#d1d5db' }}>|</span>
+          <span style={{ color: colors.neutral[300] }}>|</span>
           <span>{t.certificate}</span>
         </div>
 
         {/* Right: contacts */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          fontSize: '11px', color: '#9ca3af',
+          display: 'flex', alignItems: 'center', gap: spacing[3],
+          fontSize: typography.fontSize.xs, color: semantic.textMuted,
         }}>
           <a href="tel:+998987390198" style={{
-            color: '#9ca3af', textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: '4px',
-            transition: 'color 0.15s',
+            color: semantic.textMuted, textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: spacing[1],
+            transition: transitions.color,
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+            onMouseEnter={e => (e.currentTarget.style.color = semantic.textSecondary)}
+            onMouseLeave={e => (e.currentTarget.style.color = semantic.textMuted)}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -69,12 +69,12 @@ export default function Footer() {
             +998 98 739 01 98
           </a>
           <a href="mailto:atom2014@bk.ru" style={{
-            color: '#9ca3af', textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: '4px',
-            transition: 'color 0.15s',
+            color: semantic.textMuted, textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: spacing[1],
+            transition: transitions.color,
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+            onMouseEnter={e => (e.currentTarget.style.color = semantic.textSecondary)}
+            onMouseLeave={e => (e.currentTarget.style.color = semantic.textMuted)}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -84,7 +84,7 @@ export default function Footer() {
             atom2014@bk.ru
           </a>
           <span className="footer-location" style={{
-            display: 'flex', alignItems: 'center', gap: '4px',
+            display: 'flex', alignItems: 'center', gap: spacing[1],
           }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

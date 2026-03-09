@@ -2,6 +2,10 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useLocale } from '@/lib/i18n';
+import {
+  colors, semantic, shadows, radius, spacing, transitions,
+  typography, zIndex as zIndexTokens,
+} from '@/lib/design-tokens';
 
 /* ─── SVG Icon helper ─── */
 function Icon({ paths, size = 20, ...rest }: { paths: React.ReactNode; size?: number; [k: string]: any }) {
@@ -153,22 +157,23 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
   /* ─── Render nav groups (shared between desktop & mobile) ─── */
   const renderNavGroups = (isMobile: boolean) => (
-    <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 0' }}>
+    <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: `${spacing[2]} 0` }}>
       {NAV_GROUPS.map((group, gi) => {
         const groupTitle = (t.nav.groups as any)[group.titleKey] || group.titleKey;
         return (
-          <div key={gi} style={{ marginBottom: '4px' }}>
+          <div key={gi} style={{ marginBottom: spacing[1] }}>
             {(!collapsed || isMobile) && (
               <div style={{
-                padding: '8px 20px 4px',
-                fontSize: '10px', fontWeight: 600,
-                color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em',
+                padding: `${spacing[2]} ${spacing[5]} ${spacing[1]}`,
+                fontSize: '10px', fontWeight: typography.fontWeight.semibold,
+                color: semantic.textMuted, textTransform: 'uppercase',
+                letterSpacing: typography.letterSpacing.wider,
               }}>
                 {groupTitle}
               </div>
             )}
             {collapsed && !isMobile && gi > 0 && (
-              <div style={{ margin: '4px 12px', borderTop: '1px solid #f3f4f6' }} />
+              <div style={{ margin: `${spacing[1]} ${spacing[3]}`, borderTop: `1px solid ${semantic.borderLight}` }} />
             )}
             {group.items.map((item) => {
               const isActive = pathname === item.path ||
@@ -180,34 +185,34 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   title={isCollapsedDesktop ? label : undefined}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center',
-                    gap: '10px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    padding: isCollapsedDesktop ? '10px 0' : '8px 16px',
+                    gap: spacing[2], border: 'none', cursor: 'pointer', textAlign: 'left',
+                    padding: isCollapsedDesktop ? `${spacing[2]} 0` : `${spacing[2]} ${spacing[4]}`,
                     justifyContent: isCollapsedDesktop ? 'center' : 'flex-start',
-                    margin: isCollapsedDesktop ? '2px 0' : '1px 8px',
-                    borderRadius: isCollapsedDesktop ? '0' : '8px',
-                    backgroundColor: isActive ? '#eff6ff' : 'transparent',
-                    transition: 'background-color 0.15s, color 0.15s',
+                    margin: isCollapsedDesktop ? '2px 0' : `1px ${spacing[2]}`,
+                    borderRadius: isCollapsedDesktop ? '0' : radius.lg,
+                    backgroundColor: isActive ? semantic.bgActive : 'transparent',
+                    transition: transitions.color,
                   }}
                   onMouseEnter={e => {
-                    if (!isActive) e.currentTarget.style.backgroundColor = '#f9fafb';
+                    if (!isActive) e.currentTarget.style.backgroundColor = semantic.bgHover;
                   }}
                   onMouseLeave={e => {
                     if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
                   <span style={{
-                    color: isActive ? '#2563eb' : '#6b7280',
+                    color: isActive ? colors.primary[600] : semantic.textMuted,
                     display: 'flex', alignItems: 'center', flexShrink: 0,
-                    transition: 'color 0.15s',
+                    transition: transitions.color,
                   }}>
                     {item.icon}
                   </span>
                   {!isCollapsedDesktop && (
                     <span style={{
-                      fontSize: '13px', fontWeight: isActive ? 600 : 400,
-                      color: isActive ? '#1e40af' : '#374151',
+                      fontSize: typography.fontSize.base, fontWeight: isActive ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                      color: isActive ? colors.primary[700] : semantic.textSecondary,
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                      transition: 'color 0.15s',
+                      transition: transitions.color,
                     }}>
                       {label}
                     </span>
@@ -221,25 +226,31 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     </nav>
   );
 
-  /* ─── Logo block ─── */
+  /* ─── Logo block with logo.png ─── */
   const renderLogo = (showText: boolean) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-      <div style={{
-        width: '34px', height: '34px', borderRadius: '10px',
-        background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-          stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-        </svg>
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], overflow: 'hidden' }}>
+      <img
+        src="/logo.png"
+        alt="AI Capital"
+        width={34}
+        height={34}
+        style={{ borderRadius: radius.xl, flexShrink: 0 }}
+      />
       {showText && (
         <div style={{ whiteSpace: 'nowrap' }}>
-          <div style={{ fontWeight: 700, fontSize: '14px', color: '#111827', lineHeight: 1.2 }}>
+          <div style={{
+            fontWeight: typography.fontWeight.bold,
+            fontSize: typography.fontSize.md,
+            color: semantic.textPrimary,
+            lineHeight: typography.lineHeight.tight,
+          }}>
             {t.appName}
           </div>
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '1px' }}>
+          <div style={{
+            fontSize: typography.fontSize.xs,
+            color: semantic.textMuted,
+            marginTop: '1px',
+          }}>
             {t.appSub}
           </div>
         </div>
@@ -250,15 +261,17 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   /* ─── Version tag ─── */
   const versionTag = (
     <div style={{
-      padding: '12px 20px', borderTop: '1px solid #f3f4f6',
-      display: 'flex', alignItems: 'center', gap: '6px',
+      padding: `${spacing[3]} ${spacing[5]}`,
+      borderTop: `1px solid ${semantic.borderLight}`,
+      display: 'flex', alignItems: 'center', gap: spacing[1],
     }}>
-      <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 500 }}>
+      <span style={{ fontSize: '10px', color: semantic.textMuted, fontWeight: typography.fontWeight.medium }}>
         {t.version}
       </span>
       <span style={{
-        fontSize: '9px', padding: '1px 6px', borderRadius: '4px',
-        backgroundColor: '#fef3c7', color: '#92400e', fontWeight: 600,
+        fontSize: '9px', padding: `1px ${spacing[1]}`, borderRadius: radius.sm,
+        backgroundColor: colors.warning[100], color: colors.warning[700],
+        fontWeight: typography.fontWeight.semibold,
       }}>
         MVP
       </span>
@@ -267,11 +280,11 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
   const sidebarContent = (
     <div style={{
-      width: `${sidebarWidth}px`,
-      minWidth: `${sidebarWidth}px`,
+      width: sidebarWidth,
+      minWidth: sidebarWidth,
       height: '100vh',
-      backgroundColor: '#ffffff',
-      borderRight: '1px solid #e5e7eb',
+      backgroundColor: semantic.bgSidebar,
+      borderRight: `1px solid ${semantic.border}`,
       display: 'flex',
       flexDirection: 'column',
       transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1), min-width 0.25s cubic-bezier(0.4,0,0.2,1)',
@@ -279,8 +292,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     }}>
       {/* Logo header */}
       <div style={{
-        padding: collapsed ? '16px 12px' : '16px 20px',
-        borderBottom: '1px solid #f3f4f6',
+        padding: collapsed ? `${spacing[4]} ${spacing[3]}` : `${spacing[4]} ${spacing[5]}`,
+        borderBottom: `1px solid ${semantic.borderLight}`,
         display: 'flex',
         alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'space-between',
@@ -289,26 +302,27 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         {renderLogo(!collapsed)}
         {!collapsed && (
           <button onClick={onToggle} title="Свернуть" style={{
-            background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af',
-            padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', transition: 'color 0.15s',
+            background: 'none', border: 'none', cursor: 'pointer', color: semantic.textMuted,
+            padding: spacing[1], borderRadius: radius.md, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', transition: transitions.color,
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+            onMouseEnter={e => (e.currentTarget.style.color = semantic.textSecondary)}
+            onMouseLeave={e => (e.currentTarget.style.color = semantic.textMuted)}
           >
             <ChevronLeft />
           </button>
         )}
         {collapsed && (
           <button onClick={onToggle} title="Развернуть" style={{
-            position: 'absolute', right: '-12px', top: '20px', width: '24px', height: '24px',
-            borderRadius: '50%', backgroundColor: '#fff', border: '1px solid #e5e7eb',
+            position: 'absolute', right: '-12px', top: '20px', width: 24, height: 24,
+            borderRadius: radius.full, backgroundColor: semantic.bgCard,
+            border: `1px solid ${semantic.border}`,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#9ca3af', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', zIndex: 10,
-            transition: 'color 0.15s',
+            color: semantic.textMuted, boxShadow: shadows.xs, zIndex: 10,
+            transition: transitions.color,
           }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#374151')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+            onMouseEnter={e => (e.currentTarget.style.color = semantic.textSecondary)}
+            onMouseLeave={e => (e.currentTarget.style.color = semantic.textMuted)}
           >
             <ChevronRight />
           </button>
@@ -334,8 +348,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       {mobileOpen && (
         <div className="sidebar-mobile-overlay" onClick={onMobileClose}
           style={{
-            position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
-            zIndex: 200, transition: 'opacity 0.2s',
+            position: 'fixed', inset: 0, backgroundColor: semantic.bgOverlay,
+            zIndex: zIndexTokens.overlay, transition: transitions.normal,
           }}
         />
       )}
@@ -343,30 +357,32 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
       {/* Mobile sidebar */}
       <aside className="sidebar-mobile"
         style={{
-          position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 210,
+          position: 'fixed', top: 0, left: 0, height: '100vh',
+          zIndex: zIndexTokens.overlay + 10,
           transform: mobileOpen ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
         <div style={{ position: 'relative' }}>
           <button onClick={onMobileClose} style={{
-            position: 'absolute', top: '16px', right: '-44px',
-            width: '36px', height: '36px', borderRadius: '50%',
-            backgroundColor: '#fff', border: '1px solid #e5e7eb',
+            position: 'absolute', top: spacing[4], right: '-44px',
+            width: 36, height: 36, borderRadius: radius.full,
+            backgroundColor: semantic.bgCard, border: `1px solid ${semantic.border}`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            color: '#6b7280',
+            cursor: 'pointer', boxShadow: shadows.md,
+            color: semantic.textMuted,
           }}>
             <XIcon />
           </button>
           <div style={{
-            width: '256px', height: '100vh', backgroundColor: '#ffffff',
-            borderRight: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column',
+            width: 256, height: '100vh', backgroundColor: semantic.bgSidebar,
+            borderRight: `1px solid ${semantic.border}`, display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
           }}>
             {/* Logo */}
             <div style={{
-              padding: '16px 20px', borderBottom: '1px solid #f3f4f6',
+              padding: `${spacing[4]} ${spacing[5]}`,
+              borderBottom: `1px solid ${semantic.borderLight}`,
               display: 'flex', alignItems: 'center', minHeight: '60px',
             }}>
               {renderLogo(true)}
@@ -389,12 +405,12 @@ export function HamburgerButton({ onClick }: { onClick: () => void }) {
   return (
     <button className="hamburger-btn" onClick={onClick}
       style={{
-        background: 'none', border: 'none', cursor: 'pointer', color: '#374151',
-        padding: '6px', borderRadius: '8px', display: 'flex',
+        background: 'none', border: 'none', cursor: 'pointer', color: semantic.textSecondary,
+        padding: spacing[1], borderRadius: radius.lg, display: 'flex',
         alignItems: 'center', justifyContent: 'center',
-        transition: 'background-color 0.15s',
+        transition: transitions.color,
       }}
-      onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = semantic.bgHover)}
       onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
     >
       <MenuIcon />

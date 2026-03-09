@@ -3,6 +3,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { getActiveNavItem, HamburgerButton } from './Sidebar';
 import { useLocale, setStoredLocale, getStoredLocale } from '@/lib/i18n';
+import {
+  colors, semantic, shadows, radius, spacing, transitions,
+  typography, zIndex as zIndexTokens,
+} from '@/lib/design-tokens';
 
 /* ─── Header Component ─── */
 interface HeaderProps {
@@ -75,29 +79,33 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
 
   return (
     <header style={{
-      backgroundColor: '#ffffff',
-      borderBottom: '1px solid #e5e7eb',
-      padding: '0 24px',
+      backgroundColor: semantic.bgCard,
+      borderBottom: `1px solid ${semantic.border}`,
+      padding: `0 ${spacing[6]}`,
       height: '60px',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
       position: 'sticky',
       top: 0,
-      zIndex: 50,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+      zIndex: zIndexTokens.sticky,
+      boxShadow: shadows.xs,
     }}>
       {/* Left: hamburger + breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3] }}>
         <div className="hamburger-wrapper">
           <HamburgerButton onClick={onHamburgerClick} />
         </div>
         {activeItem && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#2563eb', display: 'flex', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2] }}>
+            <span style={{ color: colors.primary[600], display: 'flex', alignItems: 'center' }}>
               {activeItem.icon}
             </span>
-            <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+            <span style={{
+              fontSize: typography.fontSize.lg,
+              fontWeight: typography.fontWeight.semibold,
+              color: semantic.textPrimary,
+            }}>
               {activeItem.label}
             </span>
           </div>
@@ -105,18 +113,19 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
       </div>
 
       {/* Right: language + status + user */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3] }}>
         {/* Language switcher */}
         <div ref={langRef} style={{ position: 'relative' }}>
           <button onClick={() => setLangOpen(!langOpen)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              background: 'none', border: '1px solid #e5e7eb',
-              cursor: 'pointer', padding: '5px 10px', borderRadius: '8px',
-              fontSize: '12px', fontWeight: 500, color: '#374151',
-              transition: 'border-color 0.15s, background-color 0.15s',
+              display: 'flex', alignItems: 'center', gap: spacing[1],
+              background: 'none', border: `1px solid ${semantic.border}`,
+              cursor: 'pointer', padding: `5px ${spacing[2]}`, borderRadius: radius.lg,
+              fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium,
+              color: semantic.textSecondary,
+              transition: transitions.color,
             }}
-            onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+            onMouseEnter={e => { e.currentTarget.style.backgroundColor = semantic.bgHover; }}
             onMouseLeave={e => { if (!langOpen) e.currentTarget.style.backgroundColor = 'transparent'; }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -130,26 +139,27 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
 
           {langOpen && (
             <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '4px',
-              width: '140px', backgroundColor: '#fff', borderRadius: '10px',
-              border: '1px solid #e5e7eb', boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
-              padding: '4px', zIndex: 100,
+              position: 'absolute', top: '100%', right: 0, marginTop: spacing[1],
+              width: '140px', backgroundColor: semantic.bgCard, borderRadius: radius.xl,
+              border: `1px solid ${semantic.border}`, boxShadow: shadows.dropdown,
+              padding: spacing[1], zIndex: zIndexTokens.dropdown,
             }}>
               {langs.map(l => (
                 <button key={l.code}
                   onClick={() => { setStoredLocale(l.code as any); setLangOpen(false); }}
                   style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                    padding: '7px 10px', border: 'none', borderRadius: '6px',
-                    cursor: 'pointer', backgroundColor: currentLang === l.code ? '#eff6ff' : 'transparent',
-                    fontSize: '12px', color: currentLang === l.code ? '#2563eb' : '#374151',
-                    fontWeight: currentLang === l.code ? 600 : 400,
-                    textAlign: 'left', transition: 'background-color 0.15s',
+                    width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
+                    padding: `7px ${spacing[2]}`, border: 'none', borderRadius: radius.md,
+                    cursor: 'pointer', backgroundColor: currentLang === l.code ? semantic.bgActive : 'transparent',
+                    fontSize: typography.fontSize.sm,
+                    color: currentLang === l.code ? colors.primary[600] : semantic.textSecondary,
+                    fontWeight: currentLang === l.code ? typography.fontWeight.semibold : typography.fontWeight.normal,
+                    textAlign: 'left', transition: transitions.color,
                   }}
-                  onMouseEnter={e => { if (currentLang !== l.code) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                  onMouseEnter={e => { if (currentLang !== l.code) e.currentTarget.style.backgroundColor = semantic.bgHover; }}
                   onMouseLeave={e => { if (currentLang !== l.code) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
-                  <span style={{ fontWeight: 600, minWidth: '24px' }}>{l.flag}</span>
+                  <span style={{ fontWeight: typography.fontWeight.semibold, minWidth: '24px' }}>{l.flag}</span>
                   {l.label}
                 </button>
               ))}
@@ -159,13 +169,17 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
 
         {/* System status */}
         <div className="header-status" style={{
-          display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '4px 10px', borderRadius: '6px', backgroundColor: '#f0fdf4',
+          display: 'flex', alignItems: 'center', gap: spacing[1],
+          padding: `${spacing[1]} ${spacing[2]}`, borderRadius: radius.md,
+          backgroundColor: colors.success[50],
         }}>
           <div style={{
-            width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#22c55e',
+            width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.success[500],
           }} />
-          <span style={{ fontSize: '12px', color: '#15803d', fontWeight: 500 }}>
+          <span style={{
+            fontSize: typography.fontSize.sm, color: colors.success[700],
+            fontWeight: typography.fontWeight.medium,
+          }}>
             {t.systemActive}
           </span>
         </div>
@@ -174,14 +188,14 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
         <div ref={dropdownRef} style={{ position: 'relative' }}>
           <button onClick={() => setDropdownOpen(!dropdownOpen)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
+              display: 'flex', alignItems: 'center', gap: spacing[2],
               background: 'none', border: '1px solid transparent',
-              cursor: 'pointer', padding: '4px 8px', borderRadius: '10px',
-              transition: 'border-color 0.15s, background-color 0.15s',
+              cursor: 'pointer', padding: `${spacing[1]} ${spacing[2]}`, borderRadius: radius.xl,
+              transition: transitions.color,
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = '#f9fafb';
-              e.currentTarget.style.borderColor = '#e5e7eb';
+              e.currentTarget.style.backgroundColor = semantic.bgHover;
+              e.currentTarget.style.borderColor = semantic.border;
             }}
             onMouseLeave={e => {
               if (!dropdownOpen) {
@@ -191,27 +205,29 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
             }}
           >
             <div style={{
-              width: '32px', height: '32px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',
+              width: 32, height: 32, borderRadius: radius.full,
+              background: colors.gradient.accent,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#fff', fontSize: '12px', fontWeight: 700, flexShrink: 0,
+              color: semantic.textInverse, fontSize: typography.fontSize.sm,
+              fontWeight: typography.fontWeight.bold, flexShrink: 0,
             }}>
               {initials}
             </div>
             <div className="header-user-info" style={{ textAlign: 'left' }}>
               <div style={{
-                fontSize: '13px', fontWeight: 600, color: '#111827',
+                fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold,
+                color: semantic.textPrimary,
                 whiteSpace: 'nowrap', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis',
               }}>
                 {user?.full_name || t.loading}
               </div>
-              <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '1px' }}>
+              <div style={{ fontSize: '10px', color: semantic.textMuted, marginTop: '1px' }}>
                 {t.certificateShort}
               </div>
             </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af"
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={semantic.textMuted}
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{ transition: 'transform 0.2s', transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
+              style={{ transition: transitions.normal, transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }}>
               <polyline points="6 9 12 15 18 9"/>
             </svg>
           </button>
@@ -219,31 +235,35 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
           {/* Dropdown menu */}
           {dropdownOpen && (
             <div style={{
-              position: 'absolute', top: '100%', right: 0, marginTop: '6px',
-              width: '220px', backgroundColor: '#fff', borderRadius: '12px',
-              border: '1px solid #e5e7eb', boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
-              padding: '6px', zIndex: 100,
+              position: 'absolute', top: '100%', right: 0, marginTop: spacing[1],
+              width: '220px', backgroundColor: semantic.bgCard, borderRadius: radius.xl,
+              border: `1px solid ${semantic.border}`, boxShadow: shadows.dropdown,
+              padding: spacing[1], zIndex: zIndexTokens.dropdown,
             }}>
               <div style={{
-                padding: '10px 12px', borderBottom: '1px solid #f3f4f6', marginBottom: '4px',
+                padding: `${spacing[2]} ${spacing[3]}`,
+                borderBottom: `1px solid ${semantic.borderLight}`, marginBottom: spacing[1],
               }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
+                <div style={{
+                  fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.semibold,
+                  color: semantic.textPrimary,
+                }}>
                   {user?.full_name}
                 </div>
-                <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                <div style={{ fontSize: typography.fontSize.xs, color: semantic.textMuted, marginTop: '2px' }}>
                   {user?.email}
                 </div>
               </div>
 
               <button onClick={() => { setDropdownOpen(false); router.push('/settings'); }}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 12px', border: 'none', borderRadius: '8px',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
+                  padding: `${spacing[2]} ${spacing[3]}`, border: 'none', borderRadius: radius.lg,
                   cursor: 'pointer', backgroundColor: 'transparent',
-                  fontSize: '13px', color: '#374151', textAlign: 'left',
-                  transition: 'background-color 0.15s',
+                  fontSize: typography.fontSize.base, color: semantic.textSecondary, textAlign: 'left',
+                  transition: transitions.color,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = semantic.bgHover)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -256,13 +276,13 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
 
               <button onClick={() => { setDropdownOpen(false); router.push('/settings/security'); }}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 12px', border: 'none', borderRadius: '8px',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
+                  padding: `${spacing[2]} ${spacing[3]}`, border: 'none', borderRadius: radius.lg,
                   cursor: 'pointer', backgroundColor: 'transparent',
-                  fontSize: '13px', color: '#374151', textAlign: 'left',
-                  transition: 'background-color 0.15s',
+                  fontSize: typography.fontSize.base, color: semantic.textSecondary, textAlign: 'left',
+                  transition: transitions.color,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#f9fafb')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = semantic.bgHover)}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -273,17 +293,17 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
                 {t.header.security}
               </button>
 
-              <div style={{ margin: '4px 0', borderTop: '1px solid #f3f4f6' }} />
+              <div style={{ margin: `${spacing[1]} 0`, borderTop: `1px solid ${semantic.borderLight}` }} />
 
               <button onClick={handleLogout}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
-                  padding: '8px 12px', border: 'none', borderRadius: '8px',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
+                  padding: `${spacing[2]} ${spacing[3]}`, border: 'none', borderRadius: radius.lg,
                   cursor: 'pointer', backgroundColor: 'transparent',
-                  fontSize: '13px', color: '#dc2626', textAlign: 'left',
-                  transition: 'background-color 0.15s',
+                  fontSize: typography.fontSize.base, color: colors.error[600], textAlign: 'left',
+                  transition: transitions.color,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = colors.error[50])}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
