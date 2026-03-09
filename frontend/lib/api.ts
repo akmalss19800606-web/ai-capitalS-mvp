@@ -1,4 +1,11 @@
-const API_URL = '/api/v1';
+﻿const API_URL = '/api/v1';
+
+function setCookie(n: string, v: string, days: number = 7) {
+  document.cookie = n + '=' + encodeURIComponent(v) + '; path=/; expires=' + new Date(Date.now() + days * 864e5).toUTCString() + '; SameSite=Lax';
+}
+function removeCookie(n: string) {
+  document.cookie = n + '=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+}
 
 export async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -22,6 +29,7 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
         if (refreshRes.ok) {
           const data = await refreshRes.json();
           localStorage.setItem('token', data.access_token);
+          setCookie('access_token', data.access_token);
           if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
           headers['Authorization'] = `Bearer ${data.access_token}`;
           const retryRes = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
@@ -32,6 +40,7 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
+        removeCookie('access_token');
         window.location.href = '/login';
       }
     }
@@ -53,6 +62,8 @@ export const auth = {
     });
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
+    localStorage.setItem('token', data.access_token);
+    setCookie('access_token', data.access_token);
     if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
     return data;
   },
