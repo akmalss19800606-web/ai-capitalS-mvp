@@ -66,7 +66,7 @@ app.add_middleware(
 from app.middleware.rate_limiter import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware, rate_limit=120, window_seconds=60)
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)  # Убрано: используем Alembic миграции
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix='/api/v1')
