@@ -83,6 +83,8 @@ export function Button({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      aria-disabled={disabled || undefined}
       style={{
         display: 'inline-flex',
         alignItems: 'center',

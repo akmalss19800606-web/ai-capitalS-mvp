@@ -123,7 +123,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
   const currentLang = getStoredLocale();
 
   return (
-    <header style={{
+    <header role="banner" aria-label="Верхняя панель" style={{
       backgroundColor: semantic.bgCard,
       borderBottom: `1px solid ${semantic.border}`,
       padding: `0 ${spacing[6]}`,

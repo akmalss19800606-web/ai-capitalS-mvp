@@ -79,7 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
       </head>
       <body>
@@ -93,6 +93,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
         {showSidebar ? (
           <div className="flex min-h-screen">
+            {/* ACC-001: Skip to main content */}
+            <a href="#main-content" className="skip-link">
+              Перейти к содержимому
+            </a>
             {/* Sidebar */}
             <Sidebar
               collapsed={sidebarCollapsed}
@@ -103,6 +107,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main area */}
             <main
+              id="main-content"
+              role="main"
               className="main-area flex-1 min-h-screen flex flex-col"
               style={{ marginLeft: `${sidebarWidth}px` }}
             >
@@ -110,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Header onHamburgerClick={() => setMobileOpen(true)} />
 
               {/* Page content */}
-              <div className="page-content p-6 flex-1">
+              <div className="page-content p-6 flex-1" role="region" aria-label="Основное содержимое">
                 {children}
               </div>
 

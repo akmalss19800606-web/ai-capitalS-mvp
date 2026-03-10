@@ -248,10 +248,44 @@ a {
   color: var(--color-primary-700);
 }
 
-/* ─── Focus Ring (accessibility) ─── */
+/* ─── ACC-001: Accessibility Enhancements ─── */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Skip to content link (keyboard nav) */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 8px 16px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 0 0 6px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 0;
+}
+
+/* Focus trap utility for modals */
+.focus-trap-active {
+  overflow: hidden;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .skeleton-shimmer { animation: none !important; }
 }
 
 /* ─── Utility: Page Content ─── */
@@ -259,6 +293,18 @@ a {
   padding: 24px 32px;
   max-width: 1440px;
   margin: 0 auto;
+}
+
+/* ─── UI-004: Loading Spinner Animation ─── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── UI-005: Monospace font for numeric data ─── */
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /* ─── UI-002: Skeleton Shimmer Animation ─── */
