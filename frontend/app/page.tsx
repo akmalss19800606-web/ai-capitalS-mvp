@@ -440,13 +440,13 @@ export default function OverviewDashboard() {
       try {
         const pList = await portfoliosApi.list();
         setData({
-          total_portfolio_value: (pList || []).reduce((a: number, p: any) => a + (p.total_value || 0), 0),
+          total_portfolio_value: (pList || []).reduce((a: number, p: unknown) => a + (p.total_value || 0), 0),
           portfolio_count: (pList || []).length,
           total_decisions: 0, active_decisions: 0,
           total_investment_value: 0, high_priority_count: 0,
           status_counts: {}, type_counts: {},
           recent_decisions: [],
-          portfolios: (pList || []).map((p: any) => ({ id: p.id, name: p.name, total_value: p.total_value || 0 })),
+          portfolios: (pList || []).map((p: unknown) => ({ id: p.id, name: p.name, total_value: p.total_value || 0 })),
         });
       } catch { /* empty state */ }
     } finally { setLoading(false); }
@@ -472,8 +472,8 @@ export default function OverviewDashboard() {
           const all = await res.json();
           const keyCodes = ['USD', 'EUR', 'GBP', 'RUB', 'CNY'];
           const currencies = all
-            .filter((r: any) => keyCodes.includes(r.Ccy))
-            .map((r: any) => ({
+            .filter((r: unknown) => keyCodes.includes(r.Ccy))
+            .map((r: unknown) => ({
               code: r.Ccy,
               name_ru: r.CcyNm_RU || r.CcyNm_EN || r.Ccy,
               rate: parseFloat(r.Rate),

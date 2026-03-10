@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.api.v1.deps import get_current_user
-from app.services.portfolio_analytics_service import (
+from app.services.portfolio_analytics import (
     calculate_dcf,
     what_if_analysis,
     monte_carlo_simulation,

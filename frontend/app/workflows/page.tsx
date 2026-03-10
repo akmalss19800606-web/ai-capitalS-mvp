@@ -19,7 +19,7 @@ interface WorkflowDefinition {
   name: string;
   description?: string;
   trigger_type: string;
-  trigger_condition?: Record<string, any>;
+  trigger_condition?: Record<string, unknown>;
   is_active: boolean;
   is_default: boolean;
   steps_template: StepTemplate[];
@@ -54,7 +54,7 @@ interface WorkflowInstance {
   started_by: number;
   started_at: string;
   completed_at?: string;
-  metadata_json?: Record<string, any>;
+  metadata_json?: Record<string, unknown>;
   steps: WorkflowStep[];
   definition_name?: string;
   decision_name?: string;
@@ -300,7 +300,7 @@ export default function WorkflowsPage() {
       setInstances(instsRes.items || []);
       setMyTasks(tasksRes.items || []);
       setAllDecisions((decisionsRes.items || []) as Decision[]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка загрузки данных');
     }
     setLoading(false);
@@ -337,7 +337,7 @@ export default function WorkflowsPage() {
         steps: [{ order: 1, name: '', step_type: 'approval', role: 'analyst', sla_hours: 24 }],
       });
       await loadAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка создания шаблона');
     }
   };
@@ -347,7 +347,7 @@ export default function WorkflowsPage() {
     try {
       await workflows.deleteDefinition(id);
       await loadAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка удаления');
     }
   };
@@ -362,7 +362,7 @@ export default function WorkflowsPage() {
       setShowLaunch(false);
       setLaunchForm({ definition_id: 0, decision_id: 0 });
       await loadAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка запуска workflow');
     }
   };
@@ -375,7 +375,7 @@ export default function WorkflowsPage() {
       setActionComment('');
       setShowInstanceDetail(null);
       await loadAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка выполнения действия');
     }
     setActionLoading(false);
@@ -387,7 +387,7 @@ export default function WorkflowsPage() {
       await workflows.cancelInstance(id);
       setShowInstanceDetail(null);
       await loadAll();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка отмены');
     }
   };
@@ -413,7 +413,7 @@ export default function WorkflowsPage() {
     }));
   };
 
-  const updateStep = (index: number, field: string, value: any) => {
+  const updateStep = (index: number, field: string, value: unknown) => {
     setDefForm(prev => ({
       ...prev,
       steps: prev.steps.map((s, i) => i === index ? { ...s, [field]: value } : s),
@@ -576,7 +576,7 @@ export default function WorkflowsPage() {
 
   const selectStyle: React.CSSProperties = {
     ...inputStyle,
-    appearance: 'auto' as any,
+    appearance: 'auto' as unknown,
   };
 
   const labelStyle: React.CSSProperties = {
@@ -708,7 +708,7 @@ export default function WorkflowsPage() {
                 </div>
                 {/* Steps preview */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', flexWrap: 'wrap' }}>
-                  {def.steps_template.map((s: any, i: number) => (
+                  {def.steps_template.map((s: unknown, i: number) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <div style={{
                         padding: '6px 12px',

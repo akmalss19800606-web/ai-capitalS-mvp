@@ -388,7 +388,7 @@ export default function MacroUzPage() {
   const [categories, setCategories] = useState<MacroCategory[]>([]);
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [indicators, setIndicators] = useState<MacroIndicator[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<unknown[]>([]);
   const [selectedIndicator, setSelectedIndicator] = useState<string | null>(null);
 
   // Currency history

@@ -6,12 +6,12 @@ import { companyLookup } from "@/lib/api";
 
 export default function CompanySearchPage() {
   const { t } = useLocale();
-  const ct = (key: string) => (t.companyPage as any)[key];
+  const ct = (key: string) => (t.companyPage as unknown)[key];
 
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [result, setResult] = useState<unknown>(null);
+  const [companies, setCompanies] = useState<unknown[]>([]);
   const [total, setTotal] = useState(0);
   const [listSearch, setListSearch] = useState("");
   const [tab, setTab] = useState<"search" | "catalog">("search");
@@ -40,7 +40,7 @@ export default function CompanySearchPage() {
       if (res.found) {
         loadCatalog(); // Refresh catalog
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Error");
     }
     setSearching(false);
@@ -50,7 +50,7 @@ export default function CompanySearchPage() {
     try {
       await companyLookup.init();
       await loadCatalog();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Init error");
     }
   }
@@ -213,7 +213,7 @@ export default function CompanySearchPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {companies.map((c: any) => (
+                  {companies.map((c: unknown) => (
                     <tr key={c.id} style={{ borderBottom: "1px solid #F0F0F0", cursor: "pointer" }}
                       onClick={() => { setQuery(c.inn); setTab("search"); setResult({ found: true, source: `cache (${c.source})`, company: c }); }}
                     >
@@ -247,7 +247,7 @@ export default function CompanySearchPage() {
 }
 
 /* ─── Company Card ─── */
-function CompanyCard({ company, source, ct }: { company: any; source: string; ct: (k: string) => string }) {
+function CompanyCard({ company, source, ct }: { company: unknown; source: string; ct: (k: string) => string }) {
   const fields = [
     { label: ct("fieldInn"), value: company.inn, mono: true },
     { label: ct("fieldName"), value: company.name },

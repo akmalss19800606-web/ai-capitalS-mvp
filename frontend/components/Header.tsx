@@ -146,7 +146,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
             }}>
               {langs.map(l => (
                 <button key={l.code}
-                  onClick={() => { setStoredLocale(l.code as any); setLangOpen(false); }}
+                  onClick={() => { setStoredLocale(l.code as unknown); setLangOpen(false); }}
                   style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: spacing[2],
                     padding: `7px ${spacing[2]}`, border: 'none', borderRadius: radius.md,

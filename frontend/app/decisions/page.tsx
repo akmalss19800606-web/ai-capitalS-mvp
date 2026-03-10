@@ -366,7 +366,7 @@ function DecisionModal({
         await decisionsApi.create(payload);
       }
       onSaved();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка сохранения';
       try {
         const parsed = JSON.parse(err.message);
@@ -678,7 +678,7 @@ function StatusModal({
     try {
       await decisionsApi.updateStatus(decision.id, newStatus);
       onChanged();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка изменения статуса';
       try {
         const parsed = JSON.parse(err.message);
@@ -1149,7 +1149,7 @@ export default function DecisionsPage() {
     setLoading(true);
     setError('');
     try {
-      const params: Record<string, any> = {
+      const params: Record<string, unknown> = {
         page,
         per_page: perPage,
         sort_by: sortBy,
@@ -1175,7 +1175,7 @@ export default function DecisionsPage() {
         setTotal(res.total ?? items.length);
         setPages(res.pages ?? Math.ceil((res.total ?? items.length) / perPage));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Don't redirect on data errors — just show error
       let msg = 'Ошибка загрузки данных';
       try {
@@ -1238,7 +1238,7 @@ export default function DecisionsPage() {
       await decisionsApi.delete(d.id);
       loadDecisions();
       loadStats();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка удаления';
       try {
         const parsed = JSON.parse(err.message);

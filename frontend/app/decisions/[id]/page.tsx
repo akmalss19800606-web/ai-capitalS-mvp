@@ -32,7 +32,7 @@ interface Version {
   id: number;
   decision_id: number;
   version_number: number;
-  snapshot: Record<string, any>;
+  snapshot: Record<string, unknown>;
   change_type: string;
   changed_fields: string[] | null;
   change_reason: string | null;
@@ -45,9 +45,9 @@ interface AuditEvent {
   entity_type: string;
   entity_id: number;
   action: string;
-  old_values: Record<string, any> | null;
-  new_values: Record<string, any> | null;
-  metadata_json: Record<string, any> | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  metadata_json: Record<string, unknown> | null;
   user_id: number;
   created_at: string;
 }
@@ -66,8 +66,8 @@ interface Relationship {
 
 interface DiffChange {
   field: string;
-  old: any;
-  new: any;
+  old: unknown;
+  new: unknown;
 }
 
 interface GraphData {
@@ -246,7 +246,7 @@ export default function DecisionDetailPage() {
       setLoading(true);
       const d = await decisionsApi.get(decisionId);
       setDecision(d);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError('Не удалось загрузить решение');
     } finally {
       setLoading(false);
@@ -344,7 +344,7 @@ export default function DecisionDetailPage() {
       setNewRelTargetId('');
       setNewRelDesc('');
       await loadRelationships();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка создания связи');
     }
   };

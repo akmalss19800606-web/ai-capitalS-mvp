@@ -142,7 +142,7 @@ export default function CollaborationPage() {
 
   // Load decisions list
   useEffect(() => {
-    decisionsApi.list({ per_page: 100 }).then((r: any) => {
+    decisionsApi.list({ per_page: 100 }).then((r: unknown) => {
       setDecisionsList(r.items || r || []);
     }).catch(() => {});
   }, []);
@@ -177,7 +177,7 @@ export default function CollaborationPage() {
   const loadTasks = useCallback(async () => {
     if (!selectedDecision) return;
     try {
-      const params: any = {};
+      const params: unknown = {};
       if (taskFilter) params.status = taskFilter;
       const data = await collaboration.listTasks(selectedDecision, params);
       setTasks(data);
@@ -284,7 +284,7 @@ export default function CollaborationPage() {
     } catch {}
   };
 
-  const handleUpdatePref = async (key: string, value: any) => {
+  const handleUpdatePref = async (key: string, value: unknown) => {
     try {
       const data = await preferences.update({ [key]: value });
       setPrefs(data);
@@ -790,7 +790,7 @@ export default function CollaborationPage() {
                 <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '13px', color: '#475569' }}>{item.label}</span>
                   <button
-                    onClick={() => handleUpdatePref(item.key, !(prefs as any)[item.key])}
+                    onClick={() => handleUpdatePref(item.key, !(prefs as unknown)[item.key])}
                     style={{
                       width: '44px',
                       height: '24px',
@@ -798,7 +798,7 @@ export default function CollaborationPage() {
                       border: 'none',
                       cursor: 'pointer',
                       position: 'relative',
-                      background: (prefs as any)[item.key] ? '#22c55e' : '#e2e8f0',
+                      background: (prefs as unknown)[item.key] ? '#22c55e' : '#e2e8f0',
                       transition: 'background 0.2s',
                     }}
                   >
@@ -810,7 +810,7 @@ export default function CollaborationPage() {
                         background: '#fff',
                         position: 'absolute',
                         top: '3px',
-                        left: (prefs as any)[item.key] ? '23px' : '3px',
+                        left: (prefs as unknown)[item.key] ? '23px' : '3px',
                         transition: 'left 0.2s',
                         boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                       }}

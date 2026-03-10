@@ -59,7 +59,7 @@ const parseCFs = (s: string): number[] =>
   s.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
 
 /* ─── Main Component ─── */
-export default function PortfolioAnalyticsPage() {
+export default function PortfolioAnalyticsTab() {
   const router = useRouter();
   const { t } = useLocale();
   const [activeTab, setActiveTab] = useState<TabId>('dcf');
@@ -144,7 +144,7 @@ export default function PortfolioAnalyticsPage() {
    ═══════════════════════════════════════════════════════════════════════════ */
 function DCFTab() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState('');
 
   const [cfText, setCfText] = useState('500, 600, 700, 800, 900');
@@ -237,7 +237,7 @@ function DCFTab() {
 }
 
 /* ─── DCF result display (reused by DCF tab and business cases) ─── */
-function DCFResults({ result }: { result: any }) {
+function DCFResults({ result }: { result: unknown }) {
   return (
     <div>
       {/* Summary cards */}
@@ -286,7 +286,7 @@ function DCFResults({ result }: { result: any }) {
                 </tr>
               </thead>
               <tbody>
-                {result.yearly_breakdown.map((row: any) => (
+                {result.yearly_breakdown.map((row: unknown) => (
                   <tr key={row.year} style={{ borderBottom: `1px solid ${semantic.borderLight}` }}>
                     <td style={{ padding: `${spacing[3]} ${spacing[4]}`, textAlign: 'right', fontWeight: typography.fontWeight.medium, color: semantic.textPrimary }}>{row.year}</td>
                     <td style={{ padding: `${spacing[3]} ${spacing[4]}`, textAlign: 'right', color: row.cash_flow < 0 ? colors.error[600] : semantic.textPrimary }}>{fmt(row.cash_flow)}</td>
@@ -307,7 +307,7 @@ function DCFResults({ result }: { result: any }) {
             Таблица чувствительности NPV к ставке дисконтирования
           </h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing[2] }}>
-            {result.sensitivity_table.map((item: any) => {
+            {result.sensitivity_table.map((item: unknown) => {
               const isBase = Math.abs(item.discount_rate - result.discount_rate) < 0.001;
               const isPositive = item.npv >= 0;
               return (
@@ -340,7 +340,7 @@ function DCFResults({ result }: { result: any }) {
    ═══════════════════════════════════════════════════════════════════════════ */
 function WhatIfTab() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState('');
 
   const [cfText, setCfText] = useState('500, 600, 700, 800, 900');
@@ -420,7 +420,7 @@ function WhatIfTab() {
               Сценарии
             </h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: spacing[4] }}>
-              {result.scenarios?.map((sc: any, i: number) => {
+              {result.scenarios?.map((sc: unknown, i: number) => {
                 const clr = scenarioColors[sc.name_en] || scenarioColors.custom;
                 return (
                   <div key={i} style={{
@@ -462,14 +462,14 @@ function WhatIfTab() {
               <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary, marginBottom: spacing[3] }}>
                 Торнадо-диаграмма (чувствительность)
               </h4>
-              {result.tornado.map((item: any, i: number) => {
+              {result.tornado.map((item: unknown, i: number) => {
                 const varLabels: Record<string, string> = {
                   cash_flows: 'Денежные потоки',
                   discount_rate: 'Ставка дисконтирования',
                   terminal_growth: 'Терминальный рост',
                   initial_investment: 'Начальная инвестиция',
                 };
-                const maxSpread = Math.max(...result.tornado.map((t: any) => t.spread));
+                const maxSpread = Math.max(...result.tornado.map((t: unknown) => t.spread));
                 const barPct = maxSpread > 0 ? (item.spread / maxSpread) * 100 : 0;
                 return (
                   <div key={i} style={{ marginBottom: spacing[3] }}>
@@ -528,7 +528,7 @@ function WhatIfTab() {
    ═══════════════════════════════════════════════════════════════════════════ */
 function MonteCarloTab() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState('');
 
   const [cfText, setCfText] = useState('500, 600, 700, 800, 900');
@@ -691,8 +691,8 @@ function MonteCarloTab() {
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {(() => {
-                  const maxCount = Math.max(...result.histogram.map((b: any) => b.count));
-                  return result.histogram.map((bin: any, i: number) => {
+                  const maxCount = Math.max(...result.histogram.map((b: unknown) => b.count));
+                  return result.histogram.map((bin: unknown, i: number) => {
                     const pct = maxCount > 0 ? (bin.count / maxCount) * 100 : 0;
                     const isPositive = bin.bin_start >= 0;
                     return (
@@ -736,17 +736,17 @@ function MonteCarloTab() {
    TAB 4: Бизнес-кейсы Узбекистана
    ═══════════════════════════════════════════════════════════════════════════ */
 function BusinessCasesTab() {
-  const [cases, setCases] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [cases, setCases] = useState<unknown[]>([]);
+  const [categories, setCategories] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedRisk, setSelectedRisk] = useState('');
 
   // Detail view state
-  const [detailCase, setDetailCase] = useState<any>(null);
+  const [detailCase, setDetailCase] = useState<unknown>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [customCalc, setCustomCalc] = useState(false);
-  const [customResult, setCustomResult] = useState<any>(null);
+  const [customResult, setCustomResult] = useState<unknown>(null);
   const [customLoading, setCustomLoading] = useState(false);
   const [customRate, setCustomRate] = useState('');
   const [cfMult, setCfMult] = useState('1.0');
@@ -909,7 +909,7 @@ function BusinessCasesTab() {
                       What-If сценарии
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: spacing[3] }}>
-                      {customResult.what_if.scenarios.map((sc: any, i: number) => (
+                      {customResult.what_if.scenarios.map((sc: unknown, i: number) => (
                         <div key={i} style={{
                           padding: spacing[3], borderRadius: radius.xl,
                           backgroundColor: sc.name_en === 'optimistic' ? colors.success[50] : sc.name_en === 'pessimistic' ? colors.error[50] : colors.neutral[50],
@@ -974,7 +974,7 @@ function BusinessCasesTab() {
           >
             Все ({cases.length})
           </button>
-          {categories.map((cat: any) => (
+          {categories.map((cat: unknown) => (
             <button
               key={cat.category}
               onClick={() => setSelectedCategory(cat.category === selectedCategory ? '' : cat.category)}
@@ -1021,7 +1021,7 @@ function BusinessCasesTab() {
 
       {/* Cases grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: spacing[4] }}>
-        {filtered.map((c: any) => {
+        {filtered.map((c: unknown) => {
           const risk = riskLabels[c.risk_level] || riskLabels.medium;
           return (
             <div

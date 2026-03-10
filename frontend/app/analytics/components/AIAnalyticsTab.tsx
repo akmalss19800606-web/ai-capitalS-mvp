@@ -239,12 +239,12 @@ interface FrontierResult {
 }
 
 // ─── Custom Tooltip ─────────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: unknown) => {
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 14px', boxShadow: C.cardShadow, fontSize: '13px' }}>
       <div style={{ color: C.textMuted, marginBottom: '4px' }}>{label}</div>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p: unknown, i: number) => (
         <div key={i} style={{ color: p.color || C.text, fontWeight: 600 }}>{p.name}: {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</div>
       ))}
     </div>
@@ -283,7 +283,7 @@ function MonteCarloTab({ decisionsList }: { decisionsList: Decision[] }) {
         num_iterations: iterations,
       });
       setResult(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при запуске симуляции');
     } finally {
       setLoading(false);
@@ -492,7 +492,7 @@ function ShapTab({ decisionsList, portfoliosList }: { decisionsList: Decision[];
       }
       const res = await aiAnalytics.runShap(payload);
       setResult(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при запуске SHAP-анализа');
     } finally {
       setLoading(false);
@@ -668,7 +668,7 @@ function ShapTab({ decisionsList, portfoliosList }: { decisionsList: Decision[];
                     <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} />
                     <YAxis type="category" dataKey="display_name" tick={{ fontSize: 12, fill: C.text }} width={115} />
                     <Tooltip
-                      content={({ active, payload }: any) => {
+                      content={({ active, payload }: unknown) => {
                         if (!active || !payload?.length) return null;
                         const d = payload[0]?.payload;
                         return (
@@ -744,7 +744,7 @@ function EfficientFrontierTab({ portfoliosList }: { portfoliosList: Portfolio[] 
         num_frontier_points: 50,
       });
       setResult(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при оптимизации портфеля');
     } finally {
       setLoading(false);
@@ -889,7 +889,7 @@ function EfficientFrontierTab({ portfoliosList }: { portfoliosList: Portfolio[] 
                     />
                     <Tooltip
                       cursor={{ strokeDasharray: '3 3' }}
-                      content={({ active, payload }: any) => {
+                      content={({ active, payload }: unknown) => {
                         if (!active || !payload?.length) return null;
                         const d = payload[0]?.payload;
                         return (
@@ -1019,7 +1019,7 @@ const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
   { key: 'frontier', label: 'Efficient Frontier', icon: <IconGraph /> },
 ];
 
-export default function AIAnalyticsPage() {
+export default function AIAnalyticsTab() {
   const [activeTab, setActiveTab] = useState<Tab>('montecarlo');
   const [decisionsList, setDecisionsList] = useState<Decision[]>([]);
   const [portfoliosList, setPortfoliosList] = useState<Portfolio[]>([]);
@@ -1038,7 +1038,7 @@ export default function AIAnalyticsPage() {
       const portsArr: Portfolio[] = Array.isArray(portsRes) ? portsRes : (portsRes?.items || portsRes?.portfolios || []);
       setDecisionsList(decsArr);
       setPortfoliosList(portsArr);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setDataError(e.message || 'Ошибка загрузки данных');
     } finally {
       setLoadingData(false);

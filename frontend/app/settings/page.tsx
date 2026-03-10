@@ -120,7 +120,7 @@ export default function SettingsPage() {
     /* Load preferences */
     prefsApi.get().then(data => {
       if (data) {
-        if (data.language) { setLang(data.language); setStoredLocale(data.language as any); }
+        if (data.language) { setLang(data.language); setStoredLocale(data.language as unknown); }
         if (data.theme) setTheme(data.theme);
         if (data.font_size) setFontSize(data.font_size);
         if (data.email_notifications !== undefined) setEmailNotif(data.email_notifications);
@@ -131,7 +131,7 @@ export default function SettingsPage() {
 
   const handleLangChange = (newLang: string) => {
     setLang(newLang);
-    setStoredLocale(newLang as any);
+    setStoredLocale(newLang as unknown);
     prefsApi.update({ language: newLang }).catch(() => {});
   };
 

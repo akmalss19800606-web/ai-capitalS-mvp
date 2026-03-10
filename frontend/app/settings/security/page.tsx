@@ -89,8 +89,8 @@ export default function SecuritySettingsPage() {
 
 /* ═══════════════════ MFA TAB ═══════════════════ */
 function MfaTab() {
-  const [status, setStatus] = useState<any>(null);
-  const [setupData, setSetupData] = useState<any>(null);
+  const [status, setStatus] = useState<unknown>(null);
+  const [setupData, setSetupData] = useState<unknown>(null);
   const [code, setCode] = useState('');
   const [disableCode, setDisableCode] = useState('');
   const [msg, setMsg] = useState('');
@@ -107,7 +107,7 @@ function MfaTab() {
     try {
       const data = await mfa.setup();
       setSetupData(data);
-    } catch (e: any) { setMsg('Ошибка: ' + e.message); }
+    } catch (e: unknown) { setMsg('Ошибка: ' + e.message); }
     setLoading(false);
   };
 
@@ -119,7 +119,7 @@ function MfaTab() {
       setMsg('MFA успешно включено.');
       setSetupData(null); setCode('');
       loadStatus();
-    } catch (e: any) { setMsg('Неверный код. Попробуйте ещё раз.'); }
+    } catch (e: unknown) { setMsg('Неверный код. Попробуйте ещё раз.'); }
     setLoading(false);
   };
 
@@ -131,7 +131,7 @@ function MfaTab() {
       setMsg('MFA отключено.');
       setDisableCode('');
       loadStatus();
-    } catch (e: any) { setMsg('Неверный код.'); }
+    } catch (e: unknown) { setMsg('Неверный код.'); }
     setLoading(false);
   };
 
@@ -256,7 +256,7 @@ function MfaTab() {
 
 /* ═══════════════════ SESSIONS TAB ═══════════════════ */
 function SessionsTab() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
@@ -302,7 +302,7 @@ function SessionsTab() {
 
         {data?.sessions?.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {data.sessions.map((s: any) => (
+            {data.sessions.map((s: unknown) => (
               <div key={s.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px',
@@ -339,7 +339,7 @@ function SessionsTab() {
 
 /* ═══════════════════ SSO TAB ═══════════════════ */
 function SsoTab() {
-  const [providers, setProviders] = useState<any[]>([]);
+  const [providers, setProviders] = useState<unknown[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', protocol: 'oidc', client_id: '', client_secret: '', issuer_url: '', metadata_url: '' });
 
@@ -398,7 +398,7 @@ function SsoTab() {
 
         {providers.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {providers.map((p: any) => (
+            {providers.map((p: unknown) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
@@ -428,7 +428,7 @@ function SsoTab() {
 
 /* ═══════════════════ ROLES TAB ═══════════════════ */
 function RolesTab() {
-  const [roles, setRoles] = useState<any[]>([]);
+  const [roles, setRoles] = useState<unknown[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', permissions: '{}' });
 
@@ -458,7 +458,7 @@ function RolesTab() {
   const MODULES = ['decisions', 'portfolios', 'analytics', 'reports', 'settings', 'users'];
   const ACTIONS = ['read', 'write', 'delete', 'approve'];
 
-  const renderPerms = (perms: any) => {
+  const renderPerms = (perms: unknown) => {
     if (!perms || typeof perms !== 'object') return '—';
     return Object.entries(perms).map(([mod, acts]: [string, any]) => (
       <div key={mod} style={{ display: 'inline-flex', gap: '4px', marginRight: '10px', marginBottom: '4px' }}>
@@ -504,7 +504,7 @@ function RolesTab() {
 
         {roles.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {roles.map((r: any) => (
+            {roles.map((r: unknown) => (
               <div key={r.id} style={{
                 padding: '14px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
               }}>
@@ -532,13 +532,13 @@ function RolesTab() {
 
 /* ═══════════════════ POLICIES TAB ═══════════════════ */
 function PoliciesTab() {
-  const [policies, setPolicies] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<unknown[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
     name: '', resource_type: 'decision', action: 'read',
     conditions: '{}', effect: 'allow', priority: '0', description: '',
   });
-  const [checkResult, setCheckResult] = useState<any>(null);
+  const [checkResult, setCheckResult] = useState<unknown>(null);
   const [checkForm, setCheckForm] = useState({ resource_type: 'decision', action: 'read' });
 
   const load = async () => {
@@ -667,7 +667,7 @@ function PoliciesTab() {
 
         {policies.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {policies.map((p: any) => (
+            {policies.map((p: unknown) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',

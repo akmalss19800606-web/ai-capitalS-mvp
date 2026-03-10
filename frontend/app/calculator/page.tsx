@@ -25,7 +25,7 @@ export default function CalculatorPage() {
   const [amount, setAmount] = useState('10000');
   const [years, setYears] = useState('3');
   const [industry, setIndustry] = useState('Оптовая торговля мукой');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<unknown>(null);
   const [loading, setLoading] = useState(false);
 
   // Динамические ставки из API
@@ -62,7 +62,7 @@ export default function CalculatorPage() {
           const data = ratesResult.value;
           const rates = data.rates || data;
           if (Array.isArray(rates) && rates.length > 0) {
-            const usdRate = rates.find((r: any) => r.code === 'USD');
+            const usdRate = rates.find((r: unknown) => r.code === 'USD');
             if (usdRate) {
               const ratePerUnit = usdRate.rate / (usdRate.nominal || 1);
               setUzsRate(ratePerUnit);
@@ -111,7 +111,7 @@ export default function CalculatorPage() {
             refinValue = parseFloat(data.refinancing_rate);
           } else if (Array.isArray(data.indicators || data)) {
             const indicators = data.indicators || data;
-            const refinItem = indicators.find((i: any) =>
+            const refinItem = indicators.find((i: unknown) =>
               i.indicator_code?.includes('refinancing') ||
               i.indicator_name?.toLowerCase().includes('рефинанс') ||
               i.indicator_name?.toLowerCase().includes('ставка')

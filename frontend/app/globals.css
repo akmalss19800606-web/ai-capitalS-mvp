@@ -1,4 +1,4 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 
 /* ─── CSS Custom Properties (из design-tokens.ts) ─── */
 :root {
@@ -67,17 +67,13 @@
   --transition-normal: all 0.2s ease;
 }
 
-/* ─── Base ─── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* ─── Base Resets ─── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
+  font-family: var(--font-sans);
   background-color: var(--bg-app);
   color: var(--text-primary);
-  font-family: var(--font-sans);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -85,20 +81,9 @@ body {
   line-height: 1.5;
 }
 
-input, textarea, select {
-  outline: none;
-  font-family: inherit;
-}
-
-button {
-  cursor: pointer;
-  font-family: inherit;
-}
-
-a {
-  text-decoration: none;
-  color: inherit;
-}
+input, textarea, select { outline: none; font-family: inherit; }
+button { cursor: pointer; font-family: inherit; }
+a { text-decoration: none; color: inherit; }
 
 /* ─── Scrollbar ─── */
 ::-webkit-scrollbar { width: 5px; }
@@ -118,14 +103,205 @@ a {
   outline-offset: 2px;
 }
 
-/* ─── Utility: Page Content ─── */
+/* ═══════════════════════════════════════════════════════════════
+   Component Utility Classes (CSS-001: Tailwind migration layer)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Card — standard white card with border and shadow */
+.ac-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  transition: var(--transition-normal);
+}
+.ac-card:hover {
+  box-shadow: var(--shadow-card-hover);
+}
+
+/* Stat card — smaller card for numbers/KPIs */
+.ac-stat-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+
+/* Button primary */
+.ac-btn-primary {
+  padding: 10px 20px;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-primary-600);
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition-fast);
+}
+.ac-btn-primary:hover {
+  background-color: var(--color-primary-700);
+}
+.ac-btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Button secondary */
+.ac-btn-secondary {
+  padding: 8px 14px;
+  border-radius: var(--radius-lg);
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.ac-btn-secondary:hover {
+  background-color: var(--color-neutral-100);
+}
+
+/* Input */
+.ac-input {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-neutral-300);
+  font-size: 14px;
+  background-color: var(--color-neutral-50);
+  color: var(--text-primary);
+  transition: var(--transition-fast);
+}
+.ac-input:focus {
+  border-color: var(--color-primary-500);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Tab bar — used in analytics, integrations */
+.ac-tab-bar {
+  display: flex;
+  gap: 4px;
+  background-color: var(--color-neutral-100);
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+}
+.ac-tab {
+  padding: 8px 16px;
+  border-radius: var(--radius-lg);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 400;
+  background-color: transparent;
+  color: var(--text-secondary);
+  transition: var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ac-tab--active {
+  font-weight: 600;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Section heading */
+.ac-heading {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ac-subheading {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Alert / status badges */
+.ac-badge-success {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-success-50);
+  color: var(--color-success-700);
+  font-size: 12px;
+  font-weight: 500;
+}
+.ac-badge-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-error-50);
+  color: var(--color-error-600);
+  font-size: 12px;
+  font-weight: 500;
+}
+.ac-badge-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-warning-50);
+  color: var(--color-warning-600);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ─── Layout classes (from layout.tsx) ─── */
+.sidebar-desktop { display: block; }
+.sidebar-mobile { display: none; }
+.sidebar-mobile-overlay { display: none; }
+.hamburger-wrapper { display: none; }
+
+.main-area {
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .page-content {
   padding: 24px 32px;
   max-width: 1440px;
   margin: 0 auto;
 }
 
-/* ─── Utility: Fade-in animation ─── */
+/* ─── Responsive: Tablet (≤ 1024px) ─── */
+@media (max-width: 1024px) {
+  .sidebar-desktop { display: none !important; }
+  .sidebar-mobile { display: block !important; }
+  .sidebar-mobile-overlay { display: block !important; }
+  .hamburger-wrapper { display: flex !important; }
+  .main-area { margin-left: 0 !important; }
+}
+
+/* ─── Responsive: Mobile (≤ 640px) ─── */
+@media (max-width: 640px) {
+  .page-content { padding: 16px !important; }
+  .header-status { display: none !important; }
+  .header-user-info { display: none !important; }
+  .footer-location { display: none !important; }
+}
+
+/* ─── Responsive: Small Mobile (≤ 480px) ─── */
+@media (max-width: 480px) {
+  .page-content { padding: 8px !important; }
+}
+
+/* ─── Responsive tables ─── */
+@media (max-width: 768px) {
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+}
+
+/* ─── Animations ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -134,20 +310,10 @@ a {
   animation: fadeIn 0.3s ease forwards;
 }
 
-/* ─── Utility: Slide-in from left ─── */
 @keyframes slideInLeft {
   from { opacity: 0; transform: translateX(-16px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 .animate-slide-in {
   animation: slideInLeft 0.25s ease forwards;
-}
-
-/* ─── Responsive tables for mobile (Этап 0.2) ─── */
-@media (max-width: 768px) {
-  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
-  .page-content { padding: 12px !important; }
-}
-@media (max-width: 480px) {
-  .page-content { padding: 8px !important; }
 }

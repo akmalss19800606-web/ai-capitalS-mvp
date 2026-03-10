@@ -96,7 +96,7 @@ export const auth = {
     }),
   me: () => apiRequest('/auth/me'),
   ssoProviders: () => apiRequest('/auth/sso/providers'),
-  createSsoProvider: (data: any) =>
+  createSsoProvider: (data: Record<string, unknown>) =>
     apiRequest('/auth/sso/providers', { method: 'POST', body: JSON.stringify(data) }),
   deleteSsoProvider: (id: number) =>
     apiRequest(`/auth/sso/providers/${id}`, { method: 'DELETE' }),
@@ -137,8 +137,8 @@ export const decisions = {
     return apiRequest(`/decisions${query ? '?' + query : ''}`);
   },
   get: (id: number) => apiRequest(`/decisions/${id}`),
-  create: (data: any) => apiRequest('/decisions', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: any) => apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  create: (data: Record<string, unknown>) => apiRequest('/decisions', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: unknown) => apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateStatus: (id: number, status: string) =>
     apiRequest(`/decisions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: number) => apiRequest(`/decisions/${id}`, { method: 'DELETE' }),
@@ -206,9 +206,9 @@ export const workflows = {
     return apiRequest(`/workflows/definitions${params}`);
   },
   getDefinition: (id: number) => apiRequest(`/workflows/definitions/${id}`),
-  createDefinition: (data: any) =>
+  createDefinition: (data: Record<string, unknown>) =>
     apiRequest('/workflows/definitions', { method: 'POST', body: JSON.stringify(data) }),
-  updateDefinition: (id: number, data: any) =>
+  updateDefinition: (id: number, data: unknown) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDefinition: (id: number) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'DELETE' }),
@@ -379,19 +379,19 @@ export const dashboardBuilder = {
   widgetTypes: () => apiRequest('/dashboards/widget-types'),
   list: () => apiRequest('/dashboards'),
   get: (id: number) => apiRequest(`/dashboards/${id}`),
-  create: (data: any) =>
+  create: (data: Record<string, unknown>) =>
     apiRequest('/dashboards', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: any) =>
+  update: (id: number, data: unknown) =>
     apiRequest(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>
     apiRequest(`/dashboards/${id}`, { method: 'DELETE' }),
-  addWidget: (dashboardId: number, data: any) =>
+  addWidget: (dashboardId: number, data: unknown) =>
     apiRequest(`/dashboards/${dashboardId}/widgets`, { method: 'POST', body: JSON.stringify(data) }),
-  updateWidget: (widgetId: number, data: any) =>
+  updateWidget: (widgetId: number, data: unknown) =>
     apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteWidget: (widgetId: number) =>
     apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'DELETE' }),
-  updateLayout: (dashboardId: number, layout: any[]) =>
+  updateLayout: (dashboardId: number, layout: Record<string, unknown>[]) =>
     apiRequest(`/dashboards/${dashboardId}/layout`, { method: 'PUT', body: JSON.stringify(layout) }),
   widgetData: (widgetType: string, params?: {
     metric?: string;
@@ -455,9 +455,9 @@ export const collaboration = {
     const q = sp.toString();
     return apiRequest(`/decisions/${decisionId}/tasks${q ? '?' + q : ''}`);
   },
-  createTask: (decisionId: number, data: any) =>
+  createTask: (decisionId: number, data: unknown) =>
     apiRequest(`/decisions/${decisionId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
-  updateTask: (decisionId: number, taskId: number, data: any) =>
+  updateTask: (decisionId: number, taskId: number, data: unknown) =>
     apiRequest(`/decisions/${decisionId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTask: (decisionId: number, taskId: number) =>
     apiRequest(`/decisions/${decisionId}/tasks/${taskId}`, { method: 'DELETE' }),
@@ -477,12 +477,12 @@ export const notifications = {
 
 export const preferences = {
   get: () => apiRequest('/preferences'),
-  update: (data: any) =>
+  update: (data: Record<string, unknown>) =>
     apiRequest('/preferences', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 export const dataExchange = {
-  exportCSV: (entityType: string, params?: any) => {
+  exportCSV: (entityType: string, params?: unknown) => {
     const sp = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -492,7 +492,7 @@ export const dataExchange = {
     const q = sp.toString();
     return apiRequest(`/data-exchange/export/${entityType}${q ? '?' + q : ''}`);
   },
-  importCSV: (entityType: string, data: any) =>
+  importCSV: (entityType: string, data: unknown) =>
     apiRequest(`/data-exchange/import/${entityType}`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -501,11 +501,11 @@ export const dataExchange = {
 };
 
 export const islamicFinance = {
-  screen: (data: any) =>
+  screen: (data: Record<string, unknown>) =>
     apiRequest('/islamic-finance/screening', { method: 'POST', body: JSON.stringify(data) }),
   getScreening: (id: number) => apiRequest(`/islamic-finance/screening/${id}`),
   listScreenings: () => apiRequest('/islamic-finance/screening'),
-  zakatCalc: (data: any) =>
+  zakatCalc: (data: Record<string, unknown>) =>
     apiRequest('/islamic-finance/zakat/calculate', { method: 'POST', body: JSON.stringify(data) }),
   getZakat: (id: number) => apiRequest(`/islamic-finance/zakat/${id}`),
   listZakat: () => apiRequest('/islamic-finance/zakat'),
@@ -513,13 +513,13 @@ export const islamicFinance = {
 };
 
 export const portfolioAnalytics = {
-  dcf: (portfolioId: number, data: any) =>
+  dcf: (portfolioId: number, data: unknown) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/dcf`, { method: 'POST', body: JSON.stringify(data) }),
-  npvIrr: (portfolioId: number, data: any) =>
+  npvIrr: (portfolioId: number, data: unknown) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/npv-irr`, { method: 'POST', body: JSON.stringify(data) }),
-  whatIf: (portfolioId: number, data: any) =>
+  whatIf: (portfolioId: number, data: unknown) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/what-if`, { method: 'POST', body: JSON.stringify(data) }),
-  monteCarlo: (portfolioId: number, data: any) =>
+  monteCarlo: (portfolioId: number, data: unknown) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/monte-carlo`, { method: 'POST', body: JSON.stringify(data) }),
   summary: (portfolioId: number) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/summary`),
@@ -534,7 +534,7 @@ export const accessControl = {
   listRoles: () => apiRequest('/access/roles'),
   createRole: (data: { name: string; permissions: string[]; description?: string }) =>
     apiRequest('/access/roles', { method: 'POST', body: JSON.stringify(data) }),
-  updateRole: (id: number, data: any) =>
+  updateRole: (id: number, data: unknown) =>
     apiRequest(`/access/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteRole: (id: number) =>
     apiRequest(`/access/roles/${id}`, { method: 'DELETE' }),
@@ -546,9 +546,9 @@ export const accessControl = {
     resource: string;
     action: string;
     effect: string;
-    conditions?: any;
+    conditions?: Record<string, unknown>;
   }) => apiRequest('/access/policies', { method: 'POST', body: JSON.stringify(data) }),
-  updatePolicy: (id: number, data: any) =>
+  updatePolicy: (id: number, data: unknown) =>
     apiRequest(`/access/policies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePolicy: (id: number) =>
     apiRequest(`/access/policies/${id}`, { method: 'DELETE' }),
@@ -556,7 +556,7 @@ export const accessControl = {
     apiRequest('/access/check', { method: 'POST', body: JSON.stringify(data) }),
   listDecisionAccess: (decisionId: number) =>
     apiRequest(`/access/decisions/${decisionId}/access`),
-  grantAccess: (decisionId: number, data: any) =>
+  grantAccess: (decisionId: number, data: unknown) =>
     apiRequest(`/access/decisions/${decisionId}/grant`, { method: 'POST', body: JSON.stringify(data) }),
   revokeAccess: (decisionId: number, userId: number) =>
     apiRequest(`/access/decisions/${decisionId}/revoke/${userId}`, { method: 'DELETE' }),
@@ -600,7 +600,7 @@ export const apiGateway = {
 };
 
 export const architecturalPrinciples = {
-  createEvent: (data: any) =>
+  createEvent: (data: Record<string, unknown>) =>
     apiRequest('/arch/events', { method: 'POST', body: JSON.stringify(data) }),
   getEventsTimeline: (params?: { limit?: number }) => {
     const q = params?.limit ? `?limit=${params.limit}` : '';
@@ -611,7 +611,7 @@ export const architecturalPrinciples = {
     apiRequest(`/arch/events/${type}/${id}`),
   getAggregateState: (type: string, id: string) =>
     apiRequest(`/arch/events/${type}/${id}/state`),
-  createReview: (data: any) =>
+  createReview: (data: Record<string, unknown>) =>
     apiRequest('/arch/hitl/reviews', { method: 'POST', body: JSON.stringify(data) }),
   listHitlReviews: (params?: { limit?: number }) => {
     const q = params?.limit ? `?limit=${params.limit}` : '';
@@ -621,7 +621,7 @@ export const architecturalPrinciples = {
     apiRequest(`/arch/hitl/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   getHitlStats: () => apiRequest('/arch/hitl/stats'),
   getDisclaimers: () => apiRequest('/arch/hitl/disclaimers'),
-  createSnapshot: (data: any) =>
+  createSnapshot: (data: Record<string, unknown>) =>
     apiRequest('/arch/snapshots', { method: 'POST', body: JSON.stringify(data) }),
   listSnapshots: (model?: string, limit?: number) => {
     const sp = new URLSearchParams();
@@ -634,9 +634,9 @@ export const architecturalPrinciples = {
   getSnapshot: (id: number) => apiRequest(`/arch/snapshots/${id}`),
   reproduceSnapshot: (id: number) =>
     apiRequest(`/arch/snapshots/${id}/reproduce`, { method: 'POST' }),
-  publishEvent: (data: any) =>
+  publishEvent: (data: Record<string, unknown>) =>
     apiRequest('/arch/bus/publish', { method: 'POST', body: JSON.stringify(data) }),
-  consumeEvents: (data: any) =>
+  consumeEvents: (data: Record<string, unknown>) =>
     apiRequest('/arch/bus/consume', { method: 'POST', body: JSON.stringify(data) }),
   getBusChannels: () => apiRequest('/arch/bus/channels'),
   getChannelMessages: (channel: string, status?: string, limit?: number) => {
@@ -653,7 +653,7 @@ export const architecturalPrinciples = {
   getBusStats: () => apiRequest('/arch/bus/stats'),
   seedConstraints: () =>
     apiRequest('/arch/constraints/seed', { method: 'POST' }),
-  createConstraint: (data: any) =>
+  createConstraint: (data: Record<string, unknown>) =>
     apiRequest('/arch/constraints', { method: 'POST', body: JSON.stringify(data) }),
   listConstraints: (category?: string, isActive?: boolean) => {
     const sp = new URLSearchParams();
@@ -662,7 +662,7 @@ export const architecturalPrinciples = {
     const q = sp.toString();
     return apiRequest(`/arch/constraints${q ? '?' + q : ''}`);
   },
-  updateConstraint: (id: number, data: any) =>
+  updateConstraint: (id: number, data: unknown) =>
     apiRequest(`/arch/constraints/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteConstraint: (id: number) =>
     apiRequest(`/arch/constraints/${id}`, { method: 'DELETE' }),
@@ -707,10 +707,10 @@ export const cpiData = {
 
 export const marketAdapters = {
   /* Sources */
-  createSource: (data: any) =>
+  createSource: (data: Record<string, unknown>) =>
     apiRequest('/adapters/sources', { method: 'POST', body: JSON.stringify(data) }),
   listSources: () => apiRequest('/adapters/sources'),
-  updateSource: (id: number, data: any) =>
+  updateSource: (id: number, data: unknown) =>
     apiRequest(`/adapters/sources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSource: (id: number) =>
     apiRequest(`/adapters/sources/${id}`, { method: 'DELETE' }),
@@ -733,23 +733,23 @@ export const marketAdapters = {
   cleanupCache: () =>
     apiRequest('/adapters/etl/cleanup', { method: 'POST' }),
   /* CRM */
-  createContact: (data: any) =>
+  createContact: (data: Record<string, unknown>) =>
     apiRequest('/adapters/crm/contacts', { method: 'POST', body: JSON.stringify(data) }),
   listContacts: () => apiRequest('/adapters/crm/contacts'),
-  updateContact: (id: number, data: any) =>
+  updateContact: (id: number, data: unknown) =>
     apiRequest(`/adapters/crm/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: number) =>
     apiRequest(`/adapters/crm/contacts/${id}`, { method: 'DELETE' }),
-  createDeal: (data: any) =>
+  createDeal: (data: Record<string, unknown>) =>
     apiRequest('/adapters/crm/deals', { method: 'POST', body: JSON.stringify(data) }),
   listDeals: () => apiRequest('/adapters/crm/deals'),
-  updateDeal: (id: number, data: any) =>
+  updateDeal: (id: number, data: unknown) =>
     apiRequest(`/adapters/crm/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDeal: (id: number) =>
     apiRequest(`/adapters/crm/deals/${id}`, { method: 'DELETE' }),
   getPipelineSummary: () => apiRequest('/adapters/crm/pipeline'),
   /* DMS */
-  createDocument: (data: any) =>
+  createDocument: (data: Record<string, unknown>) =>
     apiRequest('/adapters/dms/documents', { method: 'POST', body: JSON.stringify(data) }),
   listDocuments: (status?: string, search?: string) => {
     const sp = new URLSearchParams();
@@ -758,11 +758,11 @@ export const marketAdapters = {
     const q = sp.toString();
     return apiRequest(`/adapters/dms/documents${q ? '?' + q : ''}`);
   },
-  updateDocument: (id: number, data: any) =>
+  updateDocument: (id: number, data: unknown) =>
     apiRequest(`/adapters/dms/documents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDocument: (id: number) =>
     apiRequest(`/adapters/dms/documents/${id}`, { method: 'DELETE' }),
-  addDocVersion: (docId: number, data: any) =>
+  addDocVersion: (docId: number, data: unknown) =>
     apiRequest(`/adapters/dms/documents/${docId}/versions`, { method: 'POST', body: JSON.stringify(data) }),
   listDocVersions: (docId: number) =>
     apiRequest(`/adapters/dms/documents/${docId}/versions`),
@@ -770,13 +770,13 @@ export const marketAdapters = {
     apiRequest('/adapters/dms/search', { method: 'POST', body: JSON.stringify(data) }),
   getDmsStats: () => apiRequest('/adapters/dms/stats'),
   /* Comparable companies */
-  createComparable: (data: any) =>
+  createComparable: (data: Record<string, unknown>) =>
     apiRequest('/adapters/comparable', { method: 'POST', body: JSON.stringify(data) }),
   listComparables: (sector?: string) => {
     const q = sector ? `?sector=${encodeURIComponent(sector)}` : '';
     return apiRequest(`/adapters/comparable${q}`);
   },
-  updateComparable: (id: number, data: any) =>
+  updateComparable: (id: number, data: unknown) =>
     apiRequest(`/adapters/comparable/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteComparable: (id: number) =>
     apiRequest(`/adapters/comparable/${id}`, { method: 'DELETE' }),

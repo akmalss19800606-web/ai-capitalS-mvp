@@ -55,10 +55,10 @@ const METRIC_LABELS: Record<string, string> = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function DashboardBuilderPage() {
-  const [dashboards, setDashboards] = useState<any[]>([]);
-  const [activeDashboard, setActiveDashboard] = useState<any>(null);
-  const [widgetTypes, setWidgetTypes] = useState<any[]>([]);
-  const [portfolioList, setPortfolioList] = useState<any[]>([]);
+  const [dashboards, setDashboards] = useState<unknown[]>([]);
+  const [activeDashboard, setActiveDashboard] = useState<unknown>(null);
+  const [widgetTypes, setWidgetTypes] = useState<unknown[]>([]);
+  const [portfolioList, setPortfolioList] = useState<unknown[]>([]);
   const [globalPortfolioId, setGlobalPortfolioId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [showAddWidget, setShowAddWidget] = useState(false);
@@ -120,7 +120,7 @@ export default function DashboardBuilderPage() {
   const handleAddWidget = async (widgetType: string, metric: string, title: string) => {
     if (!activeDashboard) return;
     try {
-      const wt = widgetTypes.find((w: any) => w.type === widgetType);
+      const wt = widgetTypes.find((w: unknown) => w.type === widgetType);
       const widget = await dashboardBuilder.addWidget(activeDashboard.id, {
         widget_type: widgetType,
         title,
@@ -130,7 +130,7 @@ export default function DashboardBuilderPage() {
         pos_y: (activeDashboard.widgets?.length || 0) * 4,
         config: { metric },
       });
-      setActiveDashboard((prev: any) => ({
+      setActiveDashboard((prev: unknown) => ({
         ...prev,
         widgets: [...(prev.widgets || []), widget],
       }));
@@ -141,9 +141,9 @@ export default function DashboardBuilderPage() {
   const handleDeleteWidget = async (widgetId: number) => {
     try {
       await dashboardBuilder.deleteWidget(widgetId);
-      setActiveDashboard((prev: any) => ({
+      setActiveDashboard((prev: unknown) => ({
         ...prev,
-        widgets: prev.widgets.filter((w: any) => w.id !== widgetId),
+        widgets: prev.widgets.filter((w: unknown) => w.id !== widgetId),
       }));
     } catch { /* ignore */ }
   };
@@ -151,27 +151,27 @@ export default function DashboardBuilderPage() {
   const handleMoveWidget = async (widgetId: number, direction: 'up' | 'down') => {
     if (!activeDashboard) return;
     const widgets = [...(activeDashboard.widgets || [])];
-    const idx = widgets.findIndex((w: any) => w.id === widgetId);
+    const idx = widgets.findIndex((w: unknown) => w.id === widgetId);
     if (idx < 0) return;
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= widgets.length) return;
     [widgets[idx], widgets[swapIdx]] = [widgets[swapIdx], widgets[idx]];
     // Update positions
-    const layout = widgets.map((w: any, i: number) => ({
+    const layout = widgets.map((w: unknown, i: number) => ({
       id: w.id, pos_x: w.pos_x, pos_y: i * (w.height || 4), width: w.width, height: w.height,
     }));
     try {
       await dashboardBuilder.updateLayout(activeDashboard.id, layout);
-      setActiveDashboard((prev: any) => ({ ...prev, widgets }));
+      setActiveDashboard((prev: unknown) => ({ ...prev, widgets }));
     } catch { /* ignore */ }
   };
 
   const handleResizeWidget = async (widgetId: number, newWidth: number) => {
     try {
       await dashboardBuilder.updateWidget(widgetId, { width: newWidth });
-      setActiveDashboard((prev: any) => ({
+      setActiveDashboard((prev: unknown) => ({
         ...prev,
-        widgets: prev.widgets.map((w: any) => w.id === widgetId ? { ...w, width: newWidth } : w),
+        widgets: prev.widgets.map((w: unknown) => w.id === widgetId ? { ...w, width: newWidth } : w),
       }));
     } catch { /* ignore */ }
   };
@@ -222,7 +222,7 @@ export default function DashboardBuilderPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-            {dashboards.map((db: any) => (
+            {dashboards.map((db: unknown) => (
               <div key={db.id} style={{ ...card, cursor: 'pointer', transition: 'box-shadow 0.15s', border: `1px solid ${C.border}` }}
                 onClick={() => loadDashboard(db.id)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
@@ -267,7 +267,7 @@ export default function DashboardBuilderPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <select value={globalPortfolioId ?? ''} onChange={e => setGlobalPortfolioId(e.target.value ? Number(e.target.value) : undefined)} style={selectStyle}>
             <option value="">Все портфели</option>
-            {portfolioList.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {portfolioList.map((p: unknown) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button style={btnPrimary} onClick={() => setShowAddWidget(true)}>
             <IconPlus /> Виджет
@@ -291,7 +291,7 @@ export default function DashboardBuilderPage() {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '16px', alignItems: 'start' }}>
-          {widgets.map((w: any, idx: number) => (
+          {widgets.map((w: unknown, idx: number) => (
             <div key={w.id} style={{ gridColumn: `span ${Math.min(w.width || 6, 12)}` }}>
               <WidgetCard
                 widget={w}
@@ -316,12 +316,12 @@ export default function DashboardBuilderPage() {
 // ADD WIDGET PANEL
 // ═══════════════════════════════════════════════════════════════════════════
 
-function AddWidgetPanel({ widgetTypes, onAdd, onClose }: { widgetTypes: any[]; onAdd: (type: string, metric: string, title: string) => void; onClose: () => void }) {
+function AddWidgetPanel({ widgetTypes, onAdd, onClose }: { widgetTypes: unknown[]; onAdd: (type: string, metric: string, title: string) => void; onClose: () => void }) {
   const [selectedType, setSelectedType] = useState('kpi');
   const [selectedMetric, setSelectedMetric] = useState('total_value');
   const [title, setTitle] = useState('');
 
-  const currentType = widgetTypes.find((w: any) => w.type === selectedType);
+  const currentType = widgetTypes.find((w: unknown) => w.type === selectedType);
   const metrics = currentType?.metrics || [];
 
   useEffect(() => {
@@ -344,7 +344,7 @@ function AddWidgetPanel({ widgetTypes, onAdd, onClose }: { widgetTypes: any[]; o
         <div>
           <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: C.textMuted, marginBottom: '4px', textTransform: 'uppercase' }}>Тип</label>
           <select value={selectedType} onChange={e => setSelectedType(e.target.value)} style={selectStyle}>
-            {widgetTypes.map((wt: any) => <option key={wt.type} value={wt.type}>{wt.label}</option>)}
+            {widgetTypes.map((wt: unknown) => <option key={wt.type} value={wt.type}>{wt.label}</option>)}
           </select>
         </div>
         <div>
@@ -370,11 +370,11 @@ function AddWidgetPanel({ widgetTypes, onAdd, onClose }: { widgetTypes: any[]; o
 // ═══════════════════════════════════════════════════════════════════════════
 
 function WidgetCard({ widget, portfolioId, onDelete, onMoveUp, onMoveDown, onResize, isFirst, isLast }: {
-  widget: any; portfolioId?: number; onDelete: () => void;
+  widget: unknown; portfolioId?: number; onDelete: () => void;
   onMoveUp: () => void; onMoveDown: () => void;
   onResize: (w: number) => void; isFirst: boolean; isLast: boolean;
 }) {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [drillKey, setDrillKey] = useState<string | null>(null);
 
@@ -384,7 +384,7 @@ function WidgetCard({ widget, portfolioId, onDelete, onMoveUp, onMoveDown, onRes
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: any = { metric };
+      const params: unknown = { metric };
       if (portfolioId) params.portfolio_id = portfolioId;
       if (drillKey) params.drill_into = drillKey;
       const d = await dashboardBuilder.widgetData(widget.widget_type, params);
@@ -458,7 +458,7 @@ function WidgetCard({ widget, portfolioId, onDelete, onMoveUp, onMoveDown, onRes
 // ═══════════════════════════════════════════════════════════════════════════
 
 function WidgetContent({ type, data, metric, onDrill, drillKey }: {
-  type: string; data: any; metric: string;
+  type: string; data: unknown; metric: string;
   onDrill: (key: string) => void; drillKey: string | null;
 }) {
   // ── KPI ──
@@ -489,7 +489,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((item: any, i: number) => (
+            {data.items.map((item: unknown, i: number) => (
               <tr key={item.id || i} style={{ borderBottom: `1px solid #f1f5f9` }}>
                 <td style={{ padding: '6px 8px', color: C.text }}>{item.title}</td>
                 <td style={{ padding: '6px 8px', color: C.textMuted }}>{item.status}</td>
@@ -514,8 +514,8 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
             <YAxis tick={{ fontSize: 11, fill: C.textMuted }} />
             <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
             <Bar dataKey="count" radius={[4, 4, 0, 0]} cursor="pointer"
-              onClick={(entry: any) => !drillKey && onDrill(entry.name)}>
-              {data.items.map((_: any, i: number) => (
+              onClick={(entry: unknown) => !drillKey && onDrill(entry.name)}>
+              {data.items.map((_: unknown, i: number) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
               ))}
             </Bar>
@@ -538,8 +538,8 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
           <PieChart>
             <Pie data={data.items} dataKey="count" nameKey="name" cx="50%" cy="50%"
               outerRadius={80} innerRadius={40} paddingAngle={2} cursor="pointer"
-              onClick={(entry: any) => !drillKey && onDrill(entry.name)}>
-              {data.items.map((_: any, i: number) => (
+              onClick={(entry: unknown) => !drillKey && onDrill(entry.name)}>
+              {data.items.map((_: unknown, i: number) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
               ))}
             </Pie>
@@ -586,7 +586,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((item: any, i: number) => (
+            {data.items.map((item: unknown, i: number) => (
               <tr key={item.id || i} style={{ borderBottom: `1px solid #f1f5f9` }}>
                 <td style={{ padding: '8px', color: C.text, fontWeight: 500 }}>{item.title}</td>
                 <td style={{ padding: '8px', color: C.textMuted }}>{item.status}</td>
@@ -602,7 +602,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
 
   // ── Waterfall ──
   if (type === 'waterfall' && data.items) {
-    const chartData = data.items.map((item: any, idx: number) => {
+    const chartData = data.items.map((item: unknown, idx: number) => {
       const prev = idx > 0 ? data.items[idx - 1].cumulative : 0;
       const invisible = item.type === 'total' ? 0 : Math.min(prev, item.cumulative);
       return { name: item.name, invisible: Math.max(invisible, 0), value: Math.abs(item.value), type: item.type };
@@ -617,7 +617,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
           <Tooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
           <Bar dataKey="invisible" stackId="s" fill="transparent" />
           <Bar dataKey="value" stackId="s" radius={[3, 3, 0, 0]}>
-            {chartData.map((e: any, i: number) => <Cell key={i} fill={getColor(e.type)} />)}
+            {chartData.map((e: unknown, i: number) => <Cell key={i} fill={getColor(e.type)} />)}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -628,7 +628,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
   if (type === 'heatmap' && data.cells) {
     const rows: string[] = data.rows || [];
     const cols: string[] = data.cols || [];
-    const values = data.cells.map((c: any) => c.value);
+    const values = data.cells.map((c: unknown) => c.value);
     const minV = Math.min(...values, 0);
     const maxV = Math.max(...values, 1);
     const getHC = (v: number) => {
@@ -638,7 +638,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
       if (r < 0.75) return '#3b82f6'; return '#1e40af';
     };
     const getTC = (v: number) => { const r = maxV === minV ? 0 : (v - minV) / (maxV - minV); return r > 0.5 ? '#fff' : '#1e293b'; };
-    const getCell = (row: string, col: string) => data.cells.find((c: any) => c.row === row && c.col === col);
+    const getCell = (row: string, col: string) => data.cells.find((c: unknown) => c.row === row && c.col === col);
     return (
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '2px', fontSize: '11px' }}>

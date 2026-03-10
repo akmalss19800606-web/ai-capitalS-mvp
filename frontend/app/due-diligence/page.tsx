@@ -318,8 +318,8 @@ export default function DueDiligencePage() {
     try {
       const res = await decisions.list({ per_page: 100 });
       const items = Array.isArray(res) ? res : (res?.items || []);
-      setDecisionsList(items.map((d: any) => ({ id: d.id, title: d.title })));
-    } catch (e: any) {
+      setDecisionsList(items.map((d: unknown) => ({ id: d.id, title: d.title })));
+    } catch (e: unknown) {
       console.error('Load decisions error:', e);
     } finally {
       setLoadingData(false);
@@ -334,7 +334,7 @@ export default function DueDiligencePage() {
     setLoading(true);
     setError(null);
     try {
-      const payload: any = {
+      const payload: unknown = {
         company_name: companyName.trim(),
         geography,
       };
@@ -349,7 +349,7 @@ export default function DueDiligencePage() {
       const res = await ddScoring.run(payload);
       setResult(res);
       setActiveTab('Обзор');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при DD-скоринге');
     } finally {
       setLoading(false);
@@ -365,7 +365,7 @@ export default function DueDiligencePage() {
         status: newStatus,
       });
       setResult(updated);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка обновления чеклиста');
     }
   };
@@ -610,7 +610,7 @@ export default function DueDiligencePage() {
                                 strokeWidth={2}
                               />
                               <Tooltip
-                                content={({ active, payload }: any) => {
+                                content={({ active, payload }: unknown) => {
                                   if (!active || !payload?.length) return null;
                                   const d = payload[0]?.payload;
                                   return (
@@ -798,7 +798,7 @@ export default function DueDiligencePage() {
                             <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} unit="" />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: C.text }} width={155} />
                             <Tooltip
-                              content={({ active, payload }: any) => {
+                              content={({ active, payload }: unknown) => {
                                 if (!active || !payload?.length) return null;
                                 const d = payload[0]?.payload;
                                 return (

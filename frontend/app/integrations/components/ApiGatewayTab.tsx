@@ -34,7 +34,7 @@ interface DeliveryItem {
   id: number;
   subscription_id: number;
   event_type: string;
-  payload: any;
+  payload: unknown;
   status_code: number | null;
   response_body: string | null;
   delivery_status: string;
@@ -315,7 +315,7 @@ function StatCard({ icon, iconColor, iconBg, label, value }: { icon: string; ico
 /* ═══════════════════════════════════════════════════════════════
    ОСНОВНОЙ КОМПОНЕНТ
    ═══════════════════════════════════════════════════════════════ */
-export default function ApiGatewayPage() {
+export default function ApiGatewayTab() {
   const [tab, setTab] = useState<'keys' | 'webhooks' | 'usage'>('keys');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -388,7 +388,7 @@ export default function ApiGatewayPage() {
       setNewKeyRateLimit(100);
       setNewKeyExpires(null);
       loadKeys();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message);
     }
   };
@@ -425,7 +425,7 @@ export default function ApiGatewayPage() {
       setWhEvents([]);
       setWhRetry(3);
       loadWebhooks();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message);
     }
   };
@@ -440,7 +440,7 @@ export default function ApiGatewayPage() {
   };
 
   const handleTestWebhook = async (id: number) => {
-    try { await apiGateway.testWebhook(id); alert('Тестовый пинг отправлен'); } catch (e: any) { alert('Ошибка: ' + e.message); }
+    try { await apiGateway.testWebhook(id); alert('Тестовый пинг отправлен'); } catch (e: unknown) { alert('Ошибка: ' + e.message); }
   };
 
   const handleShowDeliveries = async (id: number) => {

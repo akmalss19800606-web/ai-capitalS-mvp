@@ -8,7 +8,7 @@ interface SourceItem {
   name: string;
   provider: string;
   is_active: boolean;
-  config: any;
+  config: unknown;
   last_sync_at: string | null;
   sync_interval_minutes: number;
   created_at: string;
@@ -19,7 +19,7 @@ interface CacheItem {
   source_id: number;
   symbol: string;
   data_type: string;
-  data: any;
+  data: unknown;
   period: string | null;
   fetched_at: string;
   expires_at: string | null;
@@ -43,7 +43,7 @@ interface MacroResult {
   period: string | null;
   unit: string | null;
   source: string;
-  data: any[] | null;
+  data: unknown[] | null;
 }
 
 interface EtlStatus {
@@ -351,7 +351,7 @@ const TABS = [
 /*  MAIN COMPONENT                                                */
 /* ═══════════════════════════════════════════════════════════════ */
 
-export default function MarketAdaptersPage() {
+export default function MarketAdaptersTab() {
   const [tab, setTab] = useState<string>('market');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -383,7 +383,7 @@ export default function MarketAdaptersPage() {
   /* ── DMS State ──────────────────────────────────── */
   const [docs, setDocs] = useState<DocItem[]>([]);
   const [dmsSearch, setDmsSearch] = useState('');
-  const [dmsStats, setDmsStats] = useState<any>(null);
+  const [dmsStats, setDmsStats] = useState<unknown>(null);
   const [showDocModal, setShowDocModal] = useState(false);
   const [docForm, setDocForm] = useState({ title: '', description: '', category: '' });
   const [selectedDoc, setSelectedDoc] = useState<DocItem | null>(null);
@@ -454,7 +454,7 @@ export default function MarketAdaptersPage() {
       setShowSourceModal(false);
       setSrcForm({ name: '', provider: 'alpha_vantage', api_key: '', sync_interval_minutes: 60 });
       await loadSources();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -465,13 +465,13 @@ export default function MarketAdaptersPage() {
 
   async function handleFetchQuote() {
     setLoading(true); setQuoteResult(null);
-    try { setQuoteResult(await marketAdapters.getQuote(quoteSymbol)); } catch (e: any) { setError(e.message); }
+    try { setQuoteResult(await marketAdapters.getQuote(quoteSymbol)); } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
   async function handleFetchMacro() {
     setLoading(true); setMacroResult(null);
-    try { setMacroResult(await marketAdapters.getMacro(macroIndicator, undefined, macroCountry)); } catch (e: any) { setError(e.message); }
+    try { setMacroResult(await marketAdapters.getMacro(macroIndicator, undefined, macroCountry)); } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -498,7 +498,7 @@ export default function MarketAdaptersPage() {
       setShowContactModal(false);
       setContactForm({ first_name: '', last_name: '', email: '', phone: '', company: '', position: '', contact_type: 'investor', notes: '' });
       await loadContacts();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -519,7 +519,7 @@ export default function MarketAdaptersPage() {
       setDealForm({ title: '', stage: 'lead', amount: '', currency: 'USD', probability: '', description: '' });
       await loadDeals();
       await loadPipeline();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -536,7 +536,7 @@ export default function MarketAdaptersPage() {
       setDocForm({ title: '', description: '', category: '' });
       await loadDocs();
       await loadDmsStats();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -563,7 +563,7 @@ export default function MarketAdaptersPage() {
       setVersionForm({ file_name: '', file_size: '', change_notes: '' });
       setDocVersions(await marketAdapters.listDocVersions(selectedDoc.id));
       await loadDocs();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 
@@ -577,7 +577,7 @@ export default function MarketAdaptersPage() {
   async function handleCreateComparable() {
     setLoading(true); setError('');
     try {
-      const payload: any = { company_name: compForm.company_name };
+      const payload: unknown = { company_name: compForm.company_name };
       if (compForm.ticker) payload.ticker = compForm.ticker;
       if (compForm.sector) payload.sector = compForm.sector;
       if (compForm.industry) payload.industry = compForm.industry;
@@ -595,7 +595,7 @@ export default function MarketAdaptersPage() {
       setCompForm({ company_name: '', ticker: '', sector: '', industry: '', country: '', market_cap: '', revenue: '', ebitda: '', net_income: '', ev_revenue: '', ev_ebitda: '', pe_ratio: '', pb_ratio: '' });
       await loadComparables();
       await loadSectors();
-    } catch (e: any) { setError(e.message); }
+    } catch (e: unknown) { setError(e.message); }
     setLoading(false);
   }
 

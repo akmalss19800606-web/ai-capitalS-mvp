@@ -110,8 +110,8 @@ const btnOutline: React.CSSProperties = {
    TAB: EVENT SOURCING
    ═══════════════════════════════════════════════════════ */
 function EventSourcingTab() {
-  const [events, setEvents] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [events, setEvents] = useState<unknown[]>([]);
+  const [stats, setStats] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('');
 
@@ -131,10 +131,10 @@ function EventSourcingTab() {
   }
 
   const filtered = filterType
-    ? events.filter((e: any) => e.aggregate_type === filterType)
+    ? events.filter((e: unknown) => e.aggregate_type === filterType)
     : events;
 
-  const aggregateTypes = [...new Set(events.map((e: any) => e.aggregate_type))];
+  const aggregateTypes = [...new Set(events.map((e: unknown) => e.aggregate_type))];
 
   return (
     <div>
@@ -190,7 +190,7 @@ function EventSourcingTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((ev: any) => (
+                {filtered.map((ev: unknown) => (
                   <tr key={ev.id}>
                     <td style={tableCellStyle}>{ev.id}</td>
                     <td style={tableCellStyle}>
@@ -218,9 +218,9 @@ function EventSourcingTab() {
    TAB: HITL
    ═══════════════════════════════════════════════════════ */
 function HitlTab() {
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [disclaimers, setDisclaimers] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<unknown[]>([]);
+  const [stats, setStats] = useState<unknown>(null);
+  const [disclaimers, setDisclaimers] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
 
@@ -249,7 +249,7 @@ function HitlTab() {
   }
 
   const filtered = filterStatus
-    ? reviews.filter((r: any) => r.status === filterStatus)
+    ? reviews.filter((r: unknown) => r.status === filterStatus)
     : reviews;
 
   return (
@@ -309,7 +309,7 @@ function HitlTab() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r: any) => (
+                {filtered.map((r: unknown) => (
                   <tr key={r.id}>
                     <td style={tableCellStyle}>{r.id}</td>
                     <td style={tableCellStyle}>{r.ai_output_type}</td>
@@ -360,7 +360,7 @@ function HitlTab() {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {disclaimers.map((d: any, i: number) => (
+            {disclaimers.map((d: unknown, i: number) => (
               <div key={i} style={{
                 padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0',
                 backgroundColor: '#fefce8',
@@ -383,8 +383,8 @@ function HitlTab() {
    TAB: SNAPSHOTS
    ═══════════════════════════════════════════════════════ */
 function SnapshotsTab() {
-  const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [snapshots, setSnapshots] = useState<unknown[]>([]);
+  const [stats, setStats] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [reproducing, setReproducing] = useState<number | null>(null);
 
@@ -409,7 +409,7 @@ function SnapshotsTab() {
       const result = await architecturalPrinciples.reproduceSnapshot(id);
       alert(result.is_match ? 'Результат воспроизведён — хеши совпадают.' : 'Хеши не совпадают — результат изменился!');
       load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       alert('Ошибка воспроизведения: ' + (e.message || ''));
     }
     setReproducing(null);
@@ -457,7 +457,7 @@ function SnapshotsTab() {
                 </tr>
               </thead>
               <tbody>
-                {snapshots.map((s: any) => (
+                {snapshots.map((s: unknown) => (
                   <tr key={s.id}>
                     <td style={tableCellStyle}>{s.id}</td>
                     <td style={tableCellStyle}>
@@ -508,11 +508,11 @@ function SnapshotsTab() {
    TAB: EVENT BUS
    ═══════════════════════════════════════════════════════ */
 function EventBusTab() {
-  const [channels, setChannels] = useState<any[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [dlq, setDlq] = useState<any[]>([]);
+  const [channels, setChannels] = useState<unknown[]>([]);
+  const [stats, setStats] = useState<unknown>(null);
+  const [dlq, setDlq] = useState<unknown[]>([]);
   const [selectedChannel, setSelectedChannel] = useState('');
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => { load(); }, []);
@@ -576,7 +576,7 @@ function EventBusTab() {
           </p>
         ) : (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-            {channels.map((ch: any) => {
+            {channels.map((ch: unknown) => {
               const name = typeof ch === 'string' ? ch : ch.channel;
               return (
                 <button
@@ -619,7 +619,7 @@ function EventBusTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {messages.map((m: any) => (
+                  {messages.map((m: unknown) => (
                     <tr key={m.id}>
                       <td style={tableCellStyle}>{m.id}</td>
                       <td style={tableCellStyle}>{m.event_type}</td>
@@ -656,7 +656,7 @@ function EventBusTab() {
                 </tr>
               </thead>
               <tbody>
-                {dlq.map((m: any) => (
+                {dlq.map((m: unknown) => (
                   <tr key={m.id}>
                     <td style={tableCellStyle}>{m.id}</td>
                     <td style={tableCellStyle}>{m.channel}</td>
@@ -686,7 +686,7 @@ function EventBusTab() {
    TAB: CONSTRAINTS
    ═══════════════════════════════════════════════════════ */
 function ConstraintsTab() {
-  const [constraints, setConstraints] = useState<any[]>([]);
+  const [constraints, setConstraints] = useState<unknown[]>([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
   const [filterCat, setFilterCat] = useState('');
@@ -708,7 +708,7 @@ function ConstraintsTab() {
       const result = await architecturalPrinciples.seedConstraints();
       alert(`Загружено ограничений: ${result?.seeded ?? 0}`);
       load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       alert('Ошибка: ' + (e.message || ''));
     }
     setSeeding(false);
@@ -729,9 +729,9 @@ function ConstraintsTab() {
     } catch {}
   }
 
-  const categories = [...new Set(constraints.map((c: any) => c.category))];
+  const categories = [...new Set(constraints.map((c: unknown) => c.category))];
   const filtered = filterCat
-    ? constraints.filter((c: any) => c.category === filterCat)
+    ? constraints.filter((c: unknown) => c.category === filterCat)
     : constraints;
 
   return (
@@ -772,7 +772,7 @@ function ConstraintsTab() {
           </p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filtered.map((c: any) => (
+            {filtered.map((c: unknown) => (
               <div key={c.id} style={{
                 padding: '18px 20px', borderRadius: '10px', border: '1px solid #e2e8f0',
                 backgroundColor: c.is_active ? '#fff' : '#f8fafc',

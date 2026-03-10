@@ -2,39 +2,37 @@
 import { useState, useEffect, Suspense, lazy } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const OverviewTab = lazy(() => import('./components/OverviewTab'));
-const AIAnalyticsTab = lazy(() => import('./components/AIAnalyticsTab'));
-const PortfolioAnalyticsTab = lazy(() => import('./components/PortfolioAnalyticsTab'));
+const ApiGatewayTab = lazy(() => import('./components/ApiGatewayTab'));
+const MarketAdaptersTab = lazy(() => import('./components/MarketAdaptersTab'));
 
-type TabId = 'overview' | 'ai' | 'portfolio';
+type TabId = 'gateway' | 'adapters';
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'overview', label: 'Обзор', icon: '📊' },
-  { id: 'ai', label: 'AI-аналитика', icon: '🤖' },
-  { id: 'portfolio', label: 'Портфельная аналитика', icon: '💼' },
+  { id: 'gateway', label: 'API Gateway', icon: '🔑' },
+  { id: 'adapters', label: 'Рыночные адаптеры', icon: '🌐' },
 ];
 
-function AnalyticsContent() {
+function IntegrationsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams.get('tab') as TabId | null;
-  const [activeTab, setActiveTab] = useState<TabId>(tabParam && ['overview', 'ai', 'portfolio'].includes(tabParam) ? tabParam : 'overview');
+  const [activeTab, setActiveTab] = useState<TabId>(tabParam === 'adapters' ? 'adapters' : 'gateway');
 
   useEffect(() => {
-    if (tabParam && ['overview', 'ai', 'portfolio'].includes(tabParam)) {
+    if (tabParam && ['gateway', 'adapters'].includes(tabParam)) {
       setActiveTab(tabParam as TabId);
     }
   }, [tabParam]);
 
   const handleTabChange = (tab: TabId) => {
     setActiveTab(tab);
-    router.replace(`/analytics?tab=${tab}`, { scroll: false });
+    router.replace(`/integrations?tab=${tab}`, { scroll: false });
   };
 
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Аналитика</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1e293b', marginBottom: '16px' }}>Интеграции</h1>
         <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', borderRadius: '10px', padding: '4px', width: 'fit-content' }}>
           {TABS.map(tab => (
             <button
@@ -64,18 +62,17 @@ function AnalyticsContent() {
       </div>
 
       <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Загрузка...</div>}>
-        {activeTab === 'overview' && <OverviewTab />}
-        {activeTab === 'ai' && <AIAnalyticsTab />}
-        {activeTab === 'portfolio' && <PortfolioAnalyticsTab />}
+        {activeTab === 'gateway' && <ApiGatewayTab />}
+        {activeTab === 'adapters' && <MarketAdaptersTab />}
       </Suspense>
     </div>
   );
 }
 
-export default function AnalyticsPage() {
+export default function IntegrationsPage() {
   return (
     <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>Загрузка...</div>}>
-      <AnalyticsContent />
+      <IntegrationsContent />
     </Suspense>
   );
 }

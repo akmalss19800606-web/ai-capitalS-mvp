@@ -14,12 +14,12 @@ type TabKey = "overview" | "issuers" | "trades" | "charts";
 
 export default function StockExchangePage() {
   const { t } = useLocale();
-  const st = (key: string) => (t.stockPage as any)[key];
+  const st = (key: string) => (t.stockPage as unknown)[key];
 
   const [tab, setTab] = useState<TabKey>("overview");
-  const [overview, setOverview] = useState<any>(null);
-  const [issuers, setIssuers] = useState<any[]>([]);
-  const [trades, setTrades] = useState<any[]>([]);
+  const [overview, setOverview] = useState<unknown>(null);
+  const [issuers, setIssuers] = useState<unknown[]>([]);
+  const [trades, setTrades] = useState<unknown[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -40,7 +40,7 @@ export default function StockExchangePage() {
       setOverview(ov);
       setIssuers(iss);
       setTrades(tr);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Error");
     }
     setLoading(false);
@@ -52,7 +52,7 @@ export default function StockExchangePage() {
       await stockExchange.initCatalog();
       await stockExchange.sync();
       await loadData();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Sync error");
     }
     setSyncing(false);
@@ -151,7 +151,7 @@ export default function StockExchangePage() {
 }
 
 /* ─── Tab: Overview ─── */
-function OverviewTab({ overview, st, kpiStyle, cardStyle }: any) {
+function OverviewTab({ overview, st, kpiStyle, cardStyle }: unknown) {
   return (
     <div>
       <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
@@ -188,7 +188,7 @@ function OverviewTab({ overview, st, kpiStyle, cardStyle }: any) {
               </tr>
             </thead>
             <tbody>
-              {overview.most_traded.map((item: any, i: number) => (
+              {overview.most_traded.map((item: unknown, i: number) => (
                 <tr key={i} style={{ borderBottom: "1px solid #F0F0F0" }}>
                   <td style={{ padding: "10px 12px", fontSize: 14 }}>
                     <div style={{ fontWeight: 600, color: "#1A1A2E" }}>{item.name || item.code}</div>
@@ -221,10 +221,10 @@ function OverviewTab({ overview, st, kpiStyle, cardStyle }: any) {
 }
 
 /* ─── Tab: Issuers ─── */
-function IssuersTab({ issuers, st, cardStyle }: any) {
+function IssuersTab({ issuers, st, cardStyle }: unknown) {
   const [filter, setFilter] = useState("");
 
-  const filtered = issuers.filter((iss: any) =>
+  const filtered = issuers.filter((iss: unknown) =>
     (iss.name_ru || "").toLowerCase().includes(filter.toLowerCase()) ||
     (iss.code || "").toLowerCase().includes(filter.toLowerCase()) ||
     (iss.sector || "").toLowerCase().includes(filter.toLowerCase())
@@ -232,7 +232,7 @@ function IssuersTab({ issuers, st, cardStyle }: any) {
 
   // Группировка по секторам
   const sectors: Record<string, number> = {};
-  issuers.forEach((iss: any) => {
+  issuers.forEach((iss: unknown) => {
     const s = iss.sector || "Другое";
     sectors[s] = (sectors[s] || 0) + 1;
   });
@@ -275,7 +275,7 @@ function IssuersTab({ issuers, st, cardStyle }: any) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((iss: any) => (
+            {filtered.map((iss: unknown) => (
               <tr key={iss.id} style={{ borderBottom: "1px solid #F0F0F0" }}>
                 <td style={{ padding: "10px 12px", fontSize: 12, fontFamily: "monospace", color: "#555" }}>
                   {iss.code?.slice(0, 16)}...
@@ -303,7 +303,7 @@ function IssuersTab({ issuers, st, cardStyle }: any) {
 }
 
 /* ─── Tab: Trades ─── */
-function TradesTab({ trades, st, cardStyle }: any) {
+function TradesTab({ trades, st, cardStyle }: unknown) {
   return (
     <div style={cardStyle}>
       <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{st("recentTrades")}</h3>
@@ -320,7 +320,7 @@ function TradesTab({ trades, st, cardStyle }: any) {
             </tr>
           </thead>
           <tbody>
-            {trades.map((tr: any, i: number) => (
+            {trades.map((tr: unknown, i: number) => (
               <tr key={i} style={{ borderBottom: "1px solid #F0F0F0" }}>
                 <td style={{ padding: "8px 10px", fontSize: 13, color: "#555" }}>
                   {tr.trade_time ? new Date(tr.trade_time).toLocaleString("ru-RU") : tr.trade_date}
@@ -351,17 +351,17 @@ function TradesTab({ trades, st, cardStyle }: any) {
 }
 
 /* ─── Tab: Charts ─── */
-function ChartsTab({ overview, issuers, st, cardStyle }: any) {
+function ChartsTab({ overview, issuers, st, cardStyle }: unknown) {
   // Данные для pie chart — распределение по секторам
   const sectors: Record<string, number> = {};
-  (issuers || []).forEach((iss: any) => {
+  (issuers || []).forEach((iss: unknown) => {
     const s = iss.sector || "Другое";
     sectors[s] = (sectors[s] || 0) + 1;
   });
   const pieData = Object.entries(sectors).map(([name, value]) => ({ name, value }));
 
   // Данные для bar chart — объёмы торгов топ эмитентов
-  const barData = (overview?.most_traded || []).map((item: any) => ({
+  const barData = (overview?.most_traded || []).map((item: unknown) => ({
     name: (item.name || item.code || "").slice(0, 15),
     volume: item.volume || 0,
     trades: item.trades || 0,

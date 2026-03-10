@@ -322,7 +322,7 @@ export default function AIAssistantPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
   const [temperature, setTemperature] = useState(0.7);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<unknown>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   /* Загрузка провайдеров */
@@ -393,7 +393,7 @@ export default function AIAssistantPage() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
       loadStats();
-    } catch (e: any) {
+    } catch (e: unknown) {
       const errMsg: ChatMsg = {
         role: "assistant",
         content: `Ошибка: ${e?.message || "Не удалось получить ответ от ИИ. Проверьте настройки провайдеров."}`,

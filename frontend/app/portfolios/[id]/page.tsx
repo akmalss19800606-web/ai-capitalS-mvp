@@ -35,7 +35,7 @@ export default function PortfolioDetail() {
   const [loading, setLoading] = useState(true);
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [symbol, setSymbol] = useState('');
-  const [marketData, setMarketData] = useState<any>(null);
+  const [marketData, setMarketData] = useState<unknown>(null);
   const [aiResult, setAiResult] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [marketLoading, setMarketLoading] = useState(false);
