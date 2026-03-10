@@ -72,12 +72,10 @@ from app.schemas.market_adapters import (
     ComparableAnalysisResponse,
 )
 
-from app.services.market_data_adapter_service import (
+from app.services.market_data_service import (
     create_source, list_sources, get_source,
     update_source, delete_source,
     fetch_quote, fetch_macro, list_cached_data,
-)
-from app.services.market_etl_service import (
     run_etl_job, run_etl_all_sources, get_etl_status, cleanup_expired_cache,
 )
 from app.services.crm_adapter_service import (

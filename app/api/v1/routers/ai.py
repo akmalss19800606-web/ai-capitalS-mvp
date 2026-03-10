@@ -93,7 +93,7 @@ async def get_market_data(
     current_user: User = Depends(get_current_user),
 ):
     """Рыночные данные по символу (Alpha Vantage)."""
-    from app.services.market_service import get_stock_price
+    from app.services.market_data_service import get_stock_price
     data = await get_stock_price(symbol.upper())
     return data
 
@@ -104,7 +104,7 @@ async def get_market_data_bulk(
     current_user: User = Depends(get_current_user),
 ):
     """Обзор рынка по списку символов."""
-    from app.services.market_service import get_market_overview
+    from app.services.market_data_service import get_market_overview
     symbols = [s.upper() for s in request.symbols]
     return await get_market_overview(symbols)
 
