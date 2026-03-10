@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { getStoredLocale } from '@/lib/i18n';
 import { ThemeProvider } from '@/lib/theme';
+import OnboardingWizard from '@/components/OnboardingWizard';
 import './globals.css';
 
 const NO_SIDEBAR_PATHS = ['/login', '/register'];
@@ -17,18 +18,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [htmlLang, setHtmlLang] = useState('ru');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   /* Close mobile sidebar on route change */
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  /* Persist collapsed state + locale */
+  /* Persist collapsed state + locale + onboarding check */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
       if (saved === 'true') setSidebarCollapsed(true);
       setHtmlLang(getStoredLocale());
+
+      // UI-003: Check if onboarding is needed
+      const token = localStorage.getItem('token');
+      if (token && !localStorage.getItem('onboarding_complete')) {
+        fetch('/api/v1/onboarding/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && !data.completed) {
+              setShowOnboarding(true);
+            } else if (data?.completed) {
+              localStorage.setItem('onboarding_complete', 'true');
+            }
+          })
+          .catch(() => { /* ignore */ });
+      }
     }
   }, []);
 
@@ -65,6 +84,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ThemeProvider>
+        {/* UI-003: Onboarding Wizard */}
+        {showOnboarding && (
+          <OnboardingWizard onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('onboarding_complete', 'true');
+          }} />
+        )}
         {showSidebar ? (
           <div className="flex min-h-screen">
             {/* Sidebar */}
