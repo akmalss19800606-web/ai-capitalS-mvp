@@ -10,6 +10,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { KpiCard } from '@/components/ui/KpiCard';
 import { Badge } from '@/components/ui/Badge';
+import { KpiCardSkeleton, ListSkeleton, TableSkeleton } from '@/components/ui/Skeleton';
 
 /* ─── Types ─── */
 interface DashboardData {
@@ -173,8 +174,20 @@ function CurrencyWidget({ rates, loading }: { rates: CurrencyRate[]; loading: bo
     <Section title="Курсы валют ЦБ" badge="live">
       <div style={{ padding: `${spacing[1]} 0` }}>
         {loading ? (
-          <div style={{ padding: spacing[5], textAlign: 'center', color: semantic.textMuted, fontSize: typography.fontSize.base }}>
-            Загрузка курсов...
+          <div style={{ padding: `${spacing[2]} ${spacing[5]}` }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: spacing[3],
+                padding: `${spacing[2]} 0`,
+                borderBottom: i < 4 ? `1px solid var(--border-light)` : 'none',
+              }}>
+                <div className="skeleton-shimmer" style={{ width: 36, height: 36, borderRadius: '8px' }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton-shimmer" style={{ width: '60%', height: 13, borderRadius: 4 }} />
+                </div>
+                <div className="skeleton-shimmer" style={{ width: 60, height: 14, borderRadius: 4 }} />
+              </div>
+            ))}
           </div>
         ) : rates.length === 0 ? (
           <div style={{ padding: spacing[5], textAlign: 'center', color: semantic.textMuted, fontSize: typography.fontSize.base }}>

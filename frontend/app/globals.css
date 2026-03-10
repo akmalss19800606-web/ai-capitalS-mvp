@@ -261,6 +261,23 @@ a {
   margin: 0 auto;
 }
 
+/* ─── UI-002: Skeleton Shimmer Animation ─── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-100) 25%,
+    var(--color-neutral-200) 50%,
+    var(--color-neutral-100) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite ease-in-out;
+}
+
 /* ─── Utility: Fade-in animation ─── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
