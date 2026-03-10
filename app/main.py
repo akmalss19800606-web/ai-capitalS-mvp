@@ -39,8 +39,7 @@ from app.api.v1.routers.stock_exchange import router as stock_exchange_router
 from app.api.v1.routers.cpi_data import router as cpi_data_router
 from app.api.v1.routers.company_lookup import router as company_lookup_router
 # CLN-001: dashboard_realdata_router REMOVED (stub)
-# Этап 3: AI Gateway
-from app.api.v1.routers.ai_gateway import router as ai_gateway_new_router
+# REF-002: ai_gateway merged into ai.py
 # Stage 4: Beta modules
 from app.api.v1.routers import email_digest
 from app.api.v1.routers import onboarding
@@ -109,8 +108,7 @@ app.include_router(cpi_data_router, prefix='/api/v1')
 app.include_router(company_lookup_router, prefix='/api/v1')
 app.include_router(currency_rates.router, prefix='/api/v1')
 # CLN-001: dashboard_realdata REMOVED
-# Этап 3
-app.include_router(ai_gateway_new_router, prefix='/api/v1')
+# REF-002: ai_gateway merged into ai.py, no separate router needed
 # Stage 4: Beta modules
 app.include_router(email_digest.router, prefix="/api/v1")
 app.include_router(onboarding.router, prefix="/api/v1")
