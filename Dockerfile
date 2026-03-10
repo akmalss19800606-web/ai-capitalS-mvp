@@ -20,7 +20,13 @@ RUN pip install --no-cache-dir \
     "scikit-learn>=1.4.0" \
         beautifulsoup4 \
     "google-generativeai>=0.8.0" \
-    lxml
+    lxml \
+    jinja2 \
+    reportlab \
+    PyPDF2 \
+    python-docx \
+    openpyxl \
+    pdfplumber
 COPY ./app /app/app
 ENV PYTHONPATH=/app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

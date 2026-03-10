@@ -45,6 +45,18 @@ from app.api.v1.routers.company_lookup import router as company_lookup_router
 from app.api.v1.routers.dashboard_realdata import router as dashboard_realdata_router
 # ═══ Этап 3, Сессия 3.1: AI Gateway ═══
 from app.api.v1.routers.ai_gateway import router as ai_gateway_new_router
+# --- Stage 4: Beta modules ---
+from app.api.v1.routers import email_digest
+from app.api.v1.routers import onboarding
+from app.api.v1.routers import documents
+from app.api.v1.routers import branded_export
+from app.api.v1.routers import admin_panel
+# --- Stage 4: Beta modules ---
+from app.api.v1.routers import email_digest
+from app.api.v1.routers import onboarding
+from app.api.v1.routers import documents
+from app.api.v1.routers import branded_export
+from app.api.v1.routers import admin_panel
 
 from app.db.session import engine
 from app.db.base import Base
@@ -105,3 +117,9 @@ app.include_router(company_lookup_router, prefix='/api/v1')
 app.include_router(dashboard_realdata_router, prefix='/api/v1')
 # Этап 3
 app.include_router(ai_gateway_new_router, prefix='/api/v1')
+# --- Stage 4: Beta modules ---
+app.include_router(email_digest.router, prefix="/api/v1")
+app.include_router(onboarding.router, prefix="/api/v1")
+app.include_router(documents.router, prefix="/api/v1")
+app.include_router(branded_export.router, prefix="/api/v1")
+app.include_router(admin_panel.router, prefix="/api/v1")
