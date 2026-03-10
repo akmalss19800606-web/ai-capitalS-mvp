@@ -4,6 +4,7 @@
 регистрация сессий, SSO-провайдеры (конфигурация).
 """
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -120,24 +121,21 @@ def login(
     refresh_tok = create_refresh_token(data={"sub": str(user.id)})
 
     # SEC-002: Set refresh token as httpOnly cookie
-    response = Response()
     response_body = LoginResponse(
         access_token=access_token,
         token_type="bearer",
         mfa_required=False,
     )
+    response = JSONResponse(content=response_body.model_dump())
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_tok,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=False,
+        samesite="lax",
         max_age=REFRESH_COOKIE_MAX_AGE,
         path="/api/v1/auth",
     )
-    response.headers["content-type"] = "application/json"
-    response.body = response_body.model_dump_json().encode()
-    response.status_code = 200
     return response
 
 
@@ -170,24 +168,21 @@ def mfa_verify(
     refresh_tok = create_refresh_token(data={"sub": str(user.id)})
 
     # SEC-002: Set refresh token as httpOnly cookie
-    response = Response()
     response_body = LoginResponse(
         access_token=access_token,
         token_type="bearer",
         mfa_required=False,
     )
+    response = JSONResponse(content=response_body.model_dump())
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=refresh_tok,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=False,
+        samesite="lax",
         max_age=REFRESH_COOKIE_MAX_AGE,
         path="/api/v1/auth",
     )
-    response.headers["content-type"] = "application/json"
-    response.body = response_body.model_dump_json().encode()
-    response.status_code = 200
     return response
 
 
@@ -213,18 +208,13 @@ def refresh_token_endpoint(request: Request, db: Session = Depends(get_db)):
     new_access = create_access_token(data={"sub": str(user.id)})
     new_refresh = create_refresh_token(data={"sub": str(user.id)})
 
-    response = Response()
-    response_body = {"access_token": new_access, "token_type": "bearer"}
-    import json
-    response.body = json.dumps(response_body).encode()
-    response.headers["content-type"] = "application/json"
-    response.status_code = 200
+    response = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
     response.set_cookie(
         key=REFRESH_COOKIE_NAME,
         value=new_refresh,
         httponly=True,
-        secure=True,
-        samesite="strict",
+        secure=False,
+        samesite="lax",
         max_age=REFRESH_COOKIE_MAX_AGE,
         path="/api/v1/auth",
     )
