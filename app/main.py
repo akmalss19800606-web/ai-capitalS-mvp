@@ -63,6 +63,7 @@ from app.db.base import Base
 from app.core.config import settings
 
 from app.api.v1.routers import islamic_finance
+from app.api.v1.routers import portfolio_analytics
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -128,3 +129,6 @@ app.include_router(admin_panel.router, prefix="/api/v1")
 
 # Stage 5: Islamic Finance
 app.include_router(islamic_finance.router, prefix="/api/v1")
+
+# Stage 6: Portfolio Analytics Engine
+app.include_router(portfolio_analytics.router, prefix="/api/v1")
