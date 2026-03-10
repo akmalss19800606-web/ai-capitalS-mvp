@@ -366,7 +366,7 @@ function DecisionModal({
         await decisionsApi.create(payload);
       }
       onSaved();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка сохранения';
       try {
         const parsed = JSON.parse(err.message);
@@ -425,7 +425,7 @@ function DecisionModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+        <form onSubmit={handleSubmit} className="p-6">
           {error && (
             <div
               style={{
@@ -678,7 +678,7 @@ function StatusModal({
     try {
       await decisionsApi.updateStatus(decision.id, newStatus);
       onChanged();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка изменения статуса';
       try {
         const parsed = JSON.parse(err.message);
@@ -734,7 +734,7 @@ function StatusModal({
 
         <div style={{ padding: '20px 24px' }}>
           {/* Current status */}
-          <div style={{ marginBottom: '16px' }}>
+          <div className="mb-4">
             <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '6px' }}>Текущий статус</p>
             <StatusBadge status={decision.status} />
           </div>
@@ -764,7 +764,7 @@ function StatusModal({
               <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '10px' }}>
                 Доступные переходы
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex flex-col gap-2">
                 {available.map((s) => {
                   const c = STATUS_COLORS[s] || { bg: '#f1f5f9', text: '#64748b' };
                   return (
@@ -1175,7 +1175,7 @@ export default function DecisionsPage() {
         setTotal(res.total ?? items.length);
         setPages(res.pages ?? Math.ceil((res.total ?? items.length) / perPage));
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Don't redirect on data errors — just show error
       let msg = 'Ошибка загрузки данных';
       try {
@@ -1238,7 +1238,7 @@ export default function DecisionsPage() {
       await decisionsApi.delete(d.id);
       loadDecisions();
       loadStats();
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = 'Ошибка удаления';
       try {
         const parsed = JSON.parse(err.message);
@@ -1292,7 +1292,7 @@ export default function DecisionsPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ minHeight: '100vh' }}>
+    <div className="min-h-screen">
       {/* ── Header ── */}
       <div
         style={{
@@ -1665,7 +1665,7 @@ export default function DecisionsPage() {
         </div>
 
         {/* Scrollable table */}
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
             <thead>
               <tr>

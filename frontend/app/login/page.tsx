@@ -340,20 +340,20 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit}>
             {isRegister && (
-              <div style={{ marginBottom: '16px' }}>
+              <div className="mb-4">
                 <label style={labelStyle}>{t.login.fullName}</label>
                 <input value={fullName} onChange={e => setFullName(e.target.value)}
                   placeholder={t.login.fullNamePlaceholder} style={inputStyle} />
               </div>
             )}
-            <div style={{ marginBottom: '16px' }}>
+            <div className="mb-4">
               <label style={labelStyle}>{t.login.email}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder={t.login.emailPlaceholder} required style={inputStyle} />
             </div>
             <div style={{ marginBottom: '20px' }}>
               <label style={labelStyle}>{t.login.password}</label>
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password} onChange={e => setPassword(e.target.value)}

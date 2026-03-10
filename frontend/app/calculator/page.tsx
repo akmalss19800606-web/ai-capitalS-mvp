@@ -62,7 +62,7 @@ export default function CalculatorPage() {
           const data = ratesResult.value;
           const rates = data.rates || data;
           if (Array.isArray(rates) && rates.length > 0) {
-            const usdRate = rates.find((r: any) => r.code === 'USD');
+            const usdRate = rates.find((r: Record<string, unknown>) => r.code === 'USD');
             if (usdRate) {
               const ratePerUnit = usdRate.rate / (usdRate.nominal || 1);
               setUzsRate(ratePerUnit);
@@ -111,7 +111,7 @@ export default function CalculatorPage() {
             refinValue = parseFloat(data.refinancing_rate);
           } else if (Array.isArray(data.indicators || data)) {
             const indicators = data.indicators || data;
-            const refinItem = indicators.find((i: any) =>
+            const refinItem = indicators.find((i: Record<string, unknown>) =>
               i.indicator_code?.includes('refinancing') ||
               i.indicator_name?.toLowerCase().includes('рефинанс') ||
               i.indicator_name?.toLowerCase().includes('ставка')

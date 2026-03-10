@@ -1,14 +1,21 @@
 """
-AI-роутер — инвестиционные рекомендации, анализ рынка, Due Diligence.
+REF-002: Consolidated AI router.
+Merges: ai.py + ai_gateway.py. ai_analytics.py stays separate.
 
-Использует мультипровайдерный ai_service для оркестрации:
-Groq (быстрый анализ) → Gemini (мультимодальный) → Ollama (приватный).
+Endpoints:
+  /ai/recommend        — AI investment recommendation
+  /ai/market/{symbol}  — market data by symbol
+  /ai/market/overview   — market overview for multiple symbols
+  /ai/market-analysis   — AI market analysis (UZ/CA)
+  /ai/due-diligence     — AI due diligence check
+  /ai/gateway/ask       — universal AI gateway (multi-provider)
+  /ai/gateway/providers — provider status
 """
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
@@ -17,6 +24,8 @@ from app.services.ai_service import (
     get_investment_recommendation,
     analyze_market,
     due_diligence_check,
+    ask_ai_gateway,
+    get_provider_status,
 )
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -79,25 +88,25 @@ async def get_recommendation(
 
 
 @router.get("/market/{symbol}")
-def get_market_data(
+async def get_market_data(
     symbol: str,
     current_user: User = Depends(get_current_user),
 ):
     """Рыночные данные по символу (Alpha Vantage)."""
-    from app.services.market_service import get_stock_price
-    data = get_stock_price(symbol.upper())
+    from app.services.market_data_service import get_stock_price
+    data = await get_stock_price(symbol.upper())
     return data
 
 
 @router.post("/market/overview")
-def get_market_data_bulk(
+async def get_market_data_bulk(
     request: MarketRequest,
     current_user: User = Depends(get_current_user),
 ):
     """Обзор рынка по списку символов."""
-    from app.services.market_service import get_market_overview
+    from app.services.market_data_service import get_market_overview
     symbols = [s.upper() for s in request.symbols]
-    return get_market_overview(symbols)
+    return await get_market_overview(symbols)
 
 
 @router.post("/market-analysis")
@@ -149,4 +158,61 @@ async def due_diligence(
         "provider": result.get("provider", "unknown"),
         "model": result.get("model", "unknown"),
         "fallback_used": result.get("fallback_used", False),
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# AI Gateway (merged from ai_gateway.py)
+# ═══════════════════════════════════════════════════════════════
+
+class GatewayAskRequest(BaseModel):
+    question: str = Field(..., min_length=3, max_length=4000)
+    context: str = Field("", max_length=8000)
+    task_type: str = Field("general")
+    language: str = Field("ru")
+
+
+class GatewayAskResponse(BaseModel):
+    answer: str
+    provider: str
+    model: str
+    task_type: str
+    fallback_used: bool
+
+
+@router.post("/gateway/ask", response_model=GatewayAskResponse)
+async def gateway_ask(
+    request: GatewayAskRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Universal AI Gateway request with multi-provider routing."""
+    valid_types = {"general", "investment", "market_analysis", "due_diligence", "document_analysis"}
+    if request.task_type not in valid_types:
+        raise HTTPException(status_code=400, detail=f"Unknown task_type: {request.task_type}")
+
+    result = await ask_ai_gateway(
+        question=request.question,
+        context=request.context,
+        task_type=request.task_type,
+    )
+
+    return GatewayAskResponse(
+        answer=result.get("result", ""),
+        provider=result.get("provider", "unknown"),
+        model=result.get("model", "unknown"),
+        task_type=request.task_type,
+        fallback_used=result.get("fallback_used", False),
+    )
+
+
+@router.get("/gateway/providers")
+async def gateway_providers(
+    current_user: User = Depends(get_current_user),
+):
+    """AI provider status: availability, models, specialization."""
+    statuses = await get_provider_status()
+    return {
+        "providers": statuses,
+        "total": len(statuses),
+        "available": sum(1 for s in statuses if s["available"]),
     }

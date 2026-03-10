@@ -318,8 +318,8 @@ export default function DueDiligencePage() {
     try {
       const res = await decisions.list({ per_page: 100 });
       const items = Array.isArray(res) ? res : (res?.items || []);
-      setDecisionsList(items.map((d: any) => ({ id: d.id, title: d.title })));
-    } catch (e: any) {
+      setDecisionsList(items.map((d: Record<string, unknown>) => ({ id: d.id, title: d.title })));
+    } catch (e: unknown) {
       console.error('Load decisions error:', e);
     } finally {
       setLoadingData(false);
@@ -334,7 +334,7 @@ export default function DueDiligencePage() {
     setLoading(true);
     setError(null);
     try {
-      const payload: any = {
+      const payload: unknown= {
         company_name: companyName.trim(),
         geography,
       };
@@ -349,7 +349,7 @@ export default function DueDiligencePage() {
       const res = await ddScoring.run(payload);
       setResult(res);
       setActiveTab('Обзор');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при DD-скоринге');
     } finally {
       setLoading(false);
@@ -365,7 +365,7 @@ export default function DueDiligencePage() {
         status: newStatus,
       });
       setResult(updated);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка обновления чеклиста');
     }
   };
@@ -610,7 +610,7 @@ export default function DueDiligencePage() {
                                 strokeWidth={2}
                               />
                               <Tooltip
-                                content={({ active, payload }: any) => {
+                                content={({ active, payload  }: Record<string, unknown>) => {
                                   if (!active || !payload?.length) return null;
                                   const d = payload[0]?.payload;
                                   return (
@@ -635,7 +635,7 @@ export default function DueDiligencePage() {
                                   <IconFlag /> Красные флаги ({result.red_flags.length})
                                 </span>
                               </SectionTitle>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div className="flex flex-col gap-2">
                                 {result.red_flags.map((f, i) => {
                                   const sevColor = f.severity === 'critical' ? C.error : f.severity === 'high' ? '#ea580c' : C.warning;
                                   const sevBg = f.severity === 'critical' ? C.errorLight : f.severity === 'high' ? '#fff7ed' : C.warningLight;
@@ -798,7 +798,7 @@ export default function DueDiligencePage() {
                             <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} unit="" />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: C.text }} width={155} />
                             <Tooltip
-                              content={({ active, payload }: any) => {
+                              content={({ active, payload  }: Record<string, unknown>) => {
                                 if (!active || !payload?.length) return null;
                                 const d = payload[0]?.payload;
                                 return (
@@ -825,7 +825,7 @@ export default function DueDiligencePage() {
                       {/* Benchmarks Table */}
                       <div style={card}>
                         <SectionTitle>Таблица бенчмарков</SectionTitle>
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="overflow-x-auto">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                             <thead>
                               <tr>
@@ -872,7 +872,7 @@ export default function DueDiligencePage() {
 
                   {/* ─── TAB: Детализация ────────────────────────── */}
                   {activeTab === 'Детализация' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="flex flex-col gap-4">
                       {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
                         const items = (result.category_details || []).filter(d => d.category === cat);
                         if (items.length === 0) return null;
@@ -889,12 +889,12 @@ export default function DueDiligencePage() {
                                 result.esg_score
                               } />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="flex flex-col gap-2">
                               {items.map((d, idx) => (
                                 <div key={idx} style={{ backgroundColor: C.bg, borderRadius: '8px', padding: '12px 14px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>{d.subcategory}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div className="flex items-center gap-2">
                                       <span style={{ fontSize: '11px', color: C.textLight }}>Вес: {(d.weight * 100).toFixed(0)}%</span>
                                       <span style={{
                                         fontSize: '13px', fontWeight: 700,

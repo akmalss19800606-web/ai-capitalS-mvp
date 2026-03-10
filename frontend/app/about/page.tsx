@@ -142,7 +142,7 @@ export default function AboutPage() {
         <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '16px' }}>
           {s.sections.author.title}
         </h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="flex items-center gap-4">
           <div style={{
             width: '56px', height: '56px', borderRadius: '50%',
             background: 'linear-gradient(135deg, #0ea5e9, #6366f1)',

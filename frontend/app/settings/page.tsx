@@ -257,7 +257,7 @@ export default function SettingsPage() {
             <div style={{ padding: '40px 0', textAlign: 'center', color: '#9ca3af' }}>{t.loading}</div>
           ) : (
             <>
-              <div style={{ marginBottom: '16px' }}>
+              <div className="mb-4">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                   {s.profile.fullName}
                 </label>
@@ -265,14 +265,14 @@ export default function SettingsPage() {
                   onChange={e => setProfile({ ...profile, full_name: e.target.value })}
                   style={inputStyle} />
               </div>
-              <div style={{ marginBottom: '16px' }}>
+              <div className="mb-4">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                   {s.profile.email}
                 </label>
                 <input value={profile.email} readOnly
                   style={{ ...inputStyle, backgroundColor: '#f1f5f9', color: '#6b7280', cursor: 'not-allowed' }} />
               </div>
-              <div style={{ marginBottom: '24px' }}>
+              <div className="mb-6">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                   {s.profile.role}
                 </label>
@@ -288,11 +288,11 @@ export default function SettingsPage() {
               <div style={{ borderTop: '1px solid #f3f4f6', margin: '0 -28px', padding: '0 28px' }} />
 
               {/* Change password section */}
-              <div style={{ marginTop: '24px' }}>
+              <div className="mt-6">
                 <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#111827', marginBottom: '16px' }}>
                   {s.profile.changePassword}
                 </h3>
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                     {s.profile.currentPassword}
                   </label>
@@ -315,7 +315,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Save */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="flex items-center gap-3">
                 <button onClick={handleSaveProfile}
                   style={{
                     padding: '10px 24px', borderRadius: '10px', border: 'none',

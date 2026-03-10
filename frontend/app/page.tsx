@@ -132,7 +132,7 @@ function Section({ title, action, badge: badgeText, children }: {
   title: string; action?: { label: string; onClick: () => void }; badge?: string; children: React.ReactNode;
 }) {
   return (
-    <Card padding="0px" style={{ overflow: 'hidden' }}>
+    <Card padding="0px" className="overflow-hidden">
       <div style={{
         padding: `${spacing[3]} ${spacing[5]}`,
         borderBottom: `1px solid ${semantic.borderLight}`,
@@ -198,7 +198,7 @@ function CurrencyWidget({ rates, loading }: { rates: CurrencyRate[]; loading: bo
               <div style={{ flex: 1, marginLeft: spacing[3] }}>
                 <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: semantic.textPrimary }}>{r.name_ru}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 <div style={{
                   fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
                   color: semantic.textPrimary, fontVariantNumeric: 'tabular-nums',
@@ -440,13 +440,13 @@ export default function OverviewDashboard() {
       try {
         const pList = await portfoliosApi.list();
         setData({
-          total_portfolio_value: (pList || []).reduce((a: number, p: any) => a + (p.total_value || 0), 0),
+          total_portfolio_value: (pList || []).reduce((a: number, p: unknown) => a + (p.total_value || 0), 0),
           portfolio_count: (pList || []).length,
           total_decisions: 0, active_decisions: 0,
           total_investment_value: 0, high_priority_count: 0,
           status_counts: {}, type_counts: {},
           recent_decisions: [],
-          portfolios: (pList || []).map((p: any) => ({ id: p.id, name: p.name, total_value: p.total_value || 0 })),
+          portfolios: (pList || []).map((p: Record<string, unknown>) => ({ id: p.id, name: p.name, total_value: p.total_value || 0 })),
         });
       } catch { /* empty state */ }
     } finally { setLoading(false); }
@@ -472,8 +472,8 @@ export default function OverviewDashboard() {
           const all = await res.json();
           const keyCodes = ['USD', 'EUR', 'GBP', 'RUB', 'CNY'];
           const currencies = all
-            .filter((r: any) => keyCodes.includes(r.Ccy))
-            .map((r: any) => ({
+            .filter((r: Record<string, unknown>) => keyCodes.includes(r.Ccy))
+            .map((r: Record<string, unknown>) => ({
               code: r.Ccy,
               name_ru: r.CcyNm_RU || r.CcyNm_EN || r.Ccy,
               rate: parseFloat(r.Rate),
@@ -727,7 +727,7 @@ export default function OverviewDashboard() {
             <Section title="Макроэкономика" action={{ label: 'Подробнее \u2192', onClick: () => router.push('/macro-uz') }}>
               <div style={{ padding: `${spacing[4]} ${spacing[5]}`, display: 'flex', flexDirection: 'column', gap: spacing[2] }}>
                 {realData.macro.gdp_growth_pct != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Рост ВВП</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
@@ -738,7 +738,7 @@ export default function OverviewDashboard() {
                   </div>
                 )}
                 {realData.macro.inflation_pct != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Инфляция</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
@@ -749,7 +749,7 @@ export default function OverviewDashboard() {
                   </div>
                 )}
                 {realData.macro.population_mln != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Население</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,

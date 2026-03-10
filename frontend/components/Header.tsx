@@ -115,7 +115,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
       {/* Right: language + status + user */}
       <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3] }}>
         {/* Language switcher */}
-        <div ref={langRef} style={{ position: 'relative' }}>
+        <div ref={langRef} className="relative">
           <button onClick={() => setLangOpen(!langOpen)}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing[1],
@@ -185,7 +185,7 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
         </div>
 
         {/* User dropdown */}
-        <div ref={dropdownRef} style={{ position: 'relative' }}>
+        <div ref={dropdownRef} className="relative">
           <button onClick={() => setDropdownOpen(!dropdownOpen)}
             style={{
               display: 'flex', alignItems: 'center', gap: spacing[2],

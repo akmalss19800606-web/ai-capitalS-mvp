@@ -283,7 +283,7 @@ export default function PortfoliosPage() {
             >
               {/* Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="flex items-center gap-3">
                   <div
                     style={{
                       width: '42px',

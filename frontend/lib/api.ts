@@ -74,7 +74,7 @@ export const auth = {
     }),
   me: () => apiRequest('/auth/me'),
   ssoProviders: () => apiRequest('/auth/sso/providers'),
-  createSsoProvider: (data: any) =>
+  createSsoProvider: (data: unknown) =>
     apiRequest('/auth/sso/providers', { method: 'POST', body: JSON.stringify(data) }),
   deleteSsoProvider: (id: number) =>
     apiRequest(`/auth/sso/providers/${id}`, { method: 'DELETE' }),
@@ -115,8 +115,8 @@ export const decisions = {
     return apiRequest(`/decisions${query ? '?' + query : ''}`);
   },
   get: (id: number) => apiRequest(`/decisions/${id}`),
-  create: (data: any) => apiRequest('/decisions', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: any) => apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  create: (data: unknown) => apiRequest('/decisions', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: number, data: unknown) => apiRequest(`/decisions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   updateStatus: (id: number, status: string) =>
     apiRequest(`/decisions/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   delete: (id: number) => apiRequest(`/decisions/${id}`, { method: 'DELETE' }),
@@ -189,9 +189,9 @@ export const workflows = {
     return apiRequest(`/workflows/definitions${params}`);
   },
   getDefinition: (id: number) => apiRequest(`/workflows/definitions/${id}`),
-  createDefinition: (data: any) =>
+  createDefinition: (data: unknown) =>
     apiRequest('/workflows/definitions', { method: 'POST', body: JSON.stringify(data) }),
-  updateDefinition: (id: number, data: any) =>
+  updateDefinition: (id: number, data: unknown) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDefinition: (id: number) =>
     apiRequest(`/workflows/definitions/${id}`, { method: 'DELETE' }),
@@ -399,23 +399,23 @@ export const dashboardBuilder = {
   // CRUD дашбордов
   list: () => apiRequest('/dashboards'),
   get: (id: number) => apiRequest(`/dashboards/${id}`),
-  create: (data: any) =>
+  create: (data: unknown) =>
     apiRequest('/dashboards', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: any) =>
+  update: (id: number, data: unknown) =>
     apiRequest(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   delete: (id: number) =>
     apiRequest(`/dashboards/${id}`, { method: 'DELETE' }),
 
   // Виджеты
-  addWidget: (dashboardId: number, data: any) =>
+  addWidget: (dashboardId: number, data: unknown) =>
     apiRequest(`/dashboards/${dashboardId}/widgets`, { method: 'POST', body: JSON.stringify(data) }),
-  updateWidget: (widgetId: number, data: any) =>
+  updateWidget: (widgetId: number, data: unknown) =>
     apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteWidget: (widgetId: number) =>
     apiRequest(`/dashboards/widgets/${widgetId}`, { method: 'DELETE' }),
 
   // Layout (drag-and-drop)
-  updateLayout: (dashboardId: number, layout: any[]) =>
+  updateLayout: (dashboardId: number, layout: unknown[]) =>
     apiRequest(`/dashboards/${dashboardId}/layout`, { method: 'PUT', body: JSON.stringify(layout) }),
 
   // Данные для виджетов (VIS-DASH-001.1 кросс-фильтрация, 001.2 drill-down)
@@ -634,23 +634,23 @@ export const accessControl = {
     name: string;
     resource_type: string;
     action: string;
-    conditions?: any;
+    conditions?: Record<string, unknown>;
     effect?: string;
     priority?: number;
     description?: string;
   }) => apiRequest('/access/policies', { method: 'POST', body: JSON.stringify(data) }),
-  updatePolicy: (id: number, data: any) =>
+  updatePolicy: (id: number, data: unknown) =>
     apiRequest(`/access/policies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deletePolicy: (id: number) =>
     apiRequest(`/access/policies/${id}`, { method: 'DELETE' }),
-  checkAccess: (data: { resource_type: string; action: string; resource_attrs?: any }) =>
+  checkAccess: (data: { resource_type: string; action: string; resource_attrs?: Record<string, unknown> }) =>
     apiRequest('/access/check', { method: 'POST', body: JSON.stringify(data) }),
 
   // Кастомные роли
   listRoles: () => apiRequest('/access/roles'),
-  createRole: (data: { name: string; permissions: any; description?: string }) =>
+  createRole: (data: { name: string; permissions: unknown; description?: string }) =>
     apiRequest('/access/roles', { method: 'POST', body: JSON.stringify(data) }),
-  updateRole: (id: number, data: any) =>
+  updateRole: (id: number, data: unknown) =>
     apiRequest(`/access/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteRole: (id: number) =>
     apiRequest(`/access/roles/${id}`, { method: 'DELETE' }),
@@ -736,10 +736,10 @@ export const apiGateway = {
 
 export const marketAdapters = {
   // Sources (EXCH-ADAPT-001.1)
-  createSource: (data: { name: string; provider: string; api_key?: string; config?: any; sync_interval_minutes?: number }) =>
+  createSource: (data: { name: string; provider: string; api_key?: string; config?: Record<string, unknown>; sync_interval_minutes?: number }) =>
     apiRequest('/adapters/sources', { method: 'POST', body: JSON.stringify(data) }),
   listSources: () => apiRequest('/adapters/sources'),
-  updateSource: (id: number, data: any) =>
+  updateSource: (id: number, data: unknown) =>
     apiRequest(`/adapters/sources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteSource: (id: number) =>
     apiRequest(`/adapters/sources/${id}`, { method: 'DELETE' }),
@@ -760,36 +760,36 @@ export const marketAdapters = {
   cleanupCache: () => apiRequest('/adapters/etl/cleanup', { method: 'POST' }),
 
   // CRM Contacts (EXCH-ADAPT-001.3)
-  createContact: (data: any) =>
+  createContact: (data: unknown) =>
     apiRequest('/adapters/crm/contacts', { method: 'POST', body: JSON.stringify(data) }),
   listContacts: (type?: string, search?: string) =>
     apiRequest(`/adapters/crm/contacts?${type ? 'contact_type=' + type + '&' : ''}${search ? 'search=' + search : ''}`),
-  updateContact: (id: number, data: any) =>
+  updateContact: (id: number, data: unknown) =>
     apiRequest(`/adapters/crm/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteContact: (id: number) =>
     apiRequest(`/adapters/crm/contacts/${id}`, { method: 'DELETE' }),
 
   // CRM Deals
-  createDeal: (data: any) =>
+  createDeal: (data: unknown) =>
     apiRequest('/adapters/crm/deals', { method: 'POST', body: JSON.stringify(data) }),
   listDeals: (stage?: string) =>
     apiRequest(`/adapters/crm/deals${stage ? '?stage=' + stage : ''}`),
-  updateDeal: (id: number, data: any) =>
+  updateDeal: (id: number, data: unknown) =>
     apiRequest(`/adapters/crm/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDeal: (id: number) =>
     apiRequest(`/adapters/crm/deals/${id}`, { method: 'DELETE' }),
   getPipelineSummary: () => apiRequest('/adapters/crm/pipeline'),
 
   // DMS (EXCH-ADAPT-001.4)
-  createDocument: (data: any) =>
+  createDocument: (data: unknown) =>
     apiRequest('/adapters/dms/documents', { method: 'POST', body: JSON.stringify(data) }),
   listDocuments: (category?: string, search?: string) =>
     apiRequest(`/adapters/dms/documents?${category ? 'category=' + category + '&' : ''}${search ? 'search=' + search : ''}`),
-  updateDocument: (id: number, data: any) =>
+  updateDocument: (id: number, data: unknown) =>
     apiRequest(`/adapters/dms/documents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDocument: (id: number) =>
     apiRequest(`/adapters/dms/documents/${id}`, { method: 'DELETE' }),
-  addDocVersion: (id: number, data: any) =>
+  addDocVersion: (id: number, data: unknown) =>
     apiRequest(`/adapters/dms/documents/${id}/versions`, { method: 'POST', body: JSON.stringify(data) }),
   listDocVersions: (id: number) =>
     apiRequest(`/adapters/dms/documents/${id}/versions`),
@@ -798,11 +798,11 @@ export const marketAdapters = {
   getDmsStats: () => apiRequest('/adapters/dms/stats'),
 
   // Comparable (EXCH-ADAPT-001.5)
-  createComparable: (data: any) =>
+  createComparable: (data: unknown) =>
     apiRequest('/adapters/comparable', { method: 'POST', body: JSON.stringify(data) }),
   listComparables: (sector?: string) =>
     apiRequest(`/adapters/comparable${sector ? '?sector=' + sector : ''}`),
-  updateComparable: (id: number, data: any) =>
+  updateComparable: (id: number, data: unknown) =>
     apiRequest(`/adapters/comparable/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteComparable: (id: number) =>
     apiRequest(`/adapters/comparable/${id}`, { method: 'DELETE' }),
@@ -819,12 +819,12 @@ export const architecturalPrinciples = {
     aggregate_type: string;
     aggregate_id: number;
     event_type: string;
-    event_data?: any;
-    previous_state?: any;
-    new_state?: any;
+    event_data?: Record<string, unknown>;
+    previous_state?: Record<string, unknown>;
+    new_state?: Record<string, unknown>;
     correlation_id?: string;
     causation_id?: string;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   }) => apiRequest('/arch/events', { method: 'POST', body: JSON.stringify(data) }),
 
   getEventsTimeline: (params?: {
@@ -884,9 +884,9 @@ export const architecturalPrinciples = {
   createSnapshot: (data: {
     analysis_type: string;
     analysis_id?: number;
-    input_data: any;
-    parameters: any;
-    result_data: any;
+    input_data: unknown;
+    parameters: unknown;
+    result_data: unknown;
     engine_version?: string;
     notes?: string;
   }) => apiRequest('/arch/snapshots', { method: 'POST', body: JSON.stringify(data) }),
@@ -910,7 +910,7 @@ export const architecturalPrinciples = {
   publishMessage: (data: {
     channel: string;
     event_type: string;
-    payload?: any;
+    payload?: Record<string, unknown>;
     producer?: string;
   }) => apiRequest('/arch/bus/publish', { method: 'POST', body: JSON.stringify(data) }),
 

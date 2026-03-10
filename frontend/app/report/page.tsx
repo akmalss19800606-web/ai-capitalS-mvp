@@ -224,13 +224,13 @@ const TEMPLATE_COLORS: Record<string, { bg: string; text: string; icon: string }
 // CHART RENDERERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function SectionChart({ chartType, chartData }: { chartType?: string; chartData?: any[] }) {
+function SectionChart({ chartType, chartData }: { chartType?: string; chartData?: unknown[] }) {
   if (!chartType || !chartData || chartData.length === 0) return null;
 
   if (chartType === 'bar') {
     const dataKey = chartData[0]?.value !== undefined ? 'value' : Object.keys(chartData[0]).find(k => k !== 'name') || 'value';
     return (
-      <div style={{ marginTop: '12px' }}>
+      <div className="mt-3">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
@@ -252,7 +252,7 @@ function SectionChart({ chartType, chartData }: { chartType?: string; chartData?
 
   if (chartType === 'pie') {
     return (
-      <div style={{ marginTop: '12px' }}>
+      <div className="mt-3">
         <ResponsiveContainer width="100%" height={240}>
           <PieChart>
             <Pie
@@ -262,14 +262,14 @@ function SectionChart({ chartType, chartData }: { chartType?: string; chartData?
               innerRadius={50}
               outerRadius={85}
               dataKey="value"
-              label={({ name, percent }: any) => `${(name || '').slice(0, 15)} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent  }: Record<string, unknown>) => `${(name || '').slice(0, 15)} ${(percent * 100).toFixed(0)}%`}
               labelLine={false}
             >
               {chartData.map((_, i) => (
                 <Cell key={`pie-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(val: any) => typeof val === 'number' ? val.toFixed(1) : val} />
+            <Tooltip formatter={(val: unknown) => typeof val === 'number' ? val.toFixed(1) : val} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -278,7 +278,7 @@ function SectionChart({ chartType, chartData }: { chartType?: string; chartData?
 
   if (chartType === 'radar') {
     return (
-      <div style={{ marginTop: '12px' }}>
+      <div className="mt-3">
         <ResponsiveContainer width="100%" height={260}>
           <RadarChart data={chartData} cx="50%" cy="50%" outerRadius="75%">
             <PolarGrid stroke={C.border} />
@@ -375,7 +375,7 @@ export default function ReportPage() {
       setPortfoliosList(Array.isArray(ports) ? ports : (ports?.items || []));
       const decsArr = Array.isArray(decsRaw) ? decsRaw : (decsRaw?.items || []);
       setDecisionsList(decsArr);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки');
     } finally {
       setLoadingData(false);
@@ -434,7 +434,7 @@ export default function ReportPage() {
       });
       setPreviewReport(res);
       loadHistory();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка генерации');
     } finally {
       setGenerating(false);
@@ -458,7 +458,7 @@ export default function ReportPage() {
       const res = await reports.get(id);
       setPreviewReport(res);
       setActiveTab('constructor');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки отчёта');
     }
   };
@@ -532,7 +532,7 @@ export default function ReportPage() {
               {/* Template selection */}
               <div>
                 <label style={labelStyle}>Шаблон отчёта</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {templatesList.map(tpl => {
                     const c = tplColor(tpl.template_key);
                     const isSelected = tpl.template_key === selectedTemplateKey;
@@ -549,7 +549,7 @@ export default function ReportPage() {
                           transition: 'all 0.15s',
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="flex items-center gap-2">
                           <span style={{ fontSize: '16px' }}>{c.icon}</span>
                           <span style={{ fontSize: '13px', fontWeight: 600, color: isSelected ? C.primary : C.text }}>{tpl.name}</span>
                         </div>
@@ -712,7 +712,7 @@ export default function ReportPage() {
                 <>
                   {/* Report Title */}
                   <div style={{ ...card, borderLeft: `4px solid ${C.primary}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div className="flex items-center justify-between">
                       <div>
                         <div style={{ fontSize: '18px', fontWeight: 700, color: C.text }}>{previewReport.title}</div>
                         <div style={{ fontSize: '13px', color: C.textMuted, marginTop: '4px' }}>
@@ -835,7 +835,7 @@ export default function ReportPage() {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
                         <div style={{ fontSize: '20px' }}>{c.icon}</div>
-                        <div style={{ flex: 1 }}>
+                        <div className="flex-1">
                           <div style={{ fontSize: '14px', fontWeight: 600, color: C.text }}>{r.title}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
                             <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: c.bg, color: c.text, fontSize: '11px', fontWeight: 600 }}>

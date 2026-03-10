@@ -142,7 +142,7 @@ export default function CollaborationPage() {
 
   // Load decisions list
   useEffect(() => {
-    decisionsApi.list({ per_page: 100 }).then((r: any) => {
+    decisionsApi.list({ per_page: 100 }).then((r: Record<string, unknown>) => {
       setDecisionsList(r.items || r || []);
     }).catch(() => {});
   }, []);
@@ -177,7 +177,7 @@ export default function CollaborationPage() {
   const loadTasks = useCallback(async () => {
     if (!selectedDecision) return;
     try {
-      const params: any = {};
+      const params: unknown= {};
       if (taskFilter) params.status = taskFilter;
       const data = await collaboration.listTasks(selectedDecision, params);
       setTasks(data);
@@ -284,7 +284,7 @@ export default function CollaborationPage() {
     } catch {}
   };
 
-  const handleUpdatePref = async (key: string, value: any) => {
+  const handleUpdatePref = async (key: string, value: unknown) => {
     try {
       const data = await preferences.update({ [key]: value });
       setPrefs(data);
@@ -361,7 +361,7 @@ export default function CollaborationPage() {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="flex items-center gap-2">
           <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: '700' }}>
             {(c.author_name || 'U')[0]}
           </div>
@@ -385,7 +385,7 @@ export default function CollaborationPage() {
   return (
     <div>
       {/* HEADER */}
-      <div style={{ marginBottom: '24px' }}>
+      <div className="mb-6">
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', margin: '0 0 4px' }}>
           Совместная работа
         </h1>
@@ -484,7 +484,7 @@ export default function CollaborationPage() {
               {myTasksList.length === 0 ? (
                 <p style={{ color: '#94a3b8', fontSize: '13px' }}>У вас нет назначенных задач</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {myTasksList.map(t => (
                     <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px' }}>
                       <span style={badge(STATUS_COLORS[t.status] || '#94a3b8')}>{STATUS_LABELS[t.status] || t.status}</span>
@@ -559,7 +559,7 @@ export default function CollaborationPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {tasks.map(t => (
                     <div key={t.id} style={{ ...card, padding: '16px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-                      <div style={{ flex: 1 }}>
+                      <div className="flex-1">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                           <span style={badge(PRIORITY_COLORS[t.priority])}>{PRIORITY_LABELS[t.priority]}</span>
                           <span style={{ fontSize: '11px', color: '#6366f1', background: '#eef2ff', padding: '2px 8px', borderRadius: '8px' }}>
@@ -621,7 +621,7 @@ export default function CollaborationPage() {
               <p style={{ fontSize: '14px' }}>Уведомлений нет</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="flex flex-col gap-2">
               {notifs.map(n => (
                 <div
                   key={n.id}
@@ -636,7 +636,7 @@ export default function CollaborationPage() {
                   }}
                 >
                   <span style={{ fontSize: '18px' }}>{NOTIF_ICONS[n.notification_type] || 'ℹ️'}</span>
-                  <div style={{ flex: 1 }}>
+                  <div className="flex-1">
                     <p style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b', margin: '0 0 2px' }}>{n.title}</p>
                     {n.body && <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 4px' }}>{n.body}</p>}
                     <span style={{ fontSize: '11px', color: '#94a3b8' }}>{fmtDate(n.created_at)}</span>
@@ -675,7 +675,7 @@ export default function CollaborationPage() {
             <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
               Выберите представление, которое соответствует вашей роли
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="flex flex-col gap-2">
               {Object.entries(VIEW_MODE_LABELS).map(([k, v]) => (
                 <button
                   key={k}
@@ -708,9 +708,9 @@ export default function CollaborationPage() {
             </h3>
 
             {/* Theme toggle */}
-            <div style={{ marginBottom: '16px' }}>
+            <div className="mb-4">
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Тема</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex gap-2">
                 {['light', 'dark'].map(t => (
                   <button
                     key={t}
@@ -731,7 +731,7 @@ export default function CollaborationPage() {
             </div>
 
             {/* Accent color */}
-            <div style={{ marginBottom: '16px' }}>
+            <div className="mb-4">
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Акцентный цвет</label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#22c55e', '#06b6d4'].map(c => (
@@ -755,7 +755,7 @@ export default function CollaborationPage() {
             {/* Font size */}
             <div>
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '8px', display: 'block' }}>Размер шрифта</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex gap-2">
                 {Object.entries(FONT_SIZE_LABELS).map(([k, v]) => (
                   <button
                     key={k}
@@ -782,12 +782,12 @@ export default function CollaborationPage() {
             <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '14px' }}>
               Настройки уведомлений
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="flex flex-col gap-3">
               {[
                 { key: 'in_app_notifications', label: 'In-app уведомления' },
                 { key: 'email_notifications', label: 'Email-уведомления' },
               ].map(item => (
-                <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div key={item.key} className="flex justify-between items-center">
                   <span style={{ fontSize: '13px', color: '#475569' }}>{item.label}</span>
                   <button
                     onClick={() => handleUpdatePref(item.key, !(prefs as any)[item.key])}
@@ -826,7 +826,7 @@ export default function CollaborationPage() {
             <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', marginBottom: '14px' }}>
               Текущие настройки
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="flex flex-col gap-2">
               {[
                 ['Режим', VIEW_MODE_LABELS[prefs.view_mode] || prefs.view_mode],
                 ['Тема', prefs.theme === 'light' ? 'Светлая' : 'Тёмная'],
@@ -850,7 +850,7 @@ export default function CollaborationPage() {
       {/* No decision selected message */}
       {(tab === 'threads' || tab === 'tasks') && !selectedDecision && (
         <div style={{ ...card, textAlign: 'center', color: '#94a3b8', padding: '60px 20px' }}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" style={{ marginBottom: '16px' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" className="mb-4">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
           <p style={{ fontSize: '14px', margin: '0 0 4px' }}>Выберите решение</p>

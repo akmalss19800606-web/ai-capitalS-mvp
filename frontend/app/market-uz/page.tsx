@@ -71,7 +71,7 @@ export default function MarketUzbekistan() {
 
         <div>
           <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>Быстрые запросы:</p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          <div className="flex flex-wrap gap-2">
             {quickQueries.map((q, i) => (
               <button key={i} onClick={() => handleAnalyze(q)} disabled={loading} style={{ padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#475569', fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s' }}>
                 {q}
