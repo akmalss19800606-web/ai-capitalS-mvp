@@ -47,17 +47,63 @@ from app.api.v1.routers import documents
 from app.api.v1.routers import branded_export
 from app.api.v1.routers import admin_panel
 
+from contextlib import asynccontextmanager
+
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
+from app.services.redis_cache_service import RedisCacheService
 
 from app.api.v1.routers import islamic_finance
 from app.api.v1.routers import portfolio_analytics
 from app.api.v1.routers import currency_rates
 
+# Phase 3: Telegram Bot
+from app.services.telegram_bot_service import TelegramBotService, telegram_bot as _tg_ref
+
+# Phase 3: New routers
+from app.api.v1.routers import rate_limit
+from app.api.v1.routers import dd_documents
+from app.api.v1.routers import calculator
+from app.api.v1.routers import contacts
+from app.api.v1.routers import excel_export
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown: Redis + Telegram Bot."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Startup — Redis
+    redis_ok = await RedisCacheService.ping()
+    if redis_ok:
+        logger.info("Redis connected successfully")
+    else:
+        logger.warning("Redis unavailable — caching disabled")
+
+    # Startup — Telegram Bot (TG-001)
+    import app.services.telegram_bot_service as tg_module
+    bot = TelegramBotService(token=settings.TELEGRAM_BOT_TOKEN)
+    started = await bot.start()
+    if started:
+        tg_module.telegram_bot = bot
+        logger.info("Telegram Bot started")
+    else:
+        logger.info("Telegram Bot not started (token not configured or lib missing)")
+
+    yield
+
+    # Shutdown — Telegram Bot
+    if bot.is_running:
+        await bot.stop()
+    # Shutdown — Redis
+    await RedisCacheService.close()
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -119,3 +165,9 @@ app.include_router(admin_panel.router, prefix="/api/v1")
 app.include_router(islamic_finance.router, prefix="/api/v1")
 # Stage 6: Portfolio Analytics Engine
 app.include_router(portfolio_analytics.router, prefix="/api/v1")
+# Phase 3: New routers
+app.include_router(rate_limit.router, prefix="/api/v1")
+app.include_router(dd_documents.router, prefix="/api/v1")
+app.include_router(calculator.router, prefix="/api/v1")
+app.include_router(contacts.router, prefix="/api/v1")
+app.include_router(excel_export.router, prefix="/api/v1")

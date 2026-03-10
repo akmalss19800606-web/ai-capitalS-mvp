@@ -15,8 +15,10 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_current_user, get_db
 from app.services.company_lookup_service import (
+    advanced_dd_search,
     force_lookup_by_inn,
     lookup_by_inn,
+    search_by_founder,
     search_company_orginfo,
 )
 
@@ -157,3 +159,67 @@ async def force_lookup_company(
         )
 
     return result
+
+
+# ─── DD Extended Search (Phase 3, DD-001) ──────────────────────────────────
+
+
+class DDSearchRequest(BaseModel):
+    """Тело запроса для расширенного DD-поиска."""
+    query: str
+    filters: dict | None = None  # {oked, region, status}
+
+
+@router.post(
+    "/dd-search",
+    summary="Расширенный DD-поиск компаний",
+)
+async def dd_search(
+    body: DDSearchRequest,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    """
+    Расширенный поиск для Due Diligence с фильтрами.
+
+    Поиск по ОКЭД, региону, статусу. Добавляет DD-релевантность
+    и risk flags к каждому результату.
+    """
+    query = body.query.strip()
+    if len(query) < 2:
+        raise HTTPException(status_code=400, detail="Запрос должен содержать минимум 2 символа")
+
+    try:
+        results = await advanced_dd_search(db, query, body.filters)
+    except Exception as e:
+        logger.error("Ошибка DD-поиска '%s': %s", query, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Ошибка при выполнении DD-поиска",
+        )
+
+    return {"query": query, "filters": body.filters, "total": len(results), "results": results}
+
+
+@router.get(
+    "/by-founder",
+    summary="Поиск компаний по директору/основателю",
+)
+async def find_by_founder(
+    name: str = Query(..., min_length=2, description="Имя директора/основателя"),
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    """
+    Поиск всех компаний, где указанное лицо является директором.
+    """
+    try:
+        results = await search_by_founder(db, name)
+    except Exception as e:
+        logger.error("Ошибка поиска по основателю '%s': %s", name, e)
+        raise HTTPException(
+            status_code=502,
+            detail="Ошибка при поиске по основателю",
+        )
+
+    return {"founder": name, "total": len(results), "companies": results}

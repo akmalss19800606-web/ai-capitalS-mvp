@@ -128,20 +128,115 @@ def _add_header(story, styles, title: str, subtitle: str = ""):
     story.append(Spacer(1, 6 * mm))
 
 
-def _add_footer(canvas, doc):
-    """Footer на каждой странице."""
+def _draw_brand_header(canvas, doc):
+    """
+    Брендированная шапка на каждой странице (Phase 3, EXPORT-001).
+
+    Рисует: лого-область (синий квадрат) + "AI Capital Management" + дата.
+    """
     canvas.saveState()
+    page_width = A4[0]
+
+    # Синяя полоса сверху
+    canvas.setFillColor(HexColor(BRAND_DARK))
+    canvas.rect(0, A4[1] - 15 * mm, page_width, 15 * mm, fill=True, stroke=False)
+
+    # Лого-область (квадрат с буквами "AC")
+    canvas.setFillColor(HexColor(BRAND_PRIMARY))
+    canvas.roundRect(15 * mm, A4[1] - 13 * mm, 11 * mm, 11 * mm, 2 * mm, fill=True, stroke=False)
+    canvas.setFillColor(white)
+    canvas.setFont("Helvetica-Bold", 10)
+    canvas.drawCentredString(20.5 * mm, A4[1] - 10 * mm, "AC")
+
+    # Название компании
+    canvas.setFillColor(white)
+    canvas.setFont("Helvetica-Bold", 11)
+    canvas.drawString(30 * mm, A4[1] - 10 * mm, "AI Capital Management")
+
+    # Дата справа
+    now = datetime.now().strftime("%d.%m.%Y")
+    canvas.setFont("Helvetica", 8)
+    canvas.drawRightString(page_width - 15 * mm, A4[1] - 10 * mm, now)
+
+    # Тонкая синяя линия под шапкой
+    canvas.setStrokeColor(HexColor(BRAND_PRIMARY))
+    canvas.setLineWidth(0.5)
+    canvas.line(15 * mm, A4[1] - 16 * mm, page_width - 15 * mm, A4[1] - 16 * mm)
+
+    canvas.restoreState()
+
+
+def _draw_brand_footer(canvas, doc):
+    """
+    Брендированный футер: номер страницы + конфиденциальность (Phase 3, EXPORT-001).
+    """
+    canvas.saveState()
+    page_width = A4[0]
+
+    # Тонкая линия
+    canvas.setStrokeColor(HexColor("#e2e8f0"))
+    canvas.setLineWidth(0.5)
+    canvas.line(15 * mm, 14 * mm, page_width - 15 * mm, 14 * mm)
+
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(HexColor(BRAND_GRAY))
+
+    # Левая часть: конфиденциальность
     canvas.drawString(
-        20 * mm, 10 * mm,
-        "© 2026 AI Capital Management · Толиев Акмал Идиевич · Свидетельство №009932",
+        15 * mm, 9 * mm,
+        "Конфиденциально | AI Capital Management · Толиев Акмал Идиевич · Свидетельство №009932",
     )
+
+    # Правая часть: номер страницы
     canvas.drawRightString(
-        A4[0] - 20 * mm, 10 * mm,
+        page_width - 15 * mm, 9 * mm,
         f"Стр. {doc.page}",
     )
+
+    # Время генерации (мелко по центру)
+    now = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+    canvas.setFont("Helvetica", 5.5)
+    canvas.setFillColor(HexColor("#94a3b8"))
+    canvas.drawCentredString(page_width / 2, 5 * mm, f"Сформировано: {now}")
+
     canvas.restoreState()
+
+
+def _draw_watermark(canvas, doc):
+    """Водяной знак 'AI CAPITAL' по диагонали (Phase 3, EXPORT-001)."""
+    canvas.saveState()
+    canvas.setFillColor(HexColor("#e2e8f0"))
+    canvas.setFont("Helvetica-Bold", 60)
+    canvas.translate(A4[0] / 2, A4[1] / 2)
+    canvas.rotate(45)
+    canvas.drawCentredString(0, 0, "AI CAPITAL")
+    canvas.restoreState()
+
+
+def _on_first_page(canvas, doc):
+    """Callback для первой страницы: header + footer."""
+    _draw_brand_header(canvas, doc)
+    _draw_brand_footer(canvas, doc)
+
+
+def _on_later_pages(canvas, doc):
+    """Callback для последующих страниц: header + footer."""
+    _draw_brand_header(canvas, doc)
+    _draw_brand_footer(canvas, doc)
+
+
+def _on_first_page_watermark(canvas, doc):
+    """Callback с водяным знаком."""
+    _draw_brand_header(canvas, doc)
+    _draw_brand_footer(canvas, doc)
+    _draw_watermark(canvas, doc)
+
+
+# Legacy compatibility
+def _add_footer(canvas, doc):
+    """Legacy footer — теперь использует новые функции."""
+    _draw_brand_header(canvas, doc)
+    _draw_brand_footer(canvas, doc)
 
 
 def _make_table(headers: List[str], rows: List[List], col_widths=None):

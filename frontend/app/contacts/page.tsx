@@ -10,15 +10,31 @@ export default function ContactsPage() {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSending(true);
-    // Simulate sending (in production → POST /api/v1/contacts)
-    await new Promise(r => setTimeout(r, 1200));
-    setSending(false);
-    setSent(true);
-    setForm({ name: '', email: '', subject: '', message: '' });
-    setTimeout(() => setSent(false), 5000);
+    setError('');
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const res = await fetch(`${apiUrl}/api/v1/contacts/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || 'Ошибка отправки');
+      }
+      setSent(true);
+      setForm({ name: '', email: '', subject: '', message: '' });
+      setTimeout(() => setSent(false), 5000);
+    } catch (err: any) {
+      setError(err.message || 'Не удалось отправить сообщение. Попробуйте позже.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const cardStyle: React.CSSProperties = {
@@ -186,6 +202,23 @@ export default function ContactsPage() {
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
               {c.form.successMsg}
+            </div>
+          )}
+
+          {error && (
+            <div style={{
+              backgroundColor: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: '10px', padding: '12px 16px', marginBottom: '16px',
+              fontSize: '13px', color: '#dc2626',
+              display: 'flex', alignItems: 'center', gap: '8px',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+              </svg>
+              {error}
             </div>
           )}
 
