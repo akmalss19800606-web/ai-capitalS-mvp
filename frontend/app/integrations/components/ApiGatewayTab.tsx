@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { apiGateway } from '../../lib/api';
+import { apiGateway } from '@/lib/api';
 
 /* ─── Типы ──────────────────────────────────────────────────── */
 interface ApiKeyItem {

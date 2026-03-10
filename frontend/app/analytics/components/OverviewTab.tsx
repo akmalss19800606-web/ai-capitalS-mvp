@@ -118,7 +118,7 @@ const CHART_COLORS = [
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export default function OverviewTab AnalyticsPage() {
+export default function OverviewTab() {
   const [overview, setOverview] = useState<OLAPOverview | null>(null);
   const [etlStatus, setEtlStatus] = useState<ETLStatus | null>(null);
   const [loading, setLoading] = useState(true);

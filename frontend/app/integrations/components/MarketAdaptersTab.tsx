@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { marketAdapters } from '../../lib/api';
+import { marketAdapters } from '@/lib/api';
 
 /* ─── Типы ──────────────────────────────────────────────────── */
 interface SourceItem {
