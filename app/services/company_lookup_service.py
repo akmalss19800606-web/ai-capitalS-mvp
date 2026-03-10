@@ -427,6 +427,203 @@ def _save_company_to_db(db: Session, details: dict) -> CompanyProfile:
     return company
 
 
+# ─── DD Extended Search (Phase 3, DD-001) ──────────────────────────────────
+
+
+async def advanced_dd_search(
+    db: Session,
+    query: str,
+    filters: dict | None = None,
+) -> list[dict]:
+    """
+    Расширенный DD-поиск компаний с фильтрами.
+
+    Поиск по orginfo.uz с дополнительной фильтрацией результатов
+    по ОКЭД, региону, статусу и другим критериям.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        query: Поисковый запрос (ИНН, наименование, ключевые слова).
+        filters: Необязательные фильтры {oked, region, status, min_charter_fund}.
+
+    Returns:
+        Список компаний с DD-релевантными данными.
+    """
+    filters = filters or {}
+    results = []
+
+    # 1. Поиск на orginfo.uz
+    search_results = await search_company_orginfo(query)
+    if not search_results:
+        # Fallback: поиск в локальном кэше БД
+        cached = db.query(CompanyProfile).filter(
+            CompanyProfile.name.ilike(f"%{query}%")
+        ).limit(20).all()
+        return [_company_to_dict(c) for c in cached]
+
+    # 2. Загружаем детали для каждого результата (первые 10)
+    for item in search_results[:10]:
+        org_url = item.get("url", "")
+        if not org_url:
+            continue
+
+        details = await fetch_company_details(org_url)
+        if not details.get("name"):
+            details["name"] = item.get("name", "")
+        if not details.get("inn"):
+            details["inn"] = item.get("inn", "")
+
+        # 3. Применяем фильтры
+        if not _matches_filters(details, filters):
+            continue
+
+        # 4. Добавляем DD-метаданные
+        dd_entry = {
+            **details,
+            "dd_relevance": _calculate_dd_relevance(details, query),
+            "risk_flags": _detect_risk_flags(details),
+            "source_url": org_url,
+        }
+        results.append(dd_entry)
+
+        # Кэшируем в БД
+        if details.get("inn"):
+            _save_company_to_db(db, details)
+
+    # Сортировка по релевантности
+    results.sort(key=lambda x: x.get("dd_relevance", 0), reverse=True)
+    return results
+
+
+async def search_by_founder(
+    db: Session,
+    founder_name: str,
+) -> list[dict]:
+    """
+    Поиск компаний по имени основателя/директора.
+
+    Ищет сначала в локальном кэше БД, затем на orginfo.uz.
+
+    Args:
+        db: Сессия SQLAlchemy.
+        founder_name: Имя директора/основателя.
+
+    Returns:
+        Список компаний, где указанное лицо является директором.
+    """
+    results = []
+
+    # 1. Поиск в локальном кэше БД
+    cached = db.query(CompanyProfile).filter(
+        CompanyProfile.director.ilike(f"%{founder_name}%")
+    ).all()
+    for company in cached:
+        results.append({
+            **_company_to_dict(company),
+            "match_source": "database_cache",
+        })
+
+    # 2. Поиск на orginfo.uz по имени
+    search_results = await search_company_orginfo(founder_name)
+    seen_inns = {r.get("inn") for r in results if r.get("inn")}
+
+    for item in search_results[:10]:
+        org_url = item.get("url", "")
+        if not org_url:
+            continue
+
+        details = await fetch_company_details(org_url)
+        director = details.get("director", "").lower()
+        if founder_name.lower() not in director:
+            continue
+
+        inn = details.get("inn", "") or item.get("inn", "")
+        if inn in seen_inns:
+            continue
+        seen_inns.add(inn)
+
+        if not details.get("name"):
+            details["name"] = item.get("name", "")
+        if not details.get("inn"):
+            details["inn"] = inn
+
+        results.append({
+            **details,
+            "match_source": "orginfo.uz",
+        })
+
+        # Кэшируем
+        if inn:
+            _save_company_to_db(db, details)
+
+    return results
+
+
+def _matches_filters(details: dict, filters: dict) -> bool:
+    """Проверка соответствия компании фильтрам DD-поиска."""
+    if not filters:
+        return True
+
+    # Фильтр по ОКЭД
+    if "oked" in filters and filters["oked"]:
+        if filters["oked"] not in details.get("oked", ""):
+            return False
+
+    # Фильтр по региону (из адреса)
+    if "region" in filters and filters["region"]:
+        if filters["region"].lower() not in details.get("address", "").lower():
+            return False
+
+    # Фильтр по статусу
+    if "status" in filters and filters["status"]:
+        if filters["status"].lower() not in details.get("status", "").lower():
+            return False
+
+    return True
+
+
+def _calculate_dd_relevance(details: dict, query: str) -> float:
+    """Оценка DD-релевантности результата (0-100)."""
+    score = 50.0  # базовый
+
+    # Наличие ключевых данных
+    if details.get("inn"):
+        score += 10
+    if details.get("director"):
+        score += 10
+    if details.get("oked"):
+        score += 5
+    if details.get("charter_fund"):
+        score += 10
+    if details.get("address"):
+        score += 5
+    if details.get("status") and "действующ" in details["status"].lower():
+        score += 10
+
+    return min(score, 100.0)
+
+
+def _detect_risk_flags(details: dict) -> list[str]:
+    """Выявление рисковых индикаторов для DD."""
+    flags = []
+
+    status = details.get("status", "").lower()
+    if "ликвидир" in status:
+        flags.append("ЛИКВИДИРОВАНО — компания не действует")
+    elif "реорганиз" in status:
+        flags.append("РЕОРГАНИЗОВАНО — проверьте правопреемника")
+    elif not status or "действующ" not in status:
+        flags.append("СТАТУС НЕИЗВЕСТЕН — требуется ручная проверка")
+
+    if not details.get("director"):
+        flags.append("ДИРЕКТОР НЕ УКАЗАН")
+
+    if not details.get("charter_fund"):
+        flags.append("УСТАВНЫЙ ФОНД НЕ УКАЗАН")
+
+    return flags
+
+
 def _company_to_dict(company: CompanyProfile) -> dict:
     """Преобразует объект CompanyProfile в словарь для ответа API."""
     return {
