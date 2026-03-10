@@ -94,6 +94,7 @@ export const ru = {
       companySearch: 'Поиск по ИНН',
       cpiUz: 'Инфляция (ИПЦ)',
       stockExchange: 'Фондовая биржа',
+      calculator: 'Калькулятор',
     },
   },
 

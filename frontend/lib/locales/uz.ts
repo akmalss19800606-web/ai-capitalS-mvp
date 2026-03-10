@@ -96,6 +96,7 @@ export const uz: Locale = {
       companySearch: "STIR bo'yicha qidiruv",
       cpiUz: 'Inflyatsiya (INI)',
       stockExchange: 'Fond birjasi',
+      calculator: 'Kalkulyator',
     },
   },
 

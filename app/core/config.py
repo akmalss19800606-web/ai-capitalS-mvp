@@ -63,20 +63,17 @@ class Settings(BaseSettings):
             )
         return v
 
-    @property
-    def cors_origins_list(self) -> list[str]:
-        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
-
-
 
     @property
     def database_url_sync(self) -> str:
         url = self.DATABASE_URL
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+psycopg2://", 1)
-        elif url.startswith("postgresql://") and "+psycopg2" not in url:
-            url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
         return url
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
 settings = Settings()

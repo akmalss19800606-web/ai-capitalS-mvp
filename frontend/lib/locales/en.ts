@@ -96,6 +96,7 @@ export const en: Locale = {
       companySearch: 'INN Search',
       cpiUz: 'Inflation (CPI)',
       stockExchange: 'Stock Exchange',
+      calculator: 'Calculator',
     },
   },
 
