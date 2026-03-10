@@ -132,7 +132,7 @@ function Section({ title, action, badge: badgeText, children }: {
   title: string; action?: { label: string; onClick: () => void }; badge?: string; children: React.ReactNode;
 }) {
   return (
-    <Card padding="0px" style={{ overflow: 'hidden' }}>
+    <Card padding="0px" className="overflow-hidden">
       <div style={{
         padding: `${spacing[3]} ${spacing[5]}`,
         borderBottom: `1px solid ${semantic.borderLight}`,
@@ -198,7 +198,7 @@ function CurrencyWidget({ rates, loading }: { rates: CurrencyRate[]; loading: bo
               <div style={{ flex: 1, marginLeft: spacing[3] }}>
                 <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: semantic.textPrimary }}>{r.name_ru}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 <div style={{
                   fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
                   color: semantic.textPrimary, fontVariantNumeric: 'tabular-nums',
@@ -727,7 +727,7 @@ export default function OverviewDashboard() {
             <Section title="Макроэкономика" action={{ label: 'Подробнее \u2192', onClick: () => router.push('/macro-uz') }}>
               <div style={{ padding: `${spacing[4]} ${spacing[5]}`, display: 'flex', flexDirection: 'column', gap: spacing[2] }}>
                 {realData.macro.gdp_growth_pct != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Рост ВВП</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
@@ -738,7 +738,7 @@ export default function OverviewDashboard() {
                   </div>
                 )}
                 {realData.macro.inflation_pct != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Инфляция</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,
@@ -749,7 +749,7 @@ export default function OverviewDashboard() {
                   </div>
                 )}
                 {realData.macro.population_mln != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div className="flex justify-between items-center">
                     <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Население</span>
                     <span style={{
                       fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold,

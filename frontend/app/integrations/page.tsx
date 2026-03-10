@@ -16,7 +16,7 @@ export default function IntegrationsPage() {
   }, [searchParams]);
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div className="p-6">
       <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>
         Интеграции
       </h1>

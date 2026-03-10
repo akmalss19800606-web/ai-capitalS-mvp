@@ -257,9 +257,9 @@ export default function AnalyticsPage() {
   // ─── Bar Chart Component (CSS only) ─────────────────────────────────────
 
   const BarChart = ({ data, maxValue }: { data: { label: string; value: number; color: string }[]; maxValue: number }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div className="flex flex-col gap-2">
       {data.map((item, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div key={i} className="flex items-center gap-3">
           <div style={{ width: '120px', fontSize: '13px', color: '#334155', fontWeight: 500, textAlign: 'right', flexShrink: 0 }}>
             {item.label}
           </div>
@@ -457,7 +457,7 @@ export default function AnalyticsPage() {
           {/* Monthly Trend */}
           <div style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="flex items-center gap-2">
                 <IconTrendUp />
                 <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', margin: 0 }}>Динамика инвестиций</h2>
               </div>
@@ -481,7 +481,7 @@ export default function AnalyticsPage() {
             {/* Left: Dynamic breakdown */}
             <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="flex items-center gap-2">
                   <IconPie />
                   <h2 style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a', margin: 0 }}>Распределение</h2>
                 </div>
@@ -520,18 +520,18 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Right: Status + Type */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="flex flex-col gap-4">
               <div style={cardStyle}>
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: '0 0 12px' }}>По статусу</h3>
                 {overview.status_breakdown.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex flex-col gap-2">
                     {overview.status_breakdown.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i % CHART_COLORS.length] }} />
                           <span style={{ fontSize: '13px', color: '#334155' }}>{item.label}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="flex items-center gap-3">
                           <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{item.count}</span>
                           <span style={{ fontSize: '12px', color: '#94a3b8', width: '40px', textAlign: 'right' }}>{item.percentage}%</span>
                         </div>
@@ -544,14 +544,14 @@ export default function AnalyticsPage() {
               <div style={cardStyle}>
                 <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', margin: '0 0 12px' }}>По типу решения</h3>
                 {overview.type_breakdown.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div className="flex flex-col gap-2">
                     {overview.type_breakdown.map((item, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div key={i} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
                           <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: CHART_COLORS[i + 3 % CHART_COLORS.length] }} />
                           <span style={{ fontSize: '13px', color: '#334155' }}>{item.label}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div className="flex items-center gap-3">
                           <span style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>{formatCurrency(item.total_value)}</span>
                           <span style={{ fontSize: '12px', color: '#94a3b8', width: '40px', textAlign: 'right' }}>{item.percentage}%</span>
                         </div>

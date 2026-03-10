@@ -326,7 +326,7 @@ export default function RetrospectivePage() {
               {/* Radio Analysis Type */}
               <div>
                 <label style={labelStyle}>Тип анализа</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {(['decision', 'portfolio'] as const).map(type => (
                     <label
                       key={type}
@@ -528,7 +528,7 @@ export default function RetrospectivePage() {
                   {result.benchmarks && result.benchmarks.length > 0 && (
                     <div style={card}>
                       <SectionTitle>Бенчмарки</SectionTitle>
-                      <div style={{ overflowX: 'auto' }}>
+                      <div className="overflow-x-auto">
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                           <thead>
                             <tr>
@@ -586,7 +586,7 @@ export default function RetrospectivePage() {
                         <div style={{ color: C.success }}><IconLightbulb /></div>
                         <h3 style={{ fontSize: '15px', fontWeight: 700, color: C.text, margin: 0 }}>Извлечённые уроки</h3>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div className="flex flex-col gap-3">
                         {result.lessons.map((l, i) => (
                           <div key={i} style={{ padding: '14px 16px', borderRadius: '10px', borderLeft: `3px solid ${PIE_COLORS[i % PIE_COLORS.length]}`, backgroundColor: C.bg }}>
                             <div style={{ fontSize: '11px', fontWeight: 700, color: PIE_COLORS[i % PIE_COLORS.length], textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>{l.category}</div>

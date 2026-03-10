@@ -688,7 +688,7 @@ export default function WorkflowsPage() {
         definitions.map(def => (
           <div key={def.id} style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1 }}>
+              <div className="flex-1">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
                   <span style={{ fontSize: '16px', fontWeight: 600, color: '#0f172a' }}>{def.name}</span>
                   {def.is_default && (
@@ -729,7 +729,7 @@ export default function WorkflowsPage() {
                   ))}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex gap-2">
                 <button
                   style={btnDanger}
                   onClick={() => handleDeleteDefinition(def.id)}
@@ -848,7 +848,7 @@ export default function WorkflowsPage() {
           <IconWorkflow />
           Согласование (Workflow)
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex gap-2">
           <button style={btnSecondary} onClick={() => router.push('/decisions')}>
             Решения
           </button>
@@ -1284,7 +1284,7 @@ export default function WorkflowsPage() {
                     placeholder="Комментарий к одобрению или отклонению"
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="flex gap-2">
                   {(() => {
                     const currentStep = showInstanceDetail.steps.find(
                       s => s.step_order === showInstanceDetail!.current_step_order && s.status === 'pending'

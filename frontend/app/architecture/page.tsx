@@ -177,7 +177,7 @@ function EventSourcingTab() {
             Событий пока нет. События создаются автоматически при действиях в системе.
           </p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -296,7 +296,7 @@ function HitlTab() {
             Ревью пока нет. Они создаются при генерации AI-рекомендаций и аналитики.
           </p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -443,7 +443,7 @@ function SnapshotsTab() {
             Снапшотов пока нет. Они создаются автоматически при запуске аналитики (Monte Carlo, SHAP и др.).
           </p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -606,7 +606,7 @@ function EventBusTab() {
           {messages.length === 0 ? (
             <p style={{ color: '#94a3b8', textAlign: 'center', padding: '12px' }}>Сообщений нет</p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className="overflow-x-auto">
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -644,7 +644,7 @@ function EventBusTab() {
         {dlq.length === 0 ? (
           <p style={{ color: '#94a3b8', textAlign: 'center', padding: '12px' }}>DLQ пуста</p>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -771,7 +771,7 @@ function ConstraintsTab() {
             Ограничений нет. Нажмите «Загрузить стандартные», чтобы создать 7 системных ограничений.
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="flex flex-col gap-3">
             {filtered.map((c: Record<string, unknown>) => (
               <div key={c.id} style={{
                 padding: '18px 20px', borderRadius: '10px', border: '1px solid #e2e8f0',
@@ -779,7 +779,7 @@ function ConstraintsTab() {
                 opacity: c.is_active ? 1 : 0.65,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
-                  <div style={{ flex: 1 }}>
+                  <div className="flex-1">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
                         {c.title}
@@ -844,7 +844,7 @@ export default function ArchitecturePage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div className="mb-6">
         <h1 style={{ fontSize: '24px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
           Архитектурные принципы
         </h1>

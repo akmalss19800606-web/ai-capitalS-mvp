@@ -103,7 +103,7 @@ export default function ContactsPage() {
         gap: '24px',
       }}>
         {/* ─── Contact info cards ─── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="flex flex-col gap-4">
           {infoItems.map((item, i) => {
             const content = (
               <div key={i} style={{

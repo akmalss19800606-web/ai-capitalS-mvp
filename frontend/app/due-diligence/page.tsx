@@ -635,7 +635,7 @@ export default function DueDiligencePage() {
                                   <IconFlag /> Красные флаги ({result.red_flags.length})
                                 </span>
                               </SectionTitle>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div className="flex flex-col gap-2">
                                 {result.red_flags.map((f, i) => {
                                   const sevColor = f.severity === 'critical' ? C.error : f.severity === 'high' ? '#ea580c' : C.warning;
                                   const sevBg = f.severity === 'critical' ? C.errorLight : f.severity === 'high' ? '#fff7ed' : C.warningLight;
@@ -825,7 +825,7 @@ export default function DueDiligencePage() {
                       {/* Benchmarks Table */}
                       <div style={card}>
                         <SectionTitle>Таблица бенчмарков</SectionTitle>
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="overflow-x-auto">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                             <thead>
                               <tr>
@@ -872,7 +872,7 @@ export default function DueDiligencePage() {
 
                   {/* ─── TAB: Детализация ────────────────────────── */}
                   {activeTab === 'Детализация' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    <div className="flex flex-col gap-4">
                       {Object.entries(CATEGORY_COLORS).map(([cat, color]) => {
                         const items = (result.category_details || []).filter(d => d.category === cat);
                         if (items.length === 0) return null;
@@ -889,12 +889,12 @@ export default function DueDiligencePage() {
                                 result.esg_score
                               } />
                             </div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div className="flex flex-col gap-2">
                               {items.map((d, idx) => (
                                 <div key={idx} style={{ backgroundColor: C.bg, borderRadius: '8px', padding: '12px 14px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                                     <span style={{ fontSize: '13px', fontWeight: 600, color: C.text }}>{d.subcategory}</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div className="flex items-center gap-2">
                                       <span style={{ fontSize: '11px', color: C.textLight }}>Вес: {(d.weight * 100).toFixed(0)}%</span>
                                       <span style={{
                                         fontSize: '13px', fontWeight: 700,

@@ -256,14 +256,14 @@ export default function PortfolioDetail() {
         ) : (
           assets.map((asset, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: i < assets.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="flex items-center gap-3">
                 <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '10px', color: '#3b82f6' }}>{asset.symbol}</div>
                 <div>
                   <p style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{asset.symbol}</p>
                   <p style={{ color: '#94a3b8', fontSize: '12px' }}>{asset.name}</p>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 <p style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>{asset.current_price?.toLocaleString('ru-RU')} UZS</p>
                 <p style={{ color: (asset.change_percent || 0) >= 0 ? '#22c55e' : '#ef4444', fontSize: '12px' }}>
                   {(asset.change_percent || 0) >= 0 ? '+' : ''}{(asset.change_percent || 0).toFixed(2)}%

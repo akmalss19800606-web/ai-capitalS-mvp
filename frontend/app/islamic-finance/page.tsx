@@ -536,13 +536,13 @@ function ZakatTab() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: spacing[5], flexWrap: 'wrap' }}>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 <div style={{ fontSize: typography.fontSize.sm, color: colors.success[600] }}>Золото (85г)</div>
                 <div style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.success[800] }}>
                   {nisab.nisab_gold.display}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
+              <div className="text-right">
                 <div style={{ fontSize: typography.fontSize.sm, color: colors.success[600] }}>Серебро (595г)</div>
                 <div style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.success[800] }}>
                   {nisab.nisab_silver.display}
@@ -838,7 +838,7 @@ function ReferenceTab() {
       {/* Financial thresholds */}
       <div style={cardStyle}>
         <h3 style={sectionTitle}>Финансовые пороги AAOIFI</h3>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `2px solid ${semantic.border}` }}>

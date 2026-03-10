@@ -52,7 +52,7 @@ export default function SecuritySettingsPage() {
   return (
     <div style={{ maxWidth: '1120px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div className="mb-6">
         <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
           Безопасность и доступ
         </h1>
@@ -301,19 +301,19 @@ function SessionsTab() {
         </div>
 
         {data?.sessions?.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-2">
             {data.sessions.map((s: Record<string, unknown>) => (
               <div key={s.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px',
                 border: '1px solid #e2e8f0',
               }}>
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{s.device_info}</span>
                     {s.is_current && <span style={BADGE('#3b82f6')}>Текущая</span>}
                   </div>
-                  <div style={{ display: 'flex', gap: '16px' }}>
+                  <div className="flex gap-4">
                     <span style={{ fontSize: '11px', color: '#64748b' }}>IP: {s.ip_address}</span>
                     <span style={{ fontSize: '11px', color: '#64748b' }}>Последняя активность: {fmtDate(s.last_activity)}</span>
                     <span style={{ fontSize: '11px', color: '#64748b' }}>Создана: {fmtDate(s.created_at)}</span>
@@ -397,7 +397,7 @@ function SsoTab() {
         )}
 
         {providers.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-2">
             {providers.map((p: Record<string, unknown>) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -478,7 +478,7 @@ function RolesTab() {
             <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', margin: 0 }}>Кастомные роли</h3>
             <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Управление ролями с гранулярными правами</p>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-2">
             <button onClick={handleSeed} style={BTN_OUTLINE}>Создать системные</button>
             <button onClick={() => setShowForm(!showForm)} style={BTN_PRIMARY}>
               {showForm ? 'Отмена' : 'Новая роль'}
@@ -492,7 +492,7 @@ function RolesTab() {
               <div><label style={LABEL}>Название</label><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} style={INPUT} /></div>
               <div><label style={LABEL}>Описание</label><input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={INPUT} /></div>
             </div>
-            <div style={{ marginBottom: '12px' }}>
+            <div className="mb-3">
               <label style={LABEL}>Права (JSON)</label>
               <textarea value={form.permissions} onChange={e => setForm({ ...form, permissions: e.target.value })}
                 style={{ ...INPUT, height: '80px', fontFamily: 'monospace', fontSize: '12px' }}
@@ -503,13 +503,13 @@ function RolesTab() {
         )}
 
         {roles.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-2">
             {roles.map((r: Record<string, unknown>) => (
               <div key={r.id} style={{
                 padding: '14px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="flex items-center gap-2">
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{r.name}</span>
                     {r.is_system && <span style={BADGE('#f59e0b')}>Системная</span>}
                   </div>
@@ -655,7 +655,7 @@ function PoliciesTab() {
               <div><label style={LABEL}>Приоритет</label><input value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={INPUT} type="number" /></div>
               <div><label style={LABEL}>Описание</label><input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} style={INPUT} /></div>
             </div>
-            <div style={{ marginBottom: '12px' }}>
+            <div className="mb-3">
               <label style={LABEL}>Условия (JSON)</label>
               <textarea value={form.conditions} onChange={e => setForm({ ...form, conditions: e.target.value })}
                 style={{ ...INPUT, height: '60px', fontFamily: 'monospace', fontSize: '12px' }}
@@ -666,13 +666,13 @@ function PoliciesTab() {
         )}
 
         {policies.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div className="flex flex-col gap-2">
             {policies.map((p: Record<string, unknown>) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
               }}>
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>{p.name}</span>
                     <span style={BADGE(p.effect === 'allow' ? '#22c55e' : '#ef4444')}>

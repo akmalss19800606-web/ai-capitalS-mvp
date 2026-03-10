@@ -64,7 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {showSidebar ? (
-          <div style={{ display: 'flex', minHeight: '100vh' }}>
+          <div className="flex min-h-screen">
             {/* Sidebar */}
             <Sidebar
               collapsed={sidebarCollapsed}
@@ -75,20 +75,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main area */}
             <main
-              className="main-area"
-              style={{
-                marginLeft: `${sidebarWidth}px`,
-                flex: 1,
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
+              className="main-area flex-1 min-h-screen flex flex-col"
+              style={{ marginLeft: `${sidebarWidth}px` }}
             >
               {/* Header */}
               <Header onHamburgerClick={() => setMobileOpen(true)} />
 
               {/* Page content */}
-              <div className="page-content" style={{ padding: '24px', flex: 1 }}>
+              <div className="page-content p-6 flex-1">
                 {children}
               </div>
 
@@ -97,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </main>
           </div>
         ) : (
-          <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc' }}>
+          <div className="min-h-screen bg-neutral-50">
             {children}
           </div>
         )}

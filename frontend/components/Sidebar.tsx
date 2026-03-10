@@ -320,7 +320,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="sidebar-desktop" style={{ position: 'relative' }}>
+      <aside className="sidebar-desktop relative">
         {sidebarContent}
       </aside>
 
@@ -343,7 +343,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        <div style={{ position: 'relative' }}>
+        <div className="relative">
           <button onClick={onMobileClose} style={{
             position: 'absolute', top: spacing[4], right: '-44px',
             width: 36, height: 36, borderRadius: radius.full,

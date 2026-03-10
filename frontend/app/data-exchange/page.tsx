@@ -366,7 +366,7 @@ export default function DataExchangePage() {
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
+      <div className="mb-6">
         <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b', marginBottom: '6px' }}>
           Импорт / Экспорт данных
         </h1>
@@ -444,11 +444,11 @@ export default function DataExchangePage() {
               const isActive = stepKeys[i] === importStep;
               const isDone = stepKeys.indexOf(importStep) > i;
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div key={i} className="flex items-center gap-2">
                   {i > 0 && (
                     <div style={{ width: '40px', height: '2px', background: isDone ? '#3b82f6' : '#e2e8f0', borderRadius: '1px' }} />
                   )}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="flex items-center gap-2">
                     <div
                       style={{
                         width: '28px',
@@ -692,7 +692,7 @@ export default function DataExchangePage() {
 
               {/* Errors detail */}
               {currentJob.errors_detail && currentJob.errors_detail.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
+                <div className="mb-4">
                   <h4 style={{ fontSize: '13px', fontWeight: '600', color: '#991b1b', marginBottom: '8px' }}>
                     Детали ошибок
                   </h4>
@@ -719,7 +719,7 @@ export default function DataExchangePage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div className="flex gap-3">
                 <span style={statusBadge(currentJob.status)}>
                   {STATUS_LABELS[currentJob.status] || currentJob.status}
                 </span>

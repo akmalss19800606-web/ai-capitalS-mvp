@@ -402,7 +402,7 @@ export default function StressTestingPage() {
                 <>
                   {/* Scenario title */}
                   <div style={{ ...card, borderLeft: `4px solid ${C.error}`, backgroundColor: C.errorLight }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="flex items-center gap-3">
                       <div style={{ color: C.error }}><IconShield /></div>
                       <div>
                         <div style={{ fontWeight: 700, color: C.text, fontSize: '16px' }}>{result.scenario_name}</div>
@@ -486,7 +486,7 @@ export default function StressTestingPage() {
                   {shockData.length > 0 && (
                     <div style={card}>
                       <SectionTitle>Параметры шока</SectionTitle>
-                      <div style={{ overflowX: 'auto' }}>
+                      <div className="overflow-x-auto">
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
                           <thead>
                             <tr>
@@ -544,7 +544,7 @@ export default function StressTestingPage() {
                           </ResponsiveContainer>
                         </div>
                         {/* Table */}
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="overflow-x-auto">
                           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                             <thead>
                               <tr>

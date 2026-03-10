@@ -419,7 +419,7 @@ export default function DecisionDetailPage() {
         <button onClick={() => router.push('/decisions')} style={{ ...btnSecondary, padding: '8px 12px' }}>
           <IconArrowLeft /> Назад
         </button>
-        <div style={{ flex: 1 }}>
+        <div className="flex-1">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <h1 style={{ fontSize: '20px', fontWeight: 700, color: '#1e293b', margin: 0 }}>
               {decision.asset_name}
@@ -492,13 +492,13 @@ export default function DecisionDetailPage() {
             <div style={cardStyle}>
               <h3 style={{ fontSize: '14px', fontWeight: 600, color: '#1e293b', marginBottom: '14px' }}>Дополнительно</h3>
               {decision.notes && (
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                   <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>Заметки</div>
                   <div style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>{decision.notes}</div>
                 </div>
               )}
               {decision.rationale && (
-                <div style={{ marginBottom: '12px' }}>
+                <div className="mb-3">
                   <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>Обоснование</div>
                   <div style={{ fontSize: '13px', color: '#334155', lineHeight: '1.5' }}>{decision.rationale}</div>
                 </div>
@@ -536,14 +536,14 @@ export default function DecisionDetailPage() {
                   <IconDiff /> Сравнение версий
                 </h3>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                  <div style={{ flex: 1 }}>
+                  <div className="flex-1">
                     <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Версия A</label>
                     <select style={selectStyle} value={selectedVersionA ?? ''} onChange={(e) => setSelectedVersionA(e.target.value ? parseInt(e.target.value) : null)}>
                       <option value="">Выберите</option>
                       {versions.map(v => <option key={v.version_number} value={v.version_number}>v{v.version_number} — {CHANGE_TYPE_LABELS[v.change_type] || v.change_type} ({formatDate(v.created_at)})</option>)}
                     </select>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div className="flex-1">
                     <label style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Версия B</label>
                     <select style={selectStyle} value={selectedVersionB ?? ''} onChange={(e) => setSelectedVersionB(e.target.value ? parseInt(e.target.value) : null)}>
                       <option value="">Выберите</option>
@@ -556,7 +556,7 @@ export default function DecisionDetailPage() {
                 </div>
                 {/* Diff result */}
                 {diffResult && diffVersions && (
-                  <div style={{ marginTop: '16px' }}>
+                  <div className="mt-4">
                     <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
                       Изменения между v{diffVersions[0]} и v{diffVersions[1]}: {diffResult.length === 0 ? 'нет различий' : `${diffResult.length} различий`}
                     </div>
@@ -598,7 +598,7 @@ export default function DecisionDetailPage() {
                         <div style={{ width: '52px', textAlign: 'center', flexShrink: 0 }}>
                           <div style={{ fontSize: '16px', fontWeight: 700, color: '#3b82f6' }}>v{v.version_number}</div>
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div className="flex-1">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
                               {CHANGE_TYPE_LABELS[v.change_type] || v.change_type}
@@ -732,7 +732,7 @@ export default function DecisionDetailPage() {
                       <input style={inputStyle} value={newRelDesc} onChange={(e) => setNewRelDesc(e.target.value)} placeholder="Комментарий" />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div className="flex gap-2">
                     <button style={btnPrimary} onClick={handleAddRelationship}>Создать</button>
                     <button style={btnSecondary} onClick={() => setShowAddRel(false)}>Отмена</button>
                   </div>
@@ -753,7 +753,7 @@ export default function DecisionDetailPage() {
                     return (
                       <div key={rel.id} style={{ ...cardStyle, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '0' }}>
                         <div style={{ width: '8px', height: '40px', borderRadius: '4px', backgroundColor: relColor, flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
+                        <div className="flex-1">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                             <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
                               {rel.related_decision_name || `Решение #${isOutgoing ? rel.to_decision_id : rel.from_decision_id}`}

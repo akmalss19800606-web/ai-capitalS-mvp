@@ -266,7 +266,7 @@ export default function ChartsPage() {
                 boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.08)' : 'none',
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center' }}>{tab.icon}</span>
+              <span className="flex items-center">{tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           );
@@ -286,7 +286,7 @@ export default function ChartsPage() {
       {/* ── Content ───────────────────────────────────────────────────── */}
       {loading ? (
         <div style={{ ...card, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-          <div style={{ textAlign: 'center' }}>
+          <div className="text-center">
             <IconSpinner />
             <p style={{ marginTop: '12px', fontSize: '14px', color: C.textMuted }}>Загрузка данных...</p>
           </div>
@@ -635,7 +635,7 @@ function HeatmapChart({ data }: { data: Record<string, unknown> }) {
         Тепловая карта корреляций
       </h3>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '3px' }}>
           <thead>
             <tr>
@@ -731,7 +731,7 @@ function HeatmapChart({ data }: { data: Record<string, unknown> }) {
           const total = rowCells.reduce((s: number, c: unknown) => s + c.value, 0);
           const count = rowCells.reduce((s: number, c: unknown) => s + c.count, 0);
           return (
-            <div key={row} style={{ textAlign: 'center' }}>
+            <div key={row} className="text-center">
               <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>{row}</div>
               <div style={{ fontSize: '16px', fontWeight: 700, color: C.text }}>{total.toFixed(1)} {unit}</div>
               <div style={{ fontSize: '11px', color: C.textLight }}>{count} решений</div>

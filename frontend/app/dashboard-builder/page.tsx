@@ -255,7 +255,7 @@ export default function DashboardBuilderPage() {
     <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="flex items-center gap-3">
           <button style={btnSecondary} onClick={() => setActiveDashboard(null)}>
             <IconBack /> Назад
           </button>
@@ -404,7 +404,7 @@ function WidgetCard({ widget, portfolioId, onDelete, onMoveUp, onMoveDown, onRes
     <div style={{ ...card, position: 'relative', border: `1px solid ${C.border}` }}>
       {/* Widget header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="flex items-center gap-2">
           {drillKey && (
             <button onClick={handleDrillBack} style={{ ...btnSecondary, padding: '4px 8px', fontSize: '11px' }}>
               <IconBack /> Назад
@@ -640,7 +640,7 @@ function WidgetContent({ type, data, metric, onDrill, drillKey }: {
     const getTC = (v: number) => { const r = maxV === minV ? 0 : (v - minV) / (maxV - minV); return r > 0.5 ? '#fff' : '#1e293b'; };
     const getCell = (row: string, col: string) => data.cells.find((c: Record<string, unknown>) => c.row === row && c.col === col);
     return (
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '2px', fontSize: '11px' }}>
           <thead>
             <tr>

@@ -104,7 +104,7 @@ export function Button({
       {loading ? (
         <span style={{ display: 'inline-block', width: 16, height: 16, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
       ) : icon ? (
-        <span style={{ display: 'flex', alignItems: 'center' }}>{icon}</span>
+        <span className="flex items-center">{icon}</span>
       ) : null}
       {children}
     </button>

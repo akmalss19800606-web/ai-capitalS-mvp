@@ -488,7 +488,7 @@ export default function AIAssistantPage() {
                   step="0.1"
                   value={temperature}
                   onChange={(e) => setTemperature(Number(e.target.value))}
-                  style={{ flex: 1 }}
+                  className="flex-1"
                 />
               </div>
             </div>
