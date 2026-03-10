@@ -428,6 +428,13 @@ export default function OverviewDashboard() {
     if (!token) { router.push('/login'); return; }
     loadData();
     loadRealData();
+
+    // DASH-001: Auto-refresh every 5 minutes
+    const refreshInterval = setInterval(() => {
+      loadRealData();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(refreshInterval);
   }, []);
 
   /* Load portfolio/decision summary */
