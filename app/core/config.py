@@ -36,6 +36,9 @@ class Settings(BaseSettings):
     HF_API_KEY: str = ""
     HF_CHAT_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
 
+    # --- Telegram Bot (Phase 3, TG-001) ---
+    TELEGRAM_BOT_TOKEN: str = ""
+
     # --- CORS ---
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:10000"
 

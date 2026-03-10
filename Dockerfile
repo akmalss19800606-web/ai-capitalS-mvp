@@ -26,7 +26,9 @@ RUN pip install --no-cache-dir \
     PyPDF2 \
     python-docx \
     openpyxl \
-    pdfplumber
+    pdfplumber \
+    python-telegram-bot \
+    numpy-financial
 COPY ./app /app/app
 ENV PYTHONPATH=/app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

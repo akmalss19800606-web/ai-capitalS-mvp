@@ -58,19 +58,38 @@ from app.api.v1.routers import islamic_finance
 from app.api.v1.routers import portfolio_analytics
 from app.api.v1.routers import currency_rates
 
+# Phase 3: Telegram Bot
+from app.services.telegram_bot_service import TelegramBotService, telegram_bot as _tg_ref
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown: Redis connection pool."""
-    # Startup
-    redis_ok = await RedisCacheService.ping()
+    """Startup / shutdown: Redis + Telegram Bot."""
     import logging
     logger = logging.getLogger(__name__)
+
+    # Startup — Redis
+    redis_ok = await RedisCacheService.ping()
     if redis_ok:
         logger.info("Redis connected successfully")
     else:
         logger.warning("Redis unavailable — caching disabled")
+
+    # Startup — Telegram Bot (TG-001)
+    import app.services.telegram_bot_service as tg_module
+    bot = TelegramBotService(token=settings.TELEGRAM_BOT_TOKEN)
+    started = await bot.start()
+    if started:
+        tg_module.telegram_bot = bot
+        logger.info("Telegram Bot started")
+    else:
+        logger.info("Telegram Bot not started (token not configured or lib missing)")
+
     yield
-    # Shutdown
+
+    # Shutdown — Telegram Bot
+    if bot.is_running:
+        await bot.stop()
+    # Shutdown — Redis
     await RedisCacheService.close()
 
 
