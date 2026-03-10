@@ -1,12 +1,13 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 /**
  * REF-006: Unified integrations page.
  * Merges /api-gateway and /market-adapters into tabs.
  */
-export default function IntegrationsPage() {
+
+function IntegrationsContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('api');
 
@@ -55,5 +56,13 @@ export default function IntegrationsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Загрузка...</div>}>
+      <IntegrationsContent />
+    </Suspense>
   );
 }
