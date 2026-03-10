@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useLocale } from '@/lib/i18n';
@@ -53,6 +53,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { labelKey: 'dueDiligence', path: '/due-diligence',
         icon: <Icon paths={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></>} /> },
+      { labelKey: 'islamicFinance', path: '/islamic-finance',
+        icon: <Icon paths={<><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M12 12v10"/><path d="M7 9.5v7"/><path d="M17 9.5v7"/></>} /> },
       { labelKey: 'marketUz', path: '/market-uz',
         icon: <Icon paths={<><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></>} /> },
       { labelKey: 'charts', path: '/charts',

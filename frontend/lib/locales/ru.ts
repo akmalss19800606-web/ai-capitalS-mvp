@@ -1,4 +1,4 @@
-export const ru = {
+﻿export const ru = {
   /* ─── Common ─── */
   appName: 'AI Capital',
   appSub: 'Management',
@@ -94,6 +94,7 @@ export const ru = {
       companySearch: 'Поиск по ИНН',
       cpiUz: 'Инфляция (ИПЦ)',
       stockExchange: 'Фондовая биржа',
+      islamicFinance: 'Исламские финансы',
       calculator: 'Калькулятор',
     },
   },

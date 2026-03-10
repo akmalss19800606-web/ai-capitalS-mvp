@@ -1,4 +1,4 @@
-import type { Locale } from './ru';
+﻿import type { Locale } from './ru';
 
 export const en: Locale = {
   /* ─── Common ─── */
@@ -96,6 +96,7 @@ export const en: Locale = {
       companySearch: 'INN Search',
       cpiUz: 'Inflation (CPI)',
       stockExchange: 'Stock Exchange',
+      islamicFinance: 'Islamic Finance',
       calculator: 'Calculator',
     },
   },
