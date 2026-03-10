@@ -1,4 +1,4 @@
-"""
+﻿"""
 Обновлённый main.py — все роутеры Этапов 2.1–3.1.
 ИНСТРУКЦИЯ: Замените существующий app/main.py целиком.
 """
@@ -62,6 +62,8 @@ from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
 
+from app.api.v1.routers import islamic_finance
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -123,3 +125,6 @@ app.include_router(onboarding.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1")
 app.include_router(branded_export.router, prefix="/api/v1")
 app.include_router(admin_panel.router, prefix="/api/v1")
+
+# Stage 5: Islamic Finance
+app.include_router(islamic_finance.router, prefix="/api/v1")
