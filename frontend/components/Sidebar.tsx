@@ -42,6 +42,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon paths={<><path d="M21 12c0 1.2-4 6-9 6s-9-4.8-9-6c0-1.2 4-6 9-6s9 4.8 9 6z"/><circle cx="12" cy="12" r="3"/></>} /> },
       { labelKey: 'aiAnalytics', path: '/ai-analytics',
         icon: <Icon paths={<path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/>} /> },
+      { labelKey: 'portfolioAnalytics', path: '/portfolio-analytics',
+        icon: <Icon paths={<><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 17V13"/><path d="M12 17V9"/><path d="M17 17V5"/></>} /> },
       { labelKey: 'stressTest', path: '/stress-testing',
         icon: <Icon paths={<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></>} /> },
       { labelKey: 'retrospective', path: '/retrospective',

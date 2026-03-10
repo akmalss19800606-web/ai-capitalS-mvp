@@ -73,6 +73,7 @@
       workflows: 'Согласование',
       analytics: 'Аналитика',
       aiAnalytics: 'AI-Аналитика',
+      portfolioAnalytics: 'Портфельная аналитика',
       stressTest: 'Стресс-тест',
       retrospective: 'Ретроспектива',
       dueDiligence: 'Due Diligence',

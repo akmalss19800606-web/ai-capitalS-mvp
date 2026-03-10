@@ -75,6 +75,7 @@ export const en: Locale = {
       workflows: 'Workflows',
       analytics: 'Analytics',
       aiAnalytics: 'AI Analytics',
+      portfolioAnalytics: 'Portfolio Analytics',
       stressTest: 'Stress Test',
       retrospective: 'Retrospective',
       dueDiligence: 'Due Diligence',

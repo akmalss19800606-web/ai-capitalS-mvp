@@ -75,6 +75,7 @@ export const uz: Locale = {
       workflows: 'Kelishuv',
       analytics: 'Tahlil',
       aiAnalytics: 'AI-Tahlil',
+      portfolioAnalytics: 'Portfel tahlili',
       stressTest: 'Stress-test',
       retrospective: 'Retrospektiva',
       dueDiligence: 'Due Diligence',
