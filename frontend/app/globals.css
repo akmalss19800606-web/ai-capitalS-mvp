@@ -135,6 +135,74 @@
   --transition-normal: all 0.2s ease;
 }
 
+/* ─── UI-001: Bloomberg-style Dark Theme ─── */
+[data-theme="dark"] {
+  /* Primary (brighter for dark bg) */
+  --color-primary-50:  #172554;
+  --color-primary-100: #1e3a8a;
+  --color-primary-200: #1e40af;
+  --color-primary-500: #60a5fa;
+  --color-primary-600: #3b82f6;
+  --color-primary-700: #93c5fd;
+
+  /* Success */
+  --color-success-50:  #052e16;
+  --color-success-600: #4ade80;
+  --color-success-700: #86efac;
+
+  /* Warning */
+  --color-warning-50:  #422006;
+  --color-warning-600: #facc15;
+
+  /* Error */
+  --color-error-50:  #450a0a;
+  --color-error-600: #f87171;
+
+  /* Neutral (inverted) */
+  --color-neutral-0:   #0b0e14;
+  --color-neutral-50:  #0f1318;
+  --color-neutral-100: #151a22;
+  --color-neutral-200: #1e2530;
+  --color-neutral-300: #2a3342;
+  --color-neutral-400: #64748b;
+  --color-neutral-500: #94a3b8;
+  --color-neutral-600: #cbd5e1;
+  --color-neutral-700: #e2e8f0;
+  --color-neutral-800: #f1f5f9;
+  --color-neutral-900: #f8fafc;
+
+  /* Semantic overrides */
+  --bg-app:     #0b0e14;
+  --bg-card:    #111720;
+  --bg-sidebar: #0d1117;
+  --text-primary:   #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --border:         #1e2530;
+  --border-light:   #151a22;
+  --accent:         #3b82f6;
+
+  /* Shadows (glow style) */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Scrollbar dark */
+  color-scheme: dark;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #2a3342;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #3a4555;
+}
+
+[data-theme="dark"] ::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: #e2e8f0;
+}
+
 /* ─── Base ─── */
 * {
   box-sizing: border-box;

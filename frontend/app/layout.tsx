@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { getStoredLocale } from '@/lib/i18n';
+import { ThemeProvider } from '@/lib/theme';
 import './globals.css';
 
 const NO_SIDEBAR_PATHS = ['/login', '/register'];
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
       </head>
       <body>
+        <ThemeProvider>
         {showSidebar ? (
           <div className="flex min-h-screen">
             {/* Sidebar */}
@@ -95,6 +97,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
         )}
+        </ThemeProvider>
       </body>
     </html>
   );
