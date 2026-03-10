@@ -79,25 +79,25 @@ async def get_recommendation(
 
 
 @router.get("/market/{symbol}")
-def get_market_data(
+async def get_market_data(
     symbol: str,
     current_user: User = Depends(get_current_user),
 ):
-    """Рыночные данные по символу (Alpha Vantage)."""
+    """Рыночные данные по символу (Alpha Vantage). Async."""
     from app.services.market_service import get_stock_price
-    data = get_stock_price(symbol.upper())
+    data = await get_stock_price(symbol.upper())
     return data
 
 
 @router.post("/market/overview")
-def get_market_data_bulk(
+async def get_market_data_bulk(
     request: MarketRequest,
     current_user: User = Depends(get_current_user),
 ):
-    """Обзор рынка по списку символов."""
+    """Обзор рынка по списку символов. Async."""
     from app.services.market_service import get_market_overview
     symbols = [s.upper() for s in request.symbols]
-    return get_market_overview(symbols)
+    return await get_market_overview(symbols)
 
 
 @router.post("/market-analysis")

@@ -1,6 +1,6 @@
 """
 Зависимости FastAPI — подключение к БД и авторизация.
-Этап 0, Сессия 0.1: Добавлена проверка is_active в get_current_user.
+Фаза 0: get_current_user проверяет type токена через verify_access_token.
 """
 from typing import Generator
 
@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
-from app.core.security import decode_token
+from app.core.security import verify_access_token, decode_token
 from app.db.session import SessionLocal
 from app.db.models.user import User
 
@@ -32,7 +32,9 @@ def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    payload = decode_token(token)
+
+    # Используем verify_access_token — отклоняет refresh-токены
+    payload = verify_access_token(token)
     if payload is None:
         raise credentials_exception
 
@@ -48,7 +50,7 @@ def get_current_user(
     if user is None:
         raise credentials_exception
 
-    # Проверка is_active (Этап 0, Сессия 0.1)
+    # Проверка is_active
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

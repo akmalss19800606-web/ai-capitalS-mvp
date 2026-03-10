@@ -1,6 +1,6 @@
 """
 Адаптеры рыночных данных: Alpha Vantage, Yahoo Finance, World Bank.
-Фаза 4, Сессия 3 — EXCH-ADAPT-001.1.
+Фаза 0: Все внешние HTTP-вызовы переведены на async httpx.AsyncClient.
 
 Каждый адаптер реализует единый интерфейс:
   - fetch_quote(symbol) — текущая котировка
@@ -83,11 +83,11 @@ def delete_source(db: Session, source_id: int):
 
 
 # ═══════════════════════════════════════════════════════════════
-# АДАПТЕР: Котировки
+# АДАПТЕР: Котировки (async)
 # ═══════════════════════════════════════════════════════════════
 
-def fetch_quote(db: Session, source_id: int, symbol: str) -> Dict[str, Any]:
-    """Получить текущую котировку символа."""
+async def fetch_quote(db: Session, source_id: int, symbol: str) -> Dict[str, Any]:
+    """Получить текущую котировку символа (async)."""
     symbol = symbol.upper()
     source = get_source(db, source_id) if source_id else None
     provider = source.provider if source else "demo"
@@ -101,7 +101,7 @@ def fetch_quote(db: Session, source_id: int, symbol: str) -> Dict[str, Any]:
     result = None
 
     if provider == "alpha_vantage":
-        result = _alpha_vantage_quote(symbol, api_key)
+        result = await _alpha_vantage_quote(symbol, api_key)
     elif provider == "yahoo_finance":
         result = _yahoo_finance_quote(symbol)
     else:
@@ -113,8 +113,8 @@ def fetch_quote(db: Session, source_id: int, symbol: str) -> Dict[str, Any]:
     return result or _demo_quote(symbol)
 
 
-def fetch_macro(db: Session, source_id: int, indicator: str, country: str = "US") -> Dict[str, Any]:
-    """Получить макроэкономический индикатор."""
+async def fetch_macro(db: Session, source_id: int, indicator: str, country: str = "US") -> Dict[str, Any]:
+    """Получить макроэкономический индикатор (async)."""
     indicator = indicator.upper()
 
     cached = _get_cached(db, source_id, f"{indicator}_{country}", "macro", ttl_minutes=60)
@@ -126,9 +126,9 @@ def fetch_macro(db: Session, source_id: int, indicator: str, country: str = "US"
 
     result = None
     if provider == "world_bank":
-        result = _world_bank_macro(indicator, country)
+        result = await _world_bank_macro(indicator, country)
     elif provider == "alpha_vantage":
-        result = _alpha_vantage_macro(indicator, source.api_key if source else ALPHA_VANTAGE_KEY)
+        result = await _alpha_vantage_macro(indicator, source.api_key if source else ALPHA_VANTAGE_KEY)
     else:
         result = _demo_macro(indicator, country)
 
@@ -147,15 +147,17 @@ def list_cached_data(db: Session, source_id: int, data_type: Optional[str] = Non
 
 
 # ═══════════════════════════════════════════════════════════════
-# Внутренние адаптеры
+# Внутренние адаптеры (async)
 # ═══════════════════════════════════════════════════════════════
 
-def _alpha_vantage_quote(symbol: str, api_key: str) -> Optional[Dict]:
+async def _alpha_vantage_quote(symbol: str, api_key: str) -> Optional[Dict]:
     try:
-        r = httpx.get(ALPHA_VANTAGE_URL, params={
-            "function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": api_key
-        }, timeout=10)
-        data = r.json()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(ALPHA_VANTAGE_URL, params={
+                "function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": api_key
+            })
+            r.raise_for_status()
+            data = r.json()
         if "Note" in data or "Information" in data:
             return _demo_quote(symbol)
         quote = data.get("Global Quote", {})
@@ -169,18 +171,17 @@ def _alpha_vantage_quote(symbol: str, api_key: str) -> Optional[Dict]:
             "volume": quote.get("06. volume", "0"),
             "source": "alpha_vantage",
         }
-    except Exception:
+    except (httpx.TimeoutException, httpx.HTTPStatusError, Exception):
         return _demo_quote(symbol)
 
 
 def _yahoo_finance_quote(symbol: str) -> Optional[Dict]:
     """Yahoo Finance через бесплатный API (MVP fallback на демо)."""
-    # В MVP: возвращаем демо-данные. В продакшене: yfinance или RapidAPI
     return _demo_quote(symbol, source="yahoo_finance")
 
 
-def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
-    """World Bank API для макроэкономических индикаторов."""
+async def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
+    """World Bank API для макроэкономических индикаторов (async)."""
     indicator_map = {
         "GDP": "NY.GDP.MKTP.CD",
         "CPI": "FP.CPI.TOTL",
@@ -193,8 +194,10 @@ def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
 
     try:
         url = f"https://api.worldbank.org/v2/country/{country}/indicator/{wb_id}?format=json&per_page=5&date=2020:2025"
-        r = httpx.get(url, timeout=10)
-        data = r.json()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+            data = r.json()
         if len(data) < 2 or not data[1]:
             return _demo_macro(indicator, country)
 
@@ -209,12 +212,12 @@ def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
             "source": "world_bank",
             "data": records[:5],
         }
-    except Exception:
+    except (httpx.TimeoutException, httpx.HTTPStatusError, Exception):
         return _demo_macro(indicator, country)
 
 
-def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
-    """Alpha Vantage economic indicators."""
+async def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
+    """Alpha Vantage economic indicators (async)."""
     func_map = {
         "GDP": "REAL_GDP",
         "CPI": "CPI",
@@ -226,10 +229,12 @@ def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
     if not av_func:
         return _demo_macro(indicator, "US")
     try:
-        r = httpx.get(ALPHA_VANTAGE_URL, params={
-            "function": av_func, "apikey": api_key
-        }, timeout=10)
-        data = r.json()
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(ALPHA_VANTAGE_URL, params={
+                "function": av_func, "apikey": api_key
+            })
+            r.raise_for_status()
+            data = r.json()
         if "Note" in data or "Information" in data:
             return _demo_macro(indicator, "US")
         records = data.get("data", [])[:5]
@@ -241,9 +246,9 @@ def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
             "period": latest.get("date", ""),
             "unit": data.get("unit", ""),
             "source": "alpha_vantage",
-            "data": [{"year": r.get("date"), "value": r.get("value")} for r in records],
+            "data": [{"year": rec.get("date"), "value": rec.get("value")} for rec in records],
         }
-    except Exception:
+    except (httpx.TimeoutException, httpx.HTTPStatusError, Exception):
         return _demo_macro(indicator, "US")
 
 

@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     HF_CHAT_MODEL: str = "mistralai/Mistral-7B-Instruct-v0.3"
 
     # --- CORS ---
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:10000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:10000,https://ai-capital-frontend.onrender.com"
 
     # --- App ---
     APP_NAME: str = "AI Capital Management"

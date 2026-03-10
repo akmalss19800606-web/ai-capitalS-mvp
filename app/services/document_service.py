@@ -19,8 +19,12 @@ from typing import Optional, List, Tuple
 logger = logging.getLogger(__name__)
 
 # Директория хранения загруженных файлов
-UPLOAD_DIR = Path("/app/uploads")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "/app/uploads"))
+try:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+except PermissionError:
+    UPLOAD_DIR = Path("/tmp/app_uploads")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Допустимые типы файлов
 ALLOWED_EXTENSIONS = {

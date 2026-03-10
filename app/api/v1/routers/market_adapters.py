@@ -154,24 +154,24 @@ def remove_data_source(
 # ═══════════════════════════════════════════════════════════════
 
 @router.get("/market/quote/{symbol}")
-def get_quote(
+async def get_quote(
     symbol: str,
     source_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return fetch_quote(db, source_id, symbol)
+    return await fetch_quote(db, source_id, symbol)
 
 
 @router.get("/market/macro/{indicator}")
-def get_macro(
+async def get_macro(
     indicator: str,
     source_id: Optional[int] = None,
     country: str = "US",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return fetch_macro(db, source_id, indicator, country)
+    return await fetch_macro(db, source_id, indicator, country)
 
 
 @router.get("/market/cache/{source_id}", response_model=list[MarketDataCacheResponse])

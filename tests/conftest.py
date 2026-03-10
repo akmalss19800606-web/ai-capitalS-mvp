@@ -15,6 +15,13 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///./test.db")
 os.environ.setdefault("DEBUG", "true")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:3000")
 
+# Создаём /app/uploads если не существует (для document_service)
+try:
+    os.makedirs("/app/uploads", exist_ok=True)
+except PermissionError:
+    os.makedirs("/tmp/app_uploads", exist_ok=True)
+    os.environ.setdefault("UPLOAD_DIR", "/tmp/app_uploads")
+
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool

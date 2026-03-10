@@ -78,6 +78,9 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+from app.middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+
 from app.middleware.rate_limiter import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware, rate_limit=120, window_seconds=60)
 

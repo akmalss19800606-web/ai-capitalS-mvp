@@ -1,16 +1,24 @@
 """
-Обновлённый роутер аутентификации.
-Фаза 3, Сессия 3 — добавлена поддержка MFA при логине,
-регистрация сессий, SSO-провайдеры (конфигурация).
+Роутер аутентификации.
+Фаза 0: httpOnly cookie для refresh-токена, проверка type,
+         усиленная валидация пароля при регистрации.
 """
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional, List
 
 from app.api.v1.deps import get_db, get_current_user
-from app.core.security import verify_password, create_access_token, create_refresh_token, hash_password, decode_access_token
+from app.core.security import (
+    verify_password,
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    decode_access_token,
+    verify_refresh_token,
+    validate_password_strength,
+)
 from app.db.models.user import User
 from app.db.models.auth_security import SsoProvider
 from app.schemas.user import Token, UserCreate, UserRead
@@ -18,12 +26,38 @@ from app.services import mfa_service, session_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# ── Cookie settings ──
+REFRESH_COOKIE_KEY = "refresh_token"
+REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 дней
+REFRESH_COOKIE_PATH = "/api/v1/auth"
+
+
+def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
+    """Установить refresh-токен в httpOnly cookie."""
+    response.set_cookie(
+        key=REFRESH_COOKIE_KEY,
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # True в продакшне (HTTPS)
+        samesite="lax",
+        max_age=REFRESH_COOKIE_MAX_AGE,
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def _delete_refresh_cookie(response: Response) -> None:
+    """Удалить refresh-токен cookie."""
+    response.delete_cookie(
+        key=REFRESH_COOKIE_KEY,
+        path=REFRESH_COOKIE_PATH,
+    )
+
 
 # ── Schemas ──
 
 class LoginResponse(BaseModel):
     access_token: str
-    refresh_token: Optional[str] = None
+    refresh_token: Optional[str] = None  # Оставляем для обратной совместимости (может быть None)
     token_type: str = "bearer"
     mfa_required: bool = False
     mfa_temp_token: Optional[str] = None
@@ -53,6 +87,14 @@ class SsoProviderCreate(BaseModel):
 
 @router.post("/register", response_model=UserRead)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    # Валидация силы пароля
+    password_error = validate_password_strength(user_in.password)
+    if password_error:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=password_error,
+        )
+
     existing = db.query(User).filter(User.email == user_in.email).first()
     if existing:
         raise HTTPException(
@@ -70,16 +112,16 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     return user
 
 
-@router.post("/login", response_model=LoginResponse)
+@router.post("/login")
 def login(
     request: Request,
+    response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
     """
     Логин с поддержкой MFA.
-    Если MFA включено — возвращает mfa_required=true и mfa_temp_token.
-    Клиент затем вызывает /auth/mfa-verify с кодом.
+    Refresh-токен устанавливается как httpOnly cookie.
     """
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
@@ -90,7 +132,6 @@ def login(
 
     # Проверить нужна ли MFA
     if mfa_service.is_mfa_required(db, user.id):
-        # Выдать временный токен (короткоживущий) для MFA-подтверждения
         from datetime import timedelta
         temp_token = create_access_token(
             data={"sub": str(user.id), "type": "mfa_pending"},
@@ -112,18 +153,22 @@ def login(
     access_token = create_access_token(data={"sub": str(user.id), "jti": jti})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        mfa_required=False,
-    )
+    # Устанавливаем refresh-токен в httpOnly cookie
+    _set_refresh_cookie(response, refresh_token)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,  # Также в body для обратной совместимости
+        "token_type": "bearer",
+        "mfa_required": False,
+    }
 
 
-@router.post("/mfa-verify", response_model=LoginResponse)
+@router.post("/mfa-verify")
 def mfa_verify(
     body: MfaVerifyRequest,
     request: Request,
+    response: Response,
     db: Session = Depends(get_db),
 ):
     """Верификация MFA-кода после логина."""
@@ -147,33 +192,70 @@ def mfa_verify(
     access_token = create_access_token(data={"sub": str(user.id), "jti": jti})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-    return LoginResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        mfa_required=False,
-    )
+    # Устанавливаем refresh-токен в httpOnly cookie
+    _set_refresh_cookie(response, refresh_token)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "mfa_required": False,
+    }
 
 
 @router.post("/refresh", response_model=Token)
-def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
-    payload = decode_access_token(refresh_token)
-    if payload is None or payload.get("type") != "refresh":
+def refresh_token_endpoint(
+    request: Request,
+    response: Response,
+    refresh_token: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Обновление access-токена.
+    Refresh-токен берётся из httpOnly cookie (приоритет)
+    или из body (обратная совместимость).
+    """
+    # Приоритет: cookie > body
+    token = request.cookies.get(REFRESH_COOKIE_KEY) or refresh_token
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token not provided",
+        )
+
+    payload = verify_refresh_token(token)
+    if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
         )
+
     user_id = payload.get("sub")
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
     new_access = create_access_token(data={"sub": str(user.id)})
     new_refresh = create_refresh_token(data={"sub": str(user.id)})
+
+    # Обновляем cookie
+    _set_refresh_cookie(response, new_refresh)
+
     return {
         "access_token": new_access,
         "refresh_token": new_refresh,
         "token_type": "bearer",
     }
+
+
+@router.post("/logout")
+def logout(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+):
+    """Логаут — удаляет refresh cookie."""
+    _delete_refresh_cookie(response)
+    return {"message": "Вы успешно вышли из системы"}
 
 
 @router.get("/me", response_model=UserRead)
