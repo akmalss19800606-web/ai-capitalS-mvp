@@ -10,7 +10,7 @@ export default function Footer() {
   const { t } = useLocale();
 
   return (
-    <footer style={{
+    <footer role="contentinfo" style={{
       backgroundColor: semantic.bgCard,
       borderTop: `1px solid ${semantic.border}`,
       padding: `${spacing[4]} ${spacing[6]}`,

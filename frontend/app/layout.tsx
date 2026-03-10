@@ -5,6 +5,8 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { getStoredLocale } from '@/lib/i18n';
+import { ThemeProvider } from '@/lib/theme';
+import OnboardingWizard from '@/components/OnboardingWizard';
 import './globals.css';
 
 const NO_SIDEBAR_PATHS = ['/login', '/register'];
@@ -16,18 +18,36 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [htmlLang, setHtmlLang] = useState('ru');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   /* Close mobile sidebar on route change */
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  /* Persist collapsed state + locale */
+  /* Persist collapsed state + locale + onboarding check */
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
       if (saved === 'true') setSidebarCollapsed(true);
       setHtmlLang(getStoredLocale());
+
+      // UI-003: Check if onboarding is needed
+      const token = localStorage.getItem('token');
+      if (token && !localStorage.getItem('onboarding_complete')) {
+        fetch('/api/v1/onboarding/status', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && !data.completed) {
+              setShowOnboarding(true);
+            } else if (data?.completed) {
+              localStorage.setItem('onboarding_complete', 'true');
+            }
+          })
+          .catch(() => { /* ignore */ });
+      }
     }
   }, []);
 
@@ -59,12 +79,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
       </head>
       <body>
+        <ThemeProvider>
+        {/* UI-003: Onboarding Wizard */}
+        {showOnboarding && (
+          <OnboardingWizard onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('onboarding_complete', 'true');
+          }} />
+        )}
         {showSidebar ? (
           <div className="flex min-h-screen">
+            {/* ACC-001: Skip to main content */}
+            <a href="#main-content" className="skip-link">
+              Перейти к содержимому
+            </a>
             {/* Sidebar */}
             <Sidebar
               collapsed={sidebarCollapsed}
@@ -75,6 +107,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main area */}
             <main
+              id="main-content"
+              role="main"
               className="main-area flex-1 min-h-screen flex flex-col"
               style={{ marginLeft: `${sidebarWidth}px` }}
             >
@@ -82,7 +116,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Header onHamburgerClick={() => setMobileOpen(true)} />
 
               {/* Page content */}
-              <div className="page-content p-6 flex-1">
+              <div className="page-content p-6 flex-1" role="region" aria-label="Основное содержимое">
                 {children}
               </div>
 
@@ -95,6 +129,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
         )}
+        </ThemeProvider>
       </body>
     </html>
   );

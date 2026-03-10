@@ -1,6 +1,7 @@
 """
 REF-001: Consolidated dashboard router.
 Merges: dashboard.py (summary) + dashboards.py (dashboard builder).
+DASH-001: Real data endpoint with Redis caching.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
@@ -133,6 +134,98 @@ def get_dashboard_summary(
         "category_counts": category_counts,
         "geography_counts": geography_counts,
         "recent_decisions": recent_list,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════
+# DASH-001: Real Data Endpoint (Redis-cached)
+# ═══════════════════════════════════════════════════════════════
+
+@router.get("/realdata")
+async def get_dashboard_realdata(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    DASH-001: Dashboard real-time data via Redis cache.
+    Returns currencies (cbu.uz), stock market, CPI, macro data.
+    """
+    from app.services.currency_service import get_latest_rates_cached
+    from app.services.redis_cache_service import RedisCacheService
+
+    # 1. Currency rates (Redis TTL 6h)
+    try:
+        raw_rates = await get_latest_rates_cached(
+            codes=["USD", "EUR", "GBP", "RUB", "CNY", "JPY", "KZT", "CHF"]
+        )
+        currencies = [
+            {
+                "code": r.get("Ccy", "").strip(),
+                "name_ru": r.get("CcyNm_RU", ""),
+                "rate": float(str(r.get("Rate", "0")).replace(",", ".")),
+                "diff": float(str(r.get("Diff", "0")).replace(",", ".")),
+                "date": r.get("Date", ""),
+            }
+            for r in raw_rates
+        ]
+    except Exception:
+        currencies = []
+
+    # 2. Stock market summary (from DB)
+    try:
+        from app.services.stock_exchange_service import get_stock_summary
+        stock_market = get_stock_summary(db)
+    except Exception:
+        stock_market = {
+            "total_issuers": 0, "total_trades": 0,
+            "total_volume": 0, "total_turnover": 0, "top_issuers": [],
+        }
+
+    # 3. CPI data summary
+    try:
+        from app.services.cpi_data_service import get_cpi_summary
+        cpi = get_cpi_summary(db)
+    except Exception:
+        cpi = {"categories_count": 0, "data_points": 0}
+
+    # 4. Company lookup summary
+    try:
+        from app.services.company_lookup_service import get_company_summary
+        companies = get_company_summary(db)
+    except Exception:
+        companies = {"total_cached": 0, "sources": []}
+
+    # 5. Macro data (Redis TTL 24h)
+    try:
+        from app.services.macro_data_service import fetch_indicator
+        macro: dict = {}
+        gdp_data = await fetch_indicator("NY.GDP.MKTP.CD", per_page=1)
+        if gdp_data:
+            macro["gdp_total"] = gdp_data[0]["value"]
+            macro["data_year"] = gdp_data[0].get("date")
+
+        growth_data = await fetch_indicator("NY.GDP.MKTP.KD.ZG", per_page=1)
+        if growth_data:
+            macro["gdp_growth_pct"] = round(growth_data[0]["value"], 1)
+
+        inflation_data = await fetch_indicator("FP.CPI.TOTL.ZG", per_page=1)
+        if inflation_data:
+            macro["inflation_pct"] = round(inflation_data[0]["value"], 1)
+
+        pop_data = await fetch_indicator("SP.POP.TOTL", per_page=1)
+        if pop_data:
+            macro["population_mln"] = round(pop_data[0]["value"] / 1_000_000, 1)
+    except Exception:
+        macro = {}
+
+    from datetime import datetime
+    return {
+        "currencies": currencies,
+        "stock_market": stock_market,
+        "cpi": cpi,
+        "companies": companies,
+        "macro": macro,
+        "data_freshness": datetime.utcnow().isoformat(),
     }
 
 

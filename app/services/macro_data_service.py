@@ -40,20 +40,32 @@ INDICATORS = {
 }
 
 
-async def fetch_indicator(indicator_code: str, per_page: int = 20) -> list[dict]:
+async def fetch_indicator(
+    indicator_code: str, per_page: int = 20, use_cache: bool = True
+) -> list[dict]:
     """
-    Загрузка индикатора с World Bank API.
+    Загрузка индикатора с World Bank API (REDIS-001: Redis кэширование, TTL 24h).
 
-    Выполняет GET-запрос к API World Bank для получения значений
-    указанного индикатора по Узбекистану.
+    Сначала проверяет Redis-кэш, при промахе — запрос к API.
 
     Args:
         indicator_code: Код индикатора World Bank (напр. NY.GDP.MKTP.CD).
         per_page: Количество записей на страницу.
+        use_cache: Использовать Redis кэш (True по умолчанию).
 
     Returns:
         Список словарей с полями: indicator_code, indicator_name, value, date, unit.
     """
+    from app.services.redis_cache_service import RedisCacheService
+
+    # 1. Проверяем Redis кэш
+    if use_cache:
+        cached = await RedisCacheService.get_macro_data(indicator_code)
+        if cached is not None:
+            logger.info("Макроданные %s: из Redis кэша", indicator_code)
+            return cached
+
+    # 2. Запрос к API
     url = f"{WORLDBANK_BASE_URL}/{indicator_code}"
     params = {"format": "json", "per_page": per_page}
     results = []
@@ -97,6 +109,11 @@ async def fetch_indicator(indicator_code: str, per_page: int = 20) -> list[dict]
         logger.error("Ошибка подключения к World Bank API: %s", e)
     except Exception as e:
         logger.error("Непредвиденная ошибка при загрузке индикатора %s: %s", indicator_code, e)
+
+    # 3. Сохраняем в Redis кэш (TTL 24h)
+    if results and use_cache:
+        await RedisCacheService.set_macro_data(indicator_code, results)
+        logger.info("Макроданные %s: %d записей закэшировано в Redis", indicator_code, len(results))
 
     return results
 

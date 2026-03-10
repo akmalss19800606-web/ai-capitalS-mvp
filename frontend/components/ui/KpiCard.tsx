@@ -58,7 +58,7 @@ export function KpiCard({ label, value, change, trend, icon, subtitle }: KpiCard
         )}
       </div>
 
-      <div style={{
+      <div className="font-mono-num" style={{
         fontSize: typography.fontSize['3xl'],
         fontWeight: typography.fontWeight.bold,
         color: semantic.textPrimary,

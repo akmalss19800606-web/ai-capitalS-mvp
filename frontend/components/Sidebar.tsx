@@ -137,7 +137,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
 
   /* ─── Render nav groups (shared between desktop & mobile) ─── */
   const renderNavGroups = (isMobile: boolean) => (
-    <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: `${spacing[2]} 0` }}>
+    <nav aria-label="Основная навигация" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: `${spacing[2]} 0` }}>
       {NAV_GROUPS.map((group, gi) => {
         const groupTitle = (t.nav.groups as any)[group.titleKey] || group.titleKey;
         return (
@@ -320,7 +320,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="sidebar-desktop relative">
+      <aside className="sidebar-desktop relative" role="complementary" aria-label="Боковое меню">
         {sidebarContent}
       </aside>
 

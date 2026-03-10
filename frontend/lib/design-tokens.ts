@@ -79,39 +79,43 @@ export const colors = {
 } as const;
 
 /* ─── Semantic Colors (быстрый доступ) ─── */
+/**
+ * UI-001: Semantic tokens use CSS custom properties for theme support.
+ * These resolve to different values based on [data-theme="dark"] in globals.css.
+ */
 export const semantic = {
   /* Фоны */
-  bgApp:       colors.neutral[50],    // #f8fafc — фон приложения
-  bgCard:      colors.neutral[0],     // #ffffff — фон карточек
-  bgSidebar:   colors.neutral[0],     // #ffffff — фон сайдбара
-  bgHover:     colors.neutral[100],   // #f1f5f9 — hover-состояние
-  bgActive:    colors.primary[50],    // #eff6ff — активный элемент
-  bgInput:     colors.neutral[0],     // #ffffff — фон полей ввода
-  bgOverlay:   'rgba(15, 23, 42, 0.4)', // оверлей модалок
+  bgApp:       'var(--bg-app)',
+  bgCard:      'var(--bg-card)',
+  bgSidebar:   'var(--bg-sidebar)',
+  bgHover:     'var(--color-neutral-100)',
+  bgActive:    'var(--color-primary-50)',
+  bgInput:     'var(--color-neutral-0)',
+  bgOverlay:   'rgba(15, 23, 42, 0.4)',
 
   /* Текст */
-  textPrimary:   colors.neutral[900],  // #0f172a — основной текст
-  textSecondary: colors.neutral[600],  // #475569 — вторичный текст
-  textMuted:     colors.neutral[400],  // #94a3b8 — приглушённый
-  textInverse:   colors.neutral[0],    // #ffffff — на тёмном фоне
-  textLink:      colors.primary[600],  // #2563eb — ссылки
-  textLinkHover: colors.primary[700],  // #1e40af — ссылки hover
+  textPrimary:   'var(--text-primary)',
+  textSecondary: 'var(--text-secondary)',
+  textMuted:     'var(--text-muted)',
+  textInverse:   '#ffffff',
+  textLink:      'var(--color-primary-600)',
+  textLinkHover: 'var(--color-primary-700)',
 
   /* Границы */
-  border:       colors.neutral[200],  // #e2e8f0 — основная граница
-  borderLight:  colors.neutral[100],  // #f1f5f9 — лёгкая граница
-  borderFocus:  colors.primary[500],  // #3b82f6 — фокус
-  borderInput:  colors.neutral[300],  // #cbd5e1 — поля ввода
+  border:       'var(--border)',
+  borderLight:  'var(--border-light)',
+  borderFocus:  'var(--color-primary-500)',
+  borderInput:  'var(--color-neutral-300)',
 
   /* Статусы */
-  profit:  colors.success[600],  // #16a34a — прибыль
-  loss:    colors.error[600],    // #dc2626 — убыток
-  hold:    colors.warning[600],  // #ca8a04 — ожидание
+  profit:  'var(--color-success-600)',
+  loss:    'var(--color-error-600)',
+  hold:    'var(--color-warning-600)',
 
   /* Акцент */
-  accent:      colors.primary[600],   // #2563eb
-  accentHover: colors.primary[700],   // #1e40af
-  accentLight: colors.primary[100],   // #dbeafe
+  accent:      'var(--accent)',
+  accentHover: 'var(--color-primary-700)',
+  accentLight: 'var(--color-primary-100)',
 } as const;
 
 /* ─── Typography ─── */
@@ -173,17 +177,18 @@ export const spacing = {
 } as const;
 
 /* ─── Shadows ─── */
+/* UI-001: Shadows use CSS variables for theme-aware values */
 export const shadows = {
   none: 'none',
   xs:   '0 1px 2px rgba(0, 0, 0, 0.04)',
-  sm:   '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+  sm:   'var(--shadow-card)',
   md:   '0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.04)',
   lg:   '0 10px 15px rgba(0, 0, 0, 0.06), 0 4px 6px rgba(0, 0, 0, 0.04)',
   xl:   '0 20px 25px rgba(0, 0, 0, 0.08), 0 8px 10px rgba(0, 0, 0, 0.04)',
-  card:     '0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
-  cardHover:'0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
+  card:     'var(--shadow-card)',
+  cardHover:'var(--shadow-card-hover)',
   sidebar:  '1px 0 3px rgba(0, 0, 0, 0.04)',
-  dropdown: '0 4px 16px rgba(0, 0, 0, 0.12)',
+  dropdown: 'var(--shadow-dropdown)',
 } as const;
 
 /* ─── Border Radius ─── */

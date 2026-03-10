@@ -47,17 +47,37 @@ from app.api.v1.routers import documents
 from app.api.v1.routers import branded_export
 from app.api.v1.routers import admin_panel
 
+from contextlib import asynccontextmanager
+
 from app.db.session import engine
 from app.db.base import Base
 from app.core.config import settings
+from app.services.redis_cache_service import RedisCacheService
 
 from app.api.v1.routers import islamic_finance
 from app.api.v1.routers import portfolio_analytics
 from app.api.v1.routers import currency_rates
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup / shutdown: Redis connection pool."""
+    # Startup
+    redis_ok = await RedisCacheService.ping()
+    import logging
+    logger = logging.getLogger(__name__)
+    if redis_ok:
+        logger.info("Redis connected successfully")
+    else:
+        logger.warning("Redis unavailable — caching disabled")
+    yield
+    # Shutdown
+    await RedisCacheService.close()
+
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
