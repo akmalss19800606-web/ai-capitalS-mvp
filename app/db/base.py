@@ -50,7 +50,8 @@ from app.db.models.architectural_principles import (
     EventBusMessage, SystemConstraint,
 )
 # ═══ Этап 2, Сессия 2.1: Макроданные + Курсы валют ═══
-from app.db.models.macro_data import MacroIndicator, CurrencyRate
+from app.db.models.macro_data import MacroIndicator
+from app.db.models.currency_rate import CurrencyRate
 # ═══ Этап 2, Сессия 2.2: Биржа UZSE + ИПЦ ═══
 from app.db.models.stock_exchange import StockQuote, StockEmitter
 from app.db.models.cpi_data import CPIRecord
