@@ -142,7 +142,7 @@ export default function CollaborationPage() {
 
   // Load decisions list
   useEffect(() => {
-    decisionsApi.list({ per_page: 100 }).then((r: any) => {
+    decisionsApi.list({ per_page: 100 }).then((r: Record<string, unknown>) => {
       setDecisionsList(r.items || r || []);
     }).catch(() => {});
   }, []);
@@ -177,7 +177,7 @@ export default function CollaborationPage() {
   const loadTasks = useCallback(async () => {
     if (!selectedDecision) return;
     try {
-      const params: any = {};
+      const params: unknown= {};
       if (taskFilter) params.status = taskFilter;
       const data = await collaboration.listTasks(selectedDecision, params);
       setTasks(data);
@@ -284,7 +284,7 @@ export default function CollaborationPage() {
     } catch {}
   };
 
-  const handleUpdatePref = async (key: string, value: any) => {
+  const handleUpdatePref = async (key: string, value: unknown) => {
     try {
       const data = await preferences.update({ [key]: value });
       setPrefs(data);

@@ -66,8 +66,8 @@ interface Relationship {
 
 interface DiffChange {
   field: string;
-  old: any;
-  new: any;
+  old: unknown;
+  new: unknown;
 }
 
 interface GraphData {
@@ -246,7 +246,7 @@ export default function DecisionDetailPage() {
       setLoading(true);
       const d = await decisionsApi.get(decisionId);
       setDecision(d);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError('Не удалось загрузить решение');
     } finally {
       setLoading(false);
@@ -344,7 +344,7 @@ export default function DecisionDetailPage() {
       setNewRelTargetId('');
       setNewRelDesc('');
       await loadRelationships();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка создания связи');
     }
   };

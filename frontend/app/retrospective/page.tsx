@@ -246,7 +246,7 @@ export default function RetrospectivePage() {
       const portsArr: Portfolio[] = Array.isArray(portsRes) ? portsRes : (portsRes?.items || portsRes?.portfolios || []);
       setDecisionsList(decsArr);
       setPortfoliosList(portsArr);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки данных');
     } finally {
       setLoadingData(false);
@@ -261,7 +261,7 @@ export default function RetrospectivePage() {
     setLoading(true);
     setError(null);
     try {
-      const payload: any = {
+      const payload: unknown= {
         analysis_type: analysisType,
         forecast_return: forecastReturn,
         actual_return: actualReturn,
@@ -274,7 +274,7 @@ export default function RetrospectivePage() {
       }
       const res = await aiAnalytics.runRetrospective(payload);
       setResult(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при ретроспективном анализе');
     } finally {
       setLoading(false);
@@ -494,14 +494,14 @@ export default function RetrospectivePage() {
                               innerRadius={45}
                               outerRadius={75}
                               dataKey="value"
-                              label={({ name, percent }: any) => `${name.length > 12 ? name.slice(0, 10) + '..' : name} ${(percent * 100).toFixed(0)}%`}
+                              label={({ name, percent  }: Record<string, unknown>) => `${name.length > 12 ? name.slice(0, 10) + '..' : name} ${(percent * 100).toFixed(0)}%`}
                               labelLine={false}
                             >
                               {varianceData.map((d, i) => (
                                 <Cell key={`var-${i}`} fill={d.color} />
                               ))}
                             </Pie>
-                            <Tooltip formatter={(val: any) => `${Number(val).toFixed(1)}%`} />
+                            <Tooltip formatter={(val: unknown) => `${Number(val).toFixed(1)}%`} />
                           </PieChart>
                         </ResponsiveContainer>
                         <div>

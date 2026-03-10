@@ -40,7 +40,7 @@ export default function CpiPage() {
       setOverview(ov);
       setTimeSeries(ts);
       setDatasets(ds);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Error");
     }
     setLoading(false);
@@ -51,7 +51,7 @@ export default function CpiPage() {
     try {
       await cpiData.syncAll();
       await loadData();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || "Sync error");
     }
     setSyncing(false);
@@ -136,7 +136,7 @@ export default function CpiPage() {
 }
 
 /* ─── Tab: Overview ─── */
-function CpiOverviewTab({ overview, timeSeries, ct, cardStyle }: any) {
+function CpiOverviewTab({ overview, timeSeries, ct, cardStyle  }: Record<string, unknown>) {
   const kpiStyle: React.CSSProperties = {
     ...cardStyle,
     textAlign: "center" as const,
@@ -229,7 +229,7 @@ function CpiOverviewTab({ overview, timeSeries, ct, cardStyle }: any) {
 }
 
 /* ─── Tab: Categories ─── */
-function CategoriesTab({ overview, ct, cardStyle }: any) {
+function CategoriesTab({ overview, ct, cardStyle  }: Record<string, unknown>) {
   const categories = overview?.categories || [];
 
   return (
@@ -242,7 +242,7 @@ function CategoriesTab({ overview, ct, cardStyle }: any) {
             {/* Bar chart */}
             <ResponsiveContainer width="100%" height={400}>
               <BarChart
-                data={categories.slice(0, 15).map((c: any) => ({
+                data={categories.slice(0, 15).map((c: Record<string, unknown>) => ({
                   name: (c.category_ru || "").slice(0, 20),
                   value: c.latest_value ? c.latest_value - 100 : 0,
                 }))}
@@ -254,7 +254,7 @@ function CategoriesTab({ overview, ct, cardStyle }: any) {
                 <Tooltip formatter={(v: number) => [`${v > 0 ? "+" : ""}${v.toFixed(2)}%`, ct("change")]} />
                 <ReferenceLine x={0} stroke="#999" />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {categories.slice(0, 15).map((_: any, i: number) => (
+                  {categories.slice(0, 15).map((_: Record<string, unknown>, i: number) => (
                     <Cell key={i} fill={categories[i]?.latest_value > 100 ? "#A84B2F" : "#20808D"} />
                   ))}
                 </Bar>
@@ -272,7 +272,7 @@ function CategoriesTab({ overview, ct, cardStyle }: any) {
                 </tr>
               </thead>
               <tbody>
-                {categories.map((c: any, i: number) => (
+                {categories.map((c: Record<string, unknown>, i: number) => (
                   <tr key={i} style={{ borderBottom: "1px solid #F0F0F0" }}>
                     <td style={{ padding: "10px 12px", fontSize: 14 }}>{c.category_ru}</td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 14, fontWeight: 500 }}>
@@ -301,11 +301,11 @@ function CategoriesTab({ overview, ct, cardStyle }: any) {
 }
 
 /* ─── Tab: Trends ─── */
-function TrendsTab({ timeSeries, ct, cardStyle }: any) {
+function TrendsTab({ timeSeries, ct, cardStyle  }: Record<string, unknown>) {
   // Calculate rolling average
-  const dataWithMA = timeSeries.map((p: any, i: number) => {
+  const dataWithMA = timeSeries.map((p: Record<string, unknown>, i: number) => {
     const window = timeSeries.slice(Math.max(0, i - 11), i + 1);
-    const avg = window.reduce((s: number, x: any) => s + (x.value || 0), 0) / window.length;
+    const avg = window.reduce((s: number, x: unknown) => s + (x.value || 0), 0) / window.length;
     return { ...p, ma12: parseFloat(avg.toFixed(2)) };
   });
 
@@ -342,12 +342,12 @@ function TrendsTab({ timeSeries, ct, cardStyle }: any) {
 }
 
 /* ─── Tab: Datasets ─── */
-function DatasetsTab({ datasets, ct, cardStyle, onSync }: any) {
+function DatasetsTab({ datasets, ct, cardStyle, onSync  }: Record<string, unknown>) {
   return (
     <div style={cardStyle}>
       <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{ct("availableDatasets")}</h3>
       <div style={{ display: "grid", gap: 12 }}>
-        {datasets.map((ds: any, i: number) => (
+        {datasets.map((ds: Record<string, unknown>, i: number) => (
           <div key={i} style={{
             padding: 16, borderRadius: 8, border: "1px solid #E8E8E8",
             display: "flex", justifyContent: "space-between", alignItems: "center",

@@ -51,7 +51,7 @@ interface ExportJob {
   filters: Record<string, any> | null;
   status: string;
   total_rows: number | null;
-  result_data: any;
+  result_data: unknown;
   created_at: string;
   completed_at: string | null;
 }
@@ -176,7 +176,7 @@ export default function DataExchangePage() {
         setMappings(autoMappings);
       }
       setImportStep('mapping');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки файла');
     }
     setLoading(false);
@@ -194,7 +194,7 @@ export default function DataExchangePage() {
     try {
       const updated = await dataExchange.saveMapping(currentJob.id, validMappings);
       setCurrentJob(updated);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка сохранения маппинга');
     }
     setLoading(false);
@@ -208,7 +208,7 @@ export default function DataExchangePage() {
       const result = await dataExchange.executeImport(currentJob.id, importFile);
       setCurrentJob(result);
       setImportStep('result');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка выполнения импорта');
     }
     setLoading(false);
@@ -234,7 +234,7 @@ export default function DataExchangePage() {
         target_entity: exportEntity,
       });
       setExportResult(job);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка экспорта');
     }
     setExportLoading(false);

@@ -224,7 +224,7 @@ const TEMPLATE_COLORS: Record<string, { bg: string; text: string; icon: string }
 // CHART RENDERERS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function SectionChart({ chartType, chartData }: { chartType?: string; chartData?: any[] }) {
+function SectionChart({ chartType, chartData }: { chartType?: string; chartData?: unknown[] }) {
   if (!chartType || !chartData || chartData.length === 0) return null;
 
   if (chartType === 'bar') {
@@ -262,14 +262,14 @@ function SectionChart({ chartType, chartData }: { chartType?: string; chartData?
               innerRadius={50}
               outerRadius={85}
               dataKey="value"
-              label={({ name, percent }: any) => `${(name || '').slice(0, 15)} ${(percent * 100).toFixed(0)}%`}
+              label={({ name, percent  }: Record<string, unknown>) => `${(name || '').slice(0, 15)} ${(percent * 100).toFixed(0)}%`}
               labelLine={false}
             >
               {chartData.map((_, i) => (
                 <Cell key={`pie-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(val: any) => typeof val === 'number' ? val.toFixed(1) : val} />
+            <Tooltip formatter={(val: unknown) => typeof val === 'number' ? val.toFixed(1) : val} />
           </PieChart>
         </ResponsiveContainer>
       </div>
@@ -375,7 +375,7 @@ export default function ReportPage() {
       setPortfoliosList(Array.isArray(ports) ? ports : (ports?.items || []));
       const decsArr = Array.isArray(decsRaw) ? decsRaw : (decsRaw?.items || []);
       setDecisionsList(decsArr);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки');
     } finally {
       setLoadingData(false);
@@ -434,7 +434,7 @@ export default function ReportPage() {
       });
       setPreviewReport(res);
       loadHistory();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка генерации');
     } finally {
       setGenerating(false);
@@ -458,7 +458,7 @@ export default function ReportPage() {
       const res = await reports.get(id);
       setPreviewReport(res);
       setActiveTab('constructor');
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки отчёта');
     }
   };

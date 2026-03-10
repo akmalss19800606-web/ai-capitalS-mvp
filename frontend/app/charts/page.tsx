@@ -172,7 +172,7 @@ export default function ChartsPage() {
 
   // Load portfolio list once
   useEffect(() => {
-    portfolios.list().then((r: any) => {
+    portfolios.list().then((r: Record<string, unknown>) => {
       const list = Array.isArray(r) ? r : r?.items || [];
       setPortfolioList(list);
     }).catch(() => {});
@@ -205,7 +205,7 @@ export default function ChartsPage() {
           break;
         }
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки данных');
     } finally {
       setLoading(false);
@@ -235,7 +235,7 @@ export default function ChartsPage() {
             style={selectStyle}
           >
             <option value="">Все портфели</option>
-            {portfolioList.map((p: any) => (
+            {portfolioList.map((p: Record<string, unknown>) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
@@ -313,12 +313,12 @@ export default function ChartsPage() {
 // VIS-CHART-001.1  WATERFALL
 // ═══════════════════════════════════════════════════════════════════════════
 
-function WaterfallChart({ data }: { data: any }) {
-  const items: any[] = data.items || [];
+function WaterfallChart({ data }: { data: Record<string, unknown> }) {
+  const items: unknown[] = data.items || [];
   const unit = data.unit || '';
 
   // Build bar data for waterfall using invisible + visible bars
-  const chartData = items.map((item: any, idx: number) => {
+  const chartData = items.map((item: Record<string, unknown>, idx: number) => {
     const isTotal = item.type === 'total';
     const prev = idx > 0 ? items[idx - 1].cumulative : 0;
     const invisible = isTotal ? 0 : Math.min(prev, item.cumulative);
@@ -340,7 +340,7 @@ function WaterfallChart({ data }: { data: any }) {
     return '#ef4444';
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload  }: Record<string, unknown>) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     if (!d) return null;
@@ -374,7 +374,7 @@ function WaterfallChart({ data }: { data: any }) {
           <Tooltip content={<CustomTooltip />} />
           <Bar dataKey="invisible" stackId="stack" fill="transparent" />
           <Bar dataKey="value" stackId="stack" radius={[4, 4, 0, 0]}>
-            {chartData.map((entry: any, idx: number) => (
+            {chartData.map((entry: Record<string, unknown>, idx: number) => (
               <Cell key={idx} fill={getColor(entry.type)} />
             ))}
           </Bar>
@@ -403,13 +403,13 @@ function WaterfallChart({ data }: { data: any }) {
 // VIS-CHART-001.2  TORNADO
 // ═══════════════════════════════════════════════════════════════════════════
 
-function TornadoChart({ data }: { data: any }) {
-  const items: any[] = data.items || [];
+function TornadoChart({ data }: { data: Record<string, unknown> }) {
+  const items: unknown[] = data.items || [];
   const base = data.base || 0;
   const unit = data.unit || '';
 
   // Transform for horizontal bar chart
-  const chartData = items.map((item: any) => ({
+  const chartData = items.map((item: Record<string, unknown>) => ({
     factor: item.factor,
     lowDelta: -(base - item.low),
     highDelta: item.high - base,
@@ -418,7 +418,7 @@ function TornadoChart({ data }: { data: any }) {
     delta: item.delta,
   }));
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload  }: Record<string, unknown>) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     if (!d) return null;
@@ -481,13 +481,13 @@ function TornadoChart({ data }: { data: any }) {
 // VIS-CHART-001.3  BUBBLE
 // ═══════════════════════════════════════════════════════════════════════════
 
-function BubbleChart({ data }: { data: any }) {
-  const items: any[] = data.items || [];
+function BubbleChart({ data }: { data: Record<string, unknown> }) {
+  const items: unknown[] = data.items || [];
   const xLabel = data.xLabel || 'X';
   const yLabel = data.yLabel || 'Y';
 
   // Group by category
-  const categories = [...new Set(items.map((i: any) => i.category))];
+  const categories = [...new Set(items.map((i: Record<string, unknown>) => i.category))];
 
   const riskLabels: Record<number, string> = {
     1: 'Низкий',
@@ -496,7 +496,7 @@ function BubbleChart({ data }: { data: any }) {
     4: 'Критический',
   };
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const CustomTooltip = ({ active, payload  }: Record<string, unknown>) => {
     if (!active || !payload?.length) return null;
     const d = payload[0]?.payload;
     if (!d) return null;
@@ -542,7 +542,7 @@ function BubbleChart({ data }: { data: any }) {
             <Scatter
               key={cat}
               name={cat}
-              data={items.filter((i: any) => i.category === cat)}
+              data={items.filter((i: Record<string, unknown>) => i.category === cat)}
               fill={getCategoryColor(cat)}
               fillOpacity={0.7}
               stroke={getCategoryColor(cat)}
@@ -565,9 +565,9 @@ function BubbleChart({ data }: { data: any }) {
       {/* Stats cards below chart */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginTop: '20px' }}>
         {categories.map((cat: string) => {
-          const catItems = items.filter((i: any) => i.category === cat);
-          const totalX = catItems.reduce((s: number, i: any) => s + (i.x || 0), 0);
-          const avgRisk = catItems.length ? (catItems.reduce((s: number, i: any) => s + (i.y || 0), 0) / catItems.length).toFixed(1) : '0';
+          const catItems = items.filter((i: Record<string, unknown>) => i.category === cat);
+          const totalX = catItems.reduce((s: number, i: unknown) => s + (i.x || 0), 0);
+          const avgRisk = catItems.length ? (catItems.reduce((s: number, i: unknown) => s + (i.y || 0), 0) / catItems.length).toFixed(1) : '0';
           return (
             <div key={cat} style={{
               padding: '14px',
@@ -599,14 +599,14 @@ function BubbleChart({ data }: { data: any }) {
 // VIS-CHART-001.4  HEATMAP
 // ═══════════════════════════════════════════════════════════════════════════
 
-function HeatmapChart({ data }: { data: any }) {
-  const cells: any[] = data.cells || [];
+function HeatmapChart({ data }: { data: Record<string, unknown> }) {
+  const cells: unknown[] = data.cells || [];
   const rows: string[] = data.rows || [];
   const cols: string[] = data.cols || [];
   const unit = data.unit || '';
 
   // Find min/max for color scale
-  const values = cells.map((c: any) => c.value);
+  const values = cells.map((c: Record<string, unknown>) => c.value);
   const minVal = Math.min(...values, 0);
   const maxVal = Math.max(...values, 1);
 
@@ -625,8 +625,8 @@ function HeatmapChart({ data }: { data: any }) {
     return ratio > 0.5 ? '#ffffff' : '#1e293b';
   }
 
-  function getCellData(row: string, col: string): any | null {
-    return cells.find((c: any) => c.row === row && c.col === col) || null;
+  function getCellData(row: string, col: string): unknown | null {
+    return cells.find((c: Record<string, unknown>) => c.row === row && c.col === col) || null;
   }
 
   return (
@@ -727,9 +727,9 @@ function HeatmapChart({ data }: { data: any }) {
         border: `1px solid ${C.border}`,
       }}>
         {rows.map((row) => {
-          const rowCells = cells.filter((c: any) => c.row === row);
-          const total = rowCells.reduce((s: number, c: any) => s + c.value, 0);
-          const count = rowCells.reduce((s: number, c: any) => s + c.count, 0);
+          const rowCells = cells.filter((c: Record<string, unknown>) => c.row === row);
+          const total = rowCells.reduce((s: number, c: unknown) => s + c.value, 0);
+          const count = rowCells.reduce((s: number, c: unknown) => s + c.count, 0);
           return (
             <div key={row} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '12px', color: C.textMuted, marginBottom: '4px' }}>{row}</div>

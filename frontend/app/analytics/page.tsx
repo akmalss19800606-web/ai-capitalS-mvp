@@ -150,7 +150,7 @@ export default function AnalyticsPage() {
         const tsRes = await olap.timeSeries('month');
         setTimeSeriesData(tsRes.items || []);
       } catch { /* empty OLAP */ }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка загрузки');
     }
     setLoading(false);
@@ -166,7 +166,7 @@ export default function AnalyticsPage() {
       const result = await etl.run();
       setEtlResult(result);
       await loadData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(err.message || 'Ошибка ETL');
     }
     setEtlRunning(false);

@@ -8,7 +8,7 @@ import {
 } from '@/lib/design-tokens';
 
 /* ─── SVG Icon helper ─── */
-function Icon({ paths, size = 20, ...rest }: { paths: React.ReactNode; size?: number; [k: string]: any }) {
+function Icon({ paths, size = 20, ...rest }: { paths: React.ReactNode; size?: number; [k: string]: unknown }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...rest}>
@@ -103,7 +103,7 @@ const XIcon = () => (
 );
 
 /* ─── Exported: get active nav item for Header breadcrumb ─── */
-export function getActiveNavItem(pathname: string, t: any): { label: string; icon: React.ReactNode } | undefined {
+export function getActiveNavItem(pathname: string, t: unknown): { label: string; icon: React.ReactNode } | undefined {
   for (const group of NAV_GROUPS) {
     for (const item of group.items) {
       if (item.path === pathname || (item.path !== '/' && pathname.startsWith(item.path))) {

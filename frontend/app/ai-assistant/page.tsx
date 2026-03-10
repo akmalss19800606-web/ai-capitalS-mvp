@@ -393,7 +393,7 @@ export default function AIAssistantPage() {
       };
       setMessages((prev) => [...prev, assistantMsg]);
       loadStats();
-    } catch (e: any) {
+    } catch (e: unknown) {
       const errMsg: ChatMsg = {
         role: "assistant",
         content: `Ошибка: ${e?.message || "Не удалось получить ответ от ИИ. Проверьте настройки провайдеров."}`,

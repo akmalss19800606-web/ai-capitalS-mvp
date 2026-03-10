@@ -11,7 +11,7 @@ import { useLocale } from '@/lib/i18n';
 /* ─── Types ─── */
 interface ScreeningResult {
   success: boolean;
-  data: any;
+  data: unknown;
 }
 
 /* ─── Tab type ─── */
@@ -170,7 +170,7 @@ function ScreeningTab() {
 
     try {
       let endpoint = '/islamic-finance/screening/full';
-      const body: any = { company_name: companyName, industry, description };
+      const body: unknown= { company_name: companyName, industry, description };
 
       if (mode === 'industry') {
         endpoint = '/islamic-finance/screening/industry';
@@ -349,7 +349,7 @@ function ScreeningTab() {
                 Финансовые показатели (AAOIFI)
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: spacing[2] }}>
-                {result.financial_screening.checks.map((check: any, i: number) => (
+                {result.financial_screening.checks.map((check: Record<string, unknown>, i: number) => (
                   <div key={i} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: `${spacing[3]} ${spacing[4]}`,
@@ -387,7 +387,7 @@ function ScreeningTab() {
               <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.error[700], marginBottom: spacing[3] }}>
                 Нарушения отраслевых ограничений
               </h4>
-              {result.industry_screening.violations.map((v: any, i: number) => (
+              {result.industry_screening.violations.map((v: Record<string, unknown>, i: number) => (
                 <div key={i} style={{
                   padding: `${spacing[3]} ${spacing[4]}`,
                   backgroundColor: colors.error[50],
@@ -577,7 +577,7 @@ function ZakatTab() {
             backgroundColor: colors.primary[50], borderRadius: radius.xl,
             border: `1px solid ${colors.primary[200]}`,
           }}>
-            {guide.sections.map((section: any, i: number) => (
+            {guide.sections.map((section: Record<string, unknown>, i: number) => (
               <div key={i} style={{ marginBottom: spacing[3] }}>
                 <h4 style={{ fontWeight: typography.fontWeight.semibold, color: colors.primary[700], marginBottom: spacing[1] }}>
                   {section.title}
@@ -811,7 +811,7 @@ function ReferenceTab() {
           По стандартам AAOIFI Shariah Standard No. 21 и DJIM Methodology
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing[3] }}>
-          {haramList.map((item: any, i: number) => (
+          {haramList.map((item: Record<string, unknown>, i: number) => (
             <div key={i} style={{
               padding: spacing[4],
               backgroundColor: colors.error[50],
@@ -848,7 +848,7 @@ function ReferenceTab() {
               </tr>
             </thead>
             <tbody>
-              {thresholds.map((item: any, i: number) => (
+              {thresholds.map((item: Record<string, unknown>, i: number) => (
                 <tr key={i} style={{ borderBottom: `1px solid ${semantic.borderLight}` }}>
                   <td style={{ padding: `${spacing[3]} ${spacing[4]}` }}>
                     <div style={{ fontWeight: typography.fontWeight.medium, color: semantic.textPrimary, fontSize: typography.fontSize.md }}>{item.name_ru}</div>
@@ -880,7 +880,7 @@ function ReferenceTab() {
       <div style={cardStyle}>
         <h3 style={sectionTitle}>Шариатские индексы</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing[3] }}>
-          {indices.map((item: any, i: number) => (
+          {indices.map((item: Record<string, unknown>, i: number) => (
             <div key={i} style={{
               padding: spacing[4],
               backgroundColor: colors.primary[50],

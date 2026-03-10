@@ -163,12 +163,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Custom Tooltip ─────────────────────────────────────────────────────────
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label  }: Record<string, unknown>) => {
   if (!active || !payload || !payload.length) return null;
   return (
     <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '10px 14px', boxShadow: C.cardShadow, fontSize: '13px' }}>
       <div style={{ color: C.textMuted, marginBottom: '4px' }}>{label}</div>
-      {payload.map((p: any, i: number) => (
+      {payload.map((p: Record<string, unknown>, i: number) => (
         <div key={i} style={{ color: p.color || C.text, fontWeight: 600 }}>{p.name}: {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</div>
       ))}
     </div>
@@ -224,7 +224,7 @@ export default function StressTestingPage() {
       const portsArr: Portfolio[] = Array.isArray(portsRes) ? portsRes : (portsRes?.items || portsRes?.portfolios || []);
       setPortfoliosList(portsArr);
       setScenarios(Array.isArray(scenariosRes) ? scenariosRes : []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка загрузки данных');
     } finally {
       setLoadingData(false);
@@ -246,7 +246,7 @@ export default function StressTestingPage() {
         severity,
       });
       setResult(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setError(e.message || 'Ошибка при стресс-тестировании');
     } finally {
       setLoading(false);
@@ -459,7 +459,7 @@ export default function StressTestingPage() {
                           <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} unit="%" />
                           <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: C.text }} width={115} />
                           <Tooltip
-                            content={({ active, payload }: any) => {
+                            content={({ active, payload  }: Record<string, unknown>) => {
                               if (!active || !payload?.length) return null;
                               const d = payload[0]?.payload;
                               return (
@@ -532,14 +532,14 @@ export default function StressTestingPage() {
                                 innerRadius={50}
                                 outerRadius={80}
                                 dataKey="value"
-                                label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                label={({ name, percent  }: Record<string, unknown>) => `${name} ${(percent * 100).toFixed(0)}%`}
                                 labelLine={false}
                               >
                                 {concData.map((_, i) => (
                                   <Cell key={`pie-${i}`} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                                 ))}
                               </Pie>
-                              <Tooltip formatter={(val: any) => `${Number(val).toFixed(1)}%`} />
+                              <Tooltip formatter={(val: unknown) => `${Number(val).toFixed(1)}%`} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>

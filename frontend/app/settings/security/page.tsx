@@ -107,7 +107,7 @@ function MfaTab() {
     try {
       const data = await mfa.setup();
       setSetupData(data);
-    } catch (e: any) { setMsg('Ошибка: ' + e.message); }
+    } catch (e: unknown) { setMsg('Ошибка: ' + e.message); }
     setLoading(false);
   };
 
@@ -119,7 +119,7 @@ function MfaTab() {
       setMsg('MFA успешно включено.');
       setSetupData(null); setCode('');
       loadStatus();
-    } catch (e: any) { setMsg('Неверный код. Попробуйте ещё раз.'); }
+    } catch (e: unknown) { setMsg('Неверный код. Попробуйте ещё раз.'); }
     setLoading(false);
   };
 
@@ -131,7 +131,7 @@ function MfaTab() {
       setMsg('MFA отключено.');
       setDisableCode('');
       loadStatus();
-    } catch (e: any) { setMsg('Неверный код.'); }
+    } catch (e: unknown) { setMsg('Неверный код.'); }
     setLoading(false);
   };
 
@@ -302,7 +302,7 @@ function SessionsTab() {
 
         {data?.sessions?.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {data.sessions.map((s: any) => (
+            {data.sessions.map((s: Record<string, unknown>) => (
               <div key={s.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px',
@@ -398,7 +398,7 @@ function SsoTab() {
 
         {providers.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {providers.map((p: any) => (
+            {providers.map((p: Record<string, unknown>) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
@@ -458,7 +458,7 @@ function RolesTab() {
   const MODULES = ['decisions', 'portfolios', 'analytics', 'reports', 'settings', 'users'];
   const ACTIONS = ['read', 'write', 'delete', 'approve'];
 
-  const renderPerms = (perms: any) => {
+  const renderPerms = (perms: unknown) => {
     if (!perms || typeof perms !== 'object') return '—';
     return Object.entries(perms).map(([mod, acts]: [string, any]) => (
       <div key={mod} style={{ display: 'inline-flex', gap: '4px', marginRight: '10px', marginBottom: '4px' }}>
@@ -504,7 +504,7 @@ function RolesTab() {
 
         {roles.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {roles.map((r: any) => (
+            {roles.map((r: Record<string, unknown>) => (
               <div key={r.id} style={{
                 padding: '14px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
               }}>
@@ -667,7 +667,7 @@ function PoliciesTab() {
 
         {policies.length ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {policies.map((p: any) => (
+            {policies.map((p: Record<string, unknown>) => (
               <div key={p.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0',
