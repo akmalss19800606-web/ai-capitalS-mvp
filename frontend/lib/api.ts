@@ -524,3 +524,278 @@ export const portfolioAnalytics = {
   summary: (portfolioId: number) =>
     apiRequest(`/portfolio-analytics/${portfolioId}/summary`),
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   Ниже — экспорты модулей, которые используются страницами
+   (ранее отсутствовали, что вызывало ошибку сборки frontend)
+   ═══════════════════════════════════════════════════════════════ */
+
+export const accessControl = {
+  listRoles: () => apiRequest('/access/roles'),
+  createRole: (data: { name: string; permissions: string[]; description?: string }) =>
+    apiRequest('/access/roles', { method: 'POST', body: JSON.stringify(data) }),
+  updateRole: (id: number, data: any) =>
+    apiRequest(`/access/roles/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteRole: (id: number) =>
+    apiRequest(`/access/roles/${id}`, { method: 'DELETE' }),
+  seedRoles: () =>
+    apiRequest('/access/roles/seed', { method: 'POST' }),
+  listPolicies: () => apiRequest('/access/policies'),
+  createPolicy: (data: {
+    name: string;
+    resource: string;
+    action: string;
+    effect: string;
+    conditions?: any;
+  }) => apiRequest('/access/policies', { method: 'POST', body: JSON.stringify(data) }),
+  updatePolicy: (id: number, data: any) =>
+    apiRequest(`/access/policies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deletePolicy: (id: number) =>
+    apiRequest(`/access/policies/${id}`, { method: 'DELETE' }),
+  checkAccess: (data: { resource: string; action: string }) =>
+    apiRequest('/access/check', { method: 'POST', body: JSON.stringify(data) }),
+  listDecisionAccess: (decisionId: number) =>
+    apiRequest(`/access/decisions/${decisionId}/access`),
+  grantAccess: (decisionId: number, data: any) =>
+    apiRequest(`/access/decisions/${decisionId}/grant`, { method: 'POST', body: JSON.stringify(data) }),
+  revokeAccess: (decisionId: number, userId: number) =>
+    apiRequest(`/access/decisions/${decisionId}/revoke/${userId}`, { method: 'DELETE' }),
+};
+
+export const aiGateway = {
+  chat: (data: {
+    messages: Array<{ role: string; content: string }>;
+    provider?: string;
+    temperature?: number;
+    system_prompt?: string;
+    use_cache?: boolean;
+  }) => apiRequest('/ai-gateway/ask', { method: 'POST', body: JSON.stringify(data) }),
+  providers: () => apiRequest('/ai-gateway/providers'),
+  stats: () => apiRequest('/ai-gateway/providers'),
+};
+
+export const apiGateway = {
+  createApiKey: (data: { name: string; scopes?: string[]; expires_in_days?: number }) =>
+    apiRequest('/gateway/api-keys', { method: 'POST', body: JSON.stringify(data) }),
+  listApiKeys: () => apiRequest('/gateway/api-keys'),
+  updateApiKey: (id: number, data: { is_active?: boolean; scopes?: string[] }) =>
+    apiRequest(`/gateway/api-keys/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteApiKey: (id: number) =>
+    apiRequest(`/gateway/api-keys/${id}`, { method: 'DELETE' }),
+  getAvailableEvents: () => apiRequest('/gateway/webhooks/events'),
+  createWebhook: (data: { url: string; events: string[]; secret?: string }) =>
+    apiRequest('/gateway/webhooks', { method: 'POST', body: JSON.stringify(data) }),
+  listWebhooks: () => apiRequest('/gateway/webhooks'),
+  updateWebhook: (id: number, data: { url?: string; events?: string[]; is_active?: boolean }) =>
+    apiRequest(`/gateway/webhooks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteWebhook: (id: number) =>
+    apiRequest(`/gateway/webhooks/${id}`, { method: 'DELETE' }),
+  testWebhook: (id: number) =>
+    apiRequest(`/gateway/webhooks/${id}/test`, { method: 'POST' }),
+  getWebhookDeliveries: (id: number, limit?: number) =>
+    apiRequest(`/gateway/webhooks/${id}/deliveries${limit ? '?limit=' + limit : ''}`),
+  getUsageSummary: () => apiRequest('/gateway/usage/summary'),
+  getUsageLogs: (limit?: number) =>
+    apiRequest(`/gateway/usage/logs${limit ? '?limit=' + limit : ''}`),
+};
+
+export const architecturalPrinciples = {
+  createEvent: (data: any) =>
+    apiRequest('/arch/events', { method: 'POST', body: JSON.stringify(data) }),
+  getEventsTimeline: (params?: { limit?: number }) => {
+    const q = params?.limit ? `?limit=${params.limit}` : '';
+    return apiRequest(`/arch/events${q}`);
+  },
+  getEventStats: () => apiRequest('/arch/events/stats'),
+  getAggregateEvents: (type: string, id: string) =>
+    apiRequest(`/arch/events/${type}/${id}`),
+  getAggregateState: (type: string, id: string) =>
+    apiRequest(`/arch/events/${type}/${id}/state`),
+  createReview: (data: any) =>
+    apiRequest('/arch/hitl/reviews', { method: 'POST', body: JSON.stringify(data) }),
+  listHitlReviews: (params?: { limit?: number }) => {
+    const q = params?.limit ? `?limit=${params.limit}` : '';
+    return apiRequest(`/arch/hitl/reviews${q}`);
+  },
+  actOnReview: (id: number, data: { status: string }) =>
+    apiRequest(`/arch/hitl/reviews/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  getHitlStats: () => apiRequest('/arch/hitl/stats'),
+  getDisclaimers: () => apiRequest('/arch/hitl/disclaimers'),
+  createSnapshot: (data: any) =>
+    apiRequest('/arch/snapshots', { method: 'POST', body: JSON.stringify(data) }),
+  listSnapshots: (model?: string, limit?: number) => {
+    const sp = new URLSearchParams();
+    if (model) sp.append('model_name', model);
+    if (limit) sp.append('limit', String(limit));
+    const q = sp.toString();
+    return apiRequest(`/arch/snapshots${q ? '?' + q : ''}`);
+  },
+  getSnapshotStats: () => apiRequest('/arch/snapshots/stats'),
+  getSnapshot: (id: number) => apiRequest(`/arch/snapshots/${id}`),
+  reproduceSnapshot: (id: number) =>
+    apiRequest(`/arch/snapshots/${id}/reproduce`, { method: 'POST' }),
+  publishEvent: (data: any) =>
+    apiRequest('/arch/bus/publish', { method: 'POST', body: JSON.stringify(data) }),
+  consumeEvents: (data: any) =>
+    apiRequest('/arch/bus/consume', { method: 'POST', body: JSON.stringify(data) }),
+  getBusChannels: () => apiRequest('/arch/bus/channels'),
+  getChannelMessages: (channel: string, status?: string, limit?: number) => {
+    const sp = new URLSearchParams();
+    if (status) sp.append('status', status);
+    if (limit) sp.append('limit', String(limit));
+    const q = sp.toString();
+    return apiRequest(`/arch/bus/messages/${channel}${q ? '?' + q : ''}`);
+  },
+  getDeadLetterQueue: (limit?: number) =>
+    apiRequest(`/arch/bus/dead-letter${limit ? '?limit=' + limit : ''}`),
+  retryDeadLetter: (id: number) =>
+    apiRequest(`/arch/bus/dead-letter/${id}/retry`, { method: 'POST' }),
+  getBusStats: () => apiRequest('/arch/bus/stats'),
+  seedConstraints: () =>
+    apiRequest('/arch/constraints/seed', { method: 'POST' }),
+  createConstraint: (data: any) =>
+    apiRequest('/arch/constraints', { method: 'POST', body: JSON.stringify(data) }),
+  listConstraints: (category?: string, isActive?: boolean) => {
+    const sp = new URLSearchParams();
+    if (category) sp.append('category', category);
+    if (isActive !== undefined) sp.append('is_active', String(isActive));
+    const q = sp.toString();
+    return apiRequest(`/arch/constraints${q ? '?' + q : ''}`);
+  },
+  updateConstraint: (id: number, data: any) =>
+    apiRequest(`/arch/constraints/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteConstraint: (id: number) =>
+    apiRequest(`/arch/constraints/${id}`, { method: 'DELETE' }),
+  getConstraintsUi: () => apiRequest('/arch/constraints/ui'),
+  getConstraintsReports: () => apiRequest('/arch/constraints/reports'),
+};
+
+export const companyLookup = {
+  search: (query: string) =>
+    apiRequest(`/companies/search?q=${encodeURIComponent(query)}`),
+  get: (inn: string) => apiRequest(`/companies/${inn}`),
+  init: () =>
+    apiRequest('/companies/lookup', { method: 'POST', body: JSON.stringify({}) }),
+  list: (params?: { search?: string; limit?: number }) => {
+    const sp = new URLSearchParams();
+    if (params?.search) sp.append('q', params.search);
+    if (params?.limit) sp.append('limit', String(params.limit));
+    const q = sp.toString();
+    return apiRequest(`/companies/search${q ? '?' + q : ''}`);
+  },
+};
+
+export const cpiData = {
+  overview: () => apiRequest('/cpi/current'),
+  timeSeries: (params?: {
+    indicator_code?: string;
+    comparison_type?: string;
+    limit?: number;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/cpi/trend${q ? '?' + q : ''}`);
+  },
+  datasets: () => apiRequest('/cpi/data'),
+  syncAll: () => apiRequest('/cpi/sync', { method: 'POST' }),
+};
+
+export const marketAdapters = {
+  /* Sources */
+  createSource: (data: any) =>
+    apiRequest('/adapters/sources', { method: 'POST', body: JSON.stringify(data) }),
+  listSources: () => apiRequest('/adapters/sources'),
+  updateSource: (id: number, data: any) =>
+    apiRequest(`/adapters/sources/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteSource: (id: number) =>
+    apiRequest(`/adapters/sources/${id}`, { method: 'DELETE' }),
+  /* Market data */
+  getQuote: (symbol: string) => apiRequest(`/adapters/market/quote/${symbol}`),
+  getMacro: (indicator: string, period?: string, country?: string) => {
+    const sp = new URLSearchParams();
+    if (period) sp.append('period', period);
+    if (country) sp.append('country', country);
+    const q = sp.toString();
+    return apiRequest(`/adapters/market/macro/${indicator}${q ? '?' + q : ''}`);
+  },
+  getCache: (sourceId: number) => apiRequest(`/adapters/market/cache/${sourceId}`),
+  /* ETL */
+  runEtl: (sourceId: number) =>
+    apiRequest(`/adapters/etl/run/${sourceId}`, { method: 'POST' }),
+  runEtlAll: () =>
+    apiRequest('/adapters/etl/run-all', { method: 'POST' }),
+  getEtlStatus: () => apiRequest('/adapters/etl/status'),
+  cleanupCache: () =>
+    apiRequest('/adapters/etl/cleanup', { method: 'POST' }),
+  /* CRM */
+  createContact: (data: any) =>
+    apiRequest('/adapters/crm/contacts', { method: 'POST', body: JSON.stringify(data) }),
+  listContacts: () => apiRequest('/adapters/crm/contacts'),
+  updateContact: (id: number, data: any) =>
+    apiRequest(`/adapters/crm/contacts/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteContact: (id: number) =>
+    apiRequest(`/adapters/crm/contacts/${id}`, { method: 'DELETE' }),
+  createDeal: (data: any) =>
+    apiRequest('/adapters/crm/deals', { method: 'POST', body: JSON.stringify(data) }),
+  listDeals: () => apiRequest('/adapters/crm/deals'),
+  updateDeal: (id: number, data: any) =>
+    apiRequest(`/adapters/crm/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDeal: (id: number) =>
+    apiRequest(`/adapters/crm/deals/${id}`, { method: 'DELETE' }),
+  getPipelineSummary: () => apiRequest('/adapters/crm/pipeline'),
+  /* DMS */
+  createDocument: (data: any) =>
+    apiRequest('/adapters/dms/documents', { method: 'POST', body: JSON.stringify(data) }),
+  listDocuments: (status?: string, search?: string) => {
+    const sp = new URLSearchParams();
+    if (status) sp.append('status', status);
+    if (search) sp.append('search', search);
+    const q = sp.toString();
+    return apiRequest(`/adapters/dms/documents${q ? '?' + q : ''}`);
+  },
+  updateDocument: (id: number, data: any) =>
+    apiRequest(`/adapters/dms/documents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteDocument: (id: number) =>
+    apiRequest(`/adapters/dms/documents/${id}`, { method: 'DELETE' }),
+  addDocVersion: (docId: number, data: any) =>
+    apiRequest(`/adapters/dms/documents/${docId}/versions`, { method: 'POST', body: JSON.stringify(data) }),
+  listDocVersions: (docId: number) =>
+    apiRequest(`/adapters/dms/documents/${docId}/versions`),
+  searchDocuments: (data: { query: string }) =>
+    apiRequest('/adapters/dms/search', { method: 'POST', body: JSON.stringify(data) }),
+  getDmsStats: () => apiRequest('/adapters/dms/stats'),
+  /* Comparable companies */
+  createComparable: (data: any) =>
+    apiRequest('/adapters/comparable', { method: 'POST', body: JSON.stringify(data) }),
+  listComparables: (sector?: string) => {
+    const q = sector ? `?sector=${encodeURIComponent(sector)}` : '';
+    return apiRequest(`/adapters/comparable${q}`);
+  },
+  updateComparable: (id: number, data: any) =>
+    apiRequest(`/adapters/comparable/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteComparable: (id: number) =>
+    apiRequest(`/adapters/comparable/${id}`, { method: 'DELETE' }),
+  getAnalysis: (sector?: string) => {
+    const q = sector ? `?sector=${encodeURIComponent(sector)}` : '';
+    return apiRequest(`/adapters/comparable/analysis${q}`);
+  },
+  getSectors: () => apiRequest('/adapters/comparable/sectors'),
+};
+
+export const stockExchange = {
+  overview: () => apiRequest('/stock-exchange/quotes'),
+  issuers: () => apiRequest('/stock-exchange/emitters'),
+  trades: (params?: { limit?: number }) => {
+    const q = params?.limit ? `?limit=${params.limit}` : '';
+    return apiRequest(`/stock-exchange/trades${q}`);
+  },
+  initCatalog: () =>
+    apiRequest('/stock-exchange/sync', { method: 'POST' }),
+  sync: () =>
+    apiRequest('/stock-exchange/sync', { method: 'POST' }),
+};
