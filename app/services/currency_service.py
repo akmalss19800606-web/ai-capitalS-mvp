@@ -174,6 +174,66 @@ def convert_from_uzs(db: Session, amount_uzs: float, to_currency: str) -> Option
     }
 
 
+# ── Async + Redis-cached versions (REDIS-001) ─────────────────
+
+async def fetch_rates_from_cbu_async(
+    target_date: Optional[date] = None,
+) -> list[dict]:
+    """
+    Async-версия получения курсов с cbu.uz.
+    Сначала проверяет Redis (TTL 6h), при промахе — запрос к API.
+    """
+    from app.services.redis_cache_service import RedisCacheService
+
+    date_str = target_date.strftime("%Y-%m-%d") if target_date else "latest"
+
+    # 1. Проверяем кэш
+    cached = await RedisCacheService.get_currency_rates(date_str)
+    if cached is not None:
+        logger.info(f"Курсы валют ({date_str}): из Redis кэша")
+        return cached
+
+    # 2. Запрос к API
+    if target_date:
+        url = f"{CBU_API_URL}{target_date.strftime('%Y-%m-%d')}/"
+    else:
+        url = CBU_API_URL
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            rates = response.json()
+    except httpx.HTTPError as e:
+        logger.error(f"Ошибка загрузки курсов с cbu.uz: {e}")
+        return []
+    except Exception as e:
+        logger.error(f"Непредвиденная ошибка при загрузке курсов: {e}")
+        return []
+
+    # 3. Сохраняем в кэш
+    if rates:
+        await RedisCacheService.set_currency_rates(rates, date_str)
+        logger.info(f"Курсы валют ({date_str}): загружено {len(rates)} валют, закэшировано")
+
+    return rates
+
+
+async def get_latest_rates_cached(
+    codes: Optional[list[str]] = None,
+) -> list[dict]:
+    """
+    Получить последние курсы с Redis кэшированием.
+    Не требует DB session — работает через API + Redis.
+    """
+    rates = await fetch_rates_from_cbu_async()
+
+    if codes:
+        rates = [r for r in rates if r.get("Ccy", "").strip() in codes]
+
+    return rates
+
+
 def format_uzs(amount: float) -> str:
     """
     Форматирование суммы в UZS.
