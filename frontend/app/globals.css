@@ -151,3 +151,30 @@ a {
 @media (max-width: 480px) {
   .page-content { padding: 8px !important; }
 }
+/* ─── Layout: Desktop/Mobile sidebar switching ─── */
+.sidebar-desktop { display: block; }
+.sidebar-mobile { display: none; }
+.sidebar-mobile-overlay { display: none; }
+.hamburger-wrapper { display: none; }
+
+/* ─── Layout: Main area transition ─── */
+.main-area {
+  transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Tablet (≤ 1024px): collapse sidebar ─── */
+@media (max-width: 1024px) {
+  .sidebar-desktop { display: none !important; }
+  .sidebar-mobile { display: block !important; }
+  .sidebar-mobile-overlay { display: block !important; }
+  .hamburger-wrapper { display: flex !important; }
+  .main-area { margin-left: 0 !important; }
+}
+
+/* ─── Mobile (≤ 640px): compact UI ─── */
+@media (max-width: 640px) {
+  .page-content { padding: 16px !important; }
+  .header-status { display: none !important; }
+  .header-user-info { display: none !important; }
+  .footer-location { display: none !important; }
+}
