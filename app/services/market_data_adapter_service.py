@@ -150,11 +150,12 @@ def list_cached_data(db: Session, source_id: int, data_type: Optional[str] = Non
 # Внутренние адаптеры
 # ═══════════════════════════════════════════════════════════════
 
-def _alpha_vantage_quote(symbol: str, api_key: str) -> Optional[Dict]:
+async def _alpha_vantage_quote(symbol: str, api_key: str) -> Optional[Dict]:
     try:
-        r = httpx.get(ALPHA_VANTAGE_URL, params={
-            "function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": api_key
-        }, timeout=10)
+        async with httpx.AsyncClient() as client:
+            r = await client.get(ALPHA_VANTAGE_URL, params={
+                "function": "GLOBAL_QUOTE", "symbol": symbol, "apikey": api_key
+            }, timeout=10)
         data = r.json()
         if "Note" in data or "Information" in data:
             return _demo_quote(symbol)
@@ -179,7 +180,7 @@ def _yahoo_finance_quote(symbol: str) -> Optional[Dict]:
     return _demo_quote(symbol, source="yahoo_finance")
 
 
-def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
+async def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
     """World Bank API для макроэкономических индикаторов."""
     indicator_map = {
         "GDP": "NY.GDP.MKTP.CD",
@@ -193,7 +194,8 @@ def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
 
     try:
         url = f"https://api.worldbank.org/v2/country/{country}/indicator/{wb_id}?format=json&per_page=5&date=2020:2025"
-        r = httpx.get(url, timeout=10)
+        async with httpx.AsyncClient() as client:
+            r = await client.get(url, timeout=10)
         data = r.json()
         if len(data) < 2 or not data[1]:
             return _demo_macro(indicator, country)
@@ -213,7 +215,7 @@ def _world_bank_macro(indicator: str, country: str) -> Optional[Dict]:
         return _demo_macro(indicator, country)
 
 
-def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
+async def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
     """Alpha Vantage economic indicators."""
     func_map = {
         "GDP": "REAL_GDP",
@@ -226,9 +228,10 @@ def _alpha_vantage_macro(indicator: str, api_key: str) -> Optional[Dict]:
     if not av_func:
         return _demo_macro(indicator, "US")
     try:
-        r = httpx.get(ALPHA_VANTAGE_URL, params={
-            "function": av_func, "apikey": api_key
-        }, timeout=10)
+        async with httpx.AsyncClient() as client:
+            r = await client.get(ALPHA_VANTAGE_URL, params={
+                "function": av_func, "apikey": api_key
+            }, timeout=10)
         data = r.json()
         if "Note" in data or "Information" in data:
             return _demo_macro(indicator, "US")

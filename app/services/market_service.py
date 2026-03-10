@@ -1,17 +1,19 @@
-﻿import os
+"""SEC-003: All HTTP calls converted to async."""
+import os
 import httpx
 
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
 
-def get_stock_price(symbol: str) -> dict:
+async def get_stock_price(symbol: str) -> dict:
     try:
         params = {
             "function": "GLOBAL_QUOTE",
             "symbol": symbol,
             "apikey": ALPHA_VANTAGE_API_KEY
         }
-        response = httpx.get(BASE_URL, params=params, timeout=10)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(BASE_URL, params=params, timeout=10)
         data = response.json()
 
         # Проверка на лимит API
@@ -50,5 +52,7 @@ def get_stock_price(symbol: str) -> dict:
     except Exception as e:
         return {"symbol": symbol, "price": None, "error": str(e)}
 
-def get_market_overview(symbols: list) -> list:
-    return [get_stock_price(s) for s in symbols]
+async def get_market_overview(symbols: list) -> list:
+    import asyncio
+    tasks = [get_stock_price(s) for s in symbols]
+    return await asyncio.gather(*tasks)
