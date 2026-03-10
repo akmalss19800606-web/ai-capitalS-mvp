@@ -61,6 +61,13 @@ from app.api.v1.routers import currency_rates
 # Phase 3: Telegram Bot
 from app.services.telegram_bot_service import TelegramBotService, telegram_bot as _tg_ref
 
+# Phase 3: New routers
+from app.api.v1.routers import rate_limit
+from app.api.v1.routers import dd_documents
+from app.api.v1.routers import calculator
+from app.api.v1.routers import contacts
+from app.api.v1.routers import excel_export
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown: Redis + Telegram Bot."""
@@ -158,3 +165,9 @@ app.include_router(admin_panel.router, prefix="/api/v1")
 app.include_router(islamic_finance.router, prefix="/api/v1")
 # Stage 6: Portfolio Analytics Engine
 app.include_router(portfolio_analytics.router, prefix="/api/v1")
+# Phase 3: New routers
+app.include_router(rate_limit.router, prefix="/api/v1")
+app.include_router(dd_documents.router, prefix="/api/v1")
+app.include_router(calculator.router, prefix="/api/v1")
+app.include_router(contacts.router, prefix="/api/v1")
+app.include_router(excel_export.router, prefix="/api/v1")
