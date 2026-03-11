@@ -68,6 +68,13 @@ from app.api.v1.routers import calculator
 from app.api.v1.routers import contacts
 from app.api.v1.routers import excel_export
 
+# Phase 4: Business Cases, Monte Carlo, AI orchestration
+from app.api.v1.routers import business_cases
+from app.api.v1.routers import monte_carlo_v2
+from app.api.v1.routers import xai
+from app.api.v1.routers import ai_orchestrator as ai_orch_router
+from app.api.v1.routers import ai_provider_health
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown: Redis + Telegram Bot."""
@@ -171,3 +178,9 @@ app.include_router(dd_documents.router, prefix="/api/v1")
 app.include_router(calculator.router, prefix="/api/v1")
 app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(excel_export.router, prefix="/api/v1")
+# Phase 4: New routers
+app.include_router(business_cases.router, prefix="/api/v1")
+app.include_router(monte_carlo_v2.router, prefix="/api/v1")
+app.include_router(xai.router, prefix="/api/v1")
+app.include_router(ai_orch_router.router, prefix="/api/v1")
+app.include_router(ai_provider_health.router, prefix="/api/v1")

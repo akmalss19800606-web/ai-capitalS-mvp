@@ -1176,3 +1176,60 @@ export const aiGateway = {
   // Статистика использования
   stats: () => apiRequest('/ai-gateway/stats'),
 };
+
+// ─── Фаза 4: Бизнес-кейсы (PORT-001) ────────────────────────────────────────
+
+export const businessCases = {
+  list: (category?: string) =>
+    apiRequest(`/business-cases${category ? '?category=' + category : ''}`),
+  categories: () => apiRequest('/business-cases/categories'),
+  get: (caseId: string) => apiRequest(`/business-cases/${caseId}`),
+  validate: () => apiRequest('/business-cases/validate', { method: 'POST' }),
+};
+
+// ─── Фаза 4: Монте-Карло v2 (PORT-002) ──────────────────────────────────────
+
+export const monteCarloV2 = {
+  run: (data: {
+    investment_amount: number;
+    sector: string;
+    time_horizon_years?: number;
+    num_simulations?: number;
+  }) => apiRequest('/analytics/monte-carlo-v2', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── Фаза 4: AI Explainability (AI-001) ─────────────────────────────────────
+
+export const xai = {
+  analyze: (data: {
+    decision_id?: number;
+    portfolio_id?: number;
+    analysis_type?: string;
+  }) => apiRequest('/xai/analyze', { method: 'POST', body: JSON.stringify(data) }),
+  history: (params?: { decision_id?: number; portfolio_id?: number }) => {
+    const sp = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) sp.append(k, String(v));
+      });
+    }
+    const q = sp.toString();
+    return apiRequest(`/xai/history${q ? '?' + q : ''}`);
+  },
+};
+
+// ─── Фаза 4: AI Orchestration (AI-002, AI-003, AI-004) ──────────────────────
+
+export const aiOrchestrator = {
+  route: (data: {
+    query: string;
+    request_type?: string;
+    prefer_provider?: string;
+  }) => apiRequest('/ai-orchestrator/route', { method: 'POST', body: JSON.stringify(data) }),
+  synthesize: (data: {
+    query: string;
+    providers?: string[];
+  }) => apiRequest('/ai-orchestrator/synthesize', { method: 'POST', body: JSON.stringify(data) }),
+  providerHealth: () => apiRequest('/ai-provider-health/status'),
+  providerStats: () => apiRequest('/ai-provider-health/stats'),
+};

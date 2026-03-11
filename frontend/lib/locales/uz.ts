@@ -99,6 +99,8 @@ export const uz: Locale = {
       stockExchange: 'Fond birjasi',
       islamicFinance: 'Islom moliyasi',
       calculator: 'Kalkulyator',
+      businessCases: 'Biznes-keyslar',
+      xaiAnalysis: 'AI tushuntirish',
     },
   },
 
