@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, Legend,
 } from 'recharts';
-import { ddScoring, decisions } from '@/lib/api';
+import { ddScoring, decisions, companyLookup, ddDocuments } from '@/lib/api';
 
 // ─── Color Palette ─────────────────────────────────────────────────────────
 const C = {
@@ -311,6 +311,11 @@ export default function DueDiligencePage() {
   const [result, setResult] = useState<DDResult | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('Обзор');
   const [checklistFilter, setChecklistFilter] = useState<string>('all');
+    const [innQuery, setInnQuery] = useState('');
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupResult, setLookupResult] = useState<any>(null);
+  const [uploadedDocs, setUploadedDocs] = useState<any[]>([]);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
 
   // ─── Load Decisions ───────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -328,6 +333,40 @@ export default function DueDiligencePage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  
+    // ─── Company Lookup by INN ────────────────────────────────────────────────
+  const handleCompanyLookup = async () => {
+    if (!innQuery.trim()) return;
+    setLookupLoading(true);
+    try {
+      const res = await companyLookup.search(innQuery.trim());
+      setLookupResult(res);
+      if (res?.name) setCompanyName(res.name);
+      if (res?.industry) setIndustry(res.industry);
+      if (res?.region) setGeography(res.region);
+      if (res?.employee_count) setEmployeeCount(String(res.employee_count));
+    } catch (e: any) {
+      setError(e.message || 'Ошибка поиска компании');
+    } finally {
+      setLookupLoading(false);
+    }
+  };
+
+  // ─── Document Upload ────────────────────────────────────────────────────
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingDoc(true);
+    try {
+      const res = await ddDocuments.upload(file);
+      setUploadedDocs(prev => [...prev, res]);
+    } catch (err: any) {
+      setError(err.message || 'Ошибка загрузки документа');
+    } finally {
+      setUploadingDoc(false);
+      e.target.value = '';
+    }
+  };
   // ─── Run Scoring ──────────────────────────────────────────────────────
   const runScoring = async () => {
     if (!companyName.trim()) return;
@@ -439,6 +478,29 @@ export default function DueDiligencePage() {
             <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <SectionTitle>Параметры скоринга</SectionTitle>
 
+                            <div style={{ padding: '12px', backgroundColor: C.primaryLight, borderRadius: '8px', marginBottom: '12px' }}>
+                <label style={labelStyle}>Поиск по ИНН / названию</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    style={inputStyle}
+                    value={innQuery}
+                    onChange={e => setInnQuery(e.target.value)}
+                    placeholder="Введите ИНН или название"
+                  />
+                  <button
+                    onClick={handleCompanyLookup}
+                    disabled={lookupLoading || !innQuery.trim()}
+                    style={{ ...btnPrimary, whiteSpace: 'nowrap', opacity: lookupLoading || !innQuery.trim() ? 0.6 : 1 }}
+                  >
+                    {lookupLoading ? <IconSpinner /> : <IconSearch />} Найти
+                  </button>
+                </div>
+                {lookupResult && (
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: C.success }}>
+                    ✅ Найдено: {lookupResult.name} {lookupResult.inn && `(ИНН: ${lookupResult.inn})`}
+                  </div>
+                )}
+              </div>
               <div>
                 <label style={labelStyle}>Название компании *</label>
                 <input
@@ -509,6 +571,28 @@ export default function DueDiligencePage() {
                 {loading ? <IconSpinner /> : <IconSearch />}
                 {loading ? 'Анализ...' : 'Запустить DD-скоринг'}
               </button>
+
+                            {/* ─── DD Document Upload ─── */}
+              <div style={{ marginTop: '16px', padding: '12px', border: `1px dashed ${C.border}`, borderRadius: '8px' }}>
+                <label style={labelStyle}>Загрузка DD-документа</label>
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.txt"
+                  onChange={handleDocUpload}
+                  disabled={uploadingDoc}
+                  style={{ fontSize: '13px', color: C.textMuted }}
+                />
+                {uploadingDoc && <div style={{ marginTop: '6px', fontSize: '12px', color: C.primary }}><IconSpinner /> Анализ документа...</div>}
+                {uploadedDocs.length > 0 && (
+                  <div style={{ marginTop: '8px' }}>
+                    {uploadedDocs.map((doc, i) => (
+                      <div key={i} style={{ fontSize: '12px', padding: '4px 8px', backgroundColor: C.successLight, borderRadius: '4px', marginBottom: '4px', color: C.success }}>
+                        ✅ {doc.filename || `Документ ${i + 1}`} — {doc.risk_indicators?.length || 0} рисков
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ─── RIGHT PANEL: Results ─────────────────────────────── */}
