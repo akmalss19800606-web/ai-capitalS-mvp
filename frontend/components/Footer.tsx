@@ -27,7 +27,7 @@ export default function Footer() {
           display: 'flex', alignItems: 'center', gap: spacing[2],
         }}>
           <img
-                          src="/logo.svg"
+                          src="/logo.png"
             alt="AC"
             width={20}
             height={20}
