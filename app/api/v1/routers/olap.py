@@ -32,15 +32,15 @@ def olap_overview(db: Session = Depends(get_db)):
     """OLAP overview: totals, breakdowns."""
     try:
         total_decisions = db.query(func.count(InvestmentDecision.id)).scalar() or 0
-        total_value = db.query(func.sum(InvestmentDecision.expected_value)).scalar() or 0
-        avg_value = db.query(func.avg(InvestmentDecision.expected_value)).scalar() or 0
+        total_value = db.query(func.sum(InvestmentDecision.total_value)).scalar() or 0
+        avg_value = db.query(func.avg(InvestmentDecision.total_value)).scalar() or 0
 
         # Top categories
         cat_rows = db.query(
             InvestmentDecision.category,
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
-        ).group_by(InvestmentDecision.category).order_by(func.sum(InvestmentDecision.expected_value).desc()).limit(10).all()
+        ).group_by(InvestmentDecision.category).order_by(func.sum(InvestmentDecision.total_value).desc()).limit(10).all()
 
         top_categories = [
             {"dimension": "category", "label": r.category or "N/A",
@@ -52,10 +52,10 @@ def olap_overview(db: Session = Depends(get_db)):
         # Top geographies
         geo_rows = db.query(
             InvestmentDecision.geography,
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
         ).filter(InvestmentDecision.geography.isnot(None)
-        ).group_by(InvestmentDecision.geography).order_by(func.sum(InvestmentDecision.expected_value).desc()).limit(10).all()
+        ).group_by(InvestmentDecision.geography).order_by(func.sum(InvestmentDecision.total_value).desc()).limit(10).all()
 
         top_geographies = [
             {"dimension": "geography", "label": r.geography or "N/A",
@@ -67,7 +67,7 @@ def olap_overview(db: Session = Depends(get_db)):
         # Status breakdown
         status_rows = db.query(
             InvestmentDecision.status,
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
         ).group_by(InvestmentDecision.status).all()
 
@@ -81,7 +81,7 @@ def olap_overview(db: Session = Depends(get_db)):
         # Type breakdown
         type_rows = db.query(
             InvestmentDecision.decision_type,
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
         ).group_by(InvestmentDecision.decision_type).all()
 
@@ -95,9 +95,9 @@ def olap_overview(db: Session = Depends(get_db)):
         # Monthly trend
         monthly = db.query(
             func.date_trunc('month', InvestmentDecision.created_at).label("period"),
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
-            func.avg(InvestmentDecision.expected_value).label("avg_value"),
+            func.avg(InvestmentDecision.total_value).label("avg_value"),
         ).group_by("period").order_by("period").limit(24).all()
 
         monthly_trend = [
@@ -143,9 +143,9 @@ def olap_time_series(
         trunc = func.date_trunc(granularity, InvestmentDecision.created_at)
         rows = db.query(
             trunc.label("period"),
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
-            func.avg(InvestmentDecision.expected_value).label("avg_value"),
+            func.avg(InvestmentDecision.total_value).label("avg_value"),
         ).group_by("period").order_by("period").all()
         return [{"period": str(r.period)[:10], "total_value": float(r.total_value or 0),
                  "count": r.count, "avg_value": round(float(r.avg_value or 0), 2)} for r in rows]
@@ -167,12 +167,12 @@ def olap_breakdown(
     }
     col = col_map.get(dimension, InvestmentDecision.category)
     try:
-        total = db.query(func.sum(InvestmentDecision.expected_value)).scalar() or 0
+        total = db.query(func.sum(InvestmentDecision.total_value)).scalar() or 0
         rows = db.query(
             col.label("label"),
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
             func.count(InvestmentDecision.id).label("count"),
-        ).group_by(col).order_by(func.sum(InvestmentDecision.expected_value).desc()).all()
+        ).group_by(col).order_by(func.sum(InvestmentDecision.total_value).desc()).all()
         return [{"dimension": dimension, "label": r.label or "N/A",
                  "total_value": float(r.total_value or 0), "count": r.count,
                  "percentage": round(float(r.total_value or 0) / float(total) * 100, 1) if total else 0}
@@ -188,7 +188,7 @@ def olap_portfolio_trend(db: Session = Depends(get_db)):
         rows = db.query(
             func.date_trunc('month', InvestmentDecision.created_at).label("period"),
             Portfolio.name.label("portfolio_name"),
-            func.sum(InvestmentDecision.expected_value).label("total_value"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
         ).join(Portfolio, InvestmentDecision.portfolio_id == Portfolio.id
         ).group_by("period", Portfolio.name).order_by("period").all()
         return [{"period": str(r.period)[:10], "portfolio_name": r.portfolio_name,
@@ -204,7 +204,7 @@ def olap_events(db: Session = Depends(get_db)):
         rows = db.query(InvestmentDecision).order_by(
             InvestmentDecision.updated_at.desc()
         ).limit(50).all()
-        return [{"id": r.id, "title": r.title, "status": r.status,
+        return [{"id": r.id, "title": r.asset_name, "status": r.status,
                  "category": r.category, "updated_at": str(r.updated_at)} for r in rows]
     except Exception:
         return []
