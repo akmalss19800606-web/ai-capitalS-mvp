@@ -1,18 +1,21 @@
 """
-Роутер DD-документов — загрузка и анализ документов для Due Diligence.
+Роутер DD-документов — загрузка, список, удаление документов для Due Diligence.
 
 Фаза 3, DD-002:
-  - POST /dd-documents/upload — загрузка и анализ документа
-  - GET  /dd-documents/analysis/{doc_id} — результат анализа
-  - GET  /dd-documents/templates — доступные шаблоны
+ - POST /dd-documents/upload         — загрузка документа (multipart/form-data)
+ - GET  /dd-documents/{session_id}    — список документов по сессии
+ - DELETE /dd-documents/{doc_id}      — удаление документа
+ - GET  /dd-documents/templates       — доступные шаблоны/типы
 """
-
 import logging
+import os
+import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 
 from app.api.v1.deps import get_current_user
-from app.services.document_analysis_service import DocumentAnalysisService
 
 logger = logging.getLogger(__name__)
 
@@ -20,86 +23,149 @@ router = APIRouter(prefix="/dd-documents", tags=["DD Documents"])
 
 # Допустимые типы файлов
 ALLOWED_EXTENSIONS = {"pdf", "docx", "doc", "xlsx", "xls", "txt"}
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_FILES_PER_SESSION = 10
+UPLOAD_DIR = "/tmp/uploads/dd"
+
+# Типы документов DD
+DOC_TYPES = {
+    "balance": {"label": "Баланс (Форма 1)", "checklist_key": "asset_liability_assessment"},
+    "income_statement": {"label": "ОПУ (Форма 2)", "checklist_key": "audited_financials"},
+    "cash_flow": {"label": "Cash Flow", "checklist_key": "cash_flow_analysis"},
+    "charter": {"label": "Учредительные", "checklist_key": "registration_docs"},
+    "license": {"label": "Лицензии", "checklist_key": "licenses_permits"},
+    "other": {"label": "Прочие", "checklist_key": None},
+}
+
+# In-memory storage (для MVP; в проде — PostgreSQL)
+_documents: dict[str, dict] = {}
 
 
-@router.post("/upload", summary="Загрузка и анализ DD-документа")
-async def upload_and_analyze(
+class DocUploadResponse(BaseModel):
+    id: str
+    session_id: str
+    filename: str
+    doc_type: str
+    doc_type_label: str
+    size_bytes: int
+    checklist_key: str | None
+    uploaded_at: str
+
+
+@router.post("/upload", response_model=DocUploadResponse, summary="Загрузка DD-документа")
+async def upload_document(
     file: UploadFile = File(...),
-    doc_type: str = Query("auto", description="Тип документа: auto, financial_report, charter, license, contract"),
+    doc_type: str = Query("other", description="Тип: balance, income_statement, cash_flow, charter, license, other"),
+    session_id: str = Query("", description="ID сессии DD (если пусто — создаётся новый)"),
     _current_user=Depends(get_current_user),
 ):
     """
-    Загрузка документа и автоматический анализ.
-
+    Загрузка документа для DD-сессии.
     Поддерживаемые форматы: PDF, DOCX, XLSX, TXT.
-    Извлекает: даты, суммы, ИНН, стороны контракта.
-    Выявляет рисковые индикаторы для DD.
+    Лимит: 10 МБ, до 10 файлов на сессию.
     """
+    # Валидация типа документа
+    if doc_type not in DOC_TYPES:
+        raise HTTPException(status_code=400, detail=f"Неизвестный тип документа. Допустимые: {', '.join(DOC_TYPES.keys())}")
+
     # Валидация расширения
     filename = file.filename or "unknown.txt"
     extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Неподдерживаемый формат файла. Допустимые: {', '.join(ALLOWED_EXTENSIONS)}",
-        )
+        raise HTTPException(status_code=400, detail=f"Неподдерживаемый формат. Допустимые: {', '.join(ALLOWED_EXTENSIONS)}")
 
     # Читаем файл
     file_bytes = await file.read()
     if len(file_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail=f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024*1024)} МБ",
-        )
-
+        raise HTTPException(status_code=413, detail=f"Файл слишком большой. Максимум: {MAX_FILE_SIZE // (1024*1024)} МБ")
     if len(file_bytes) == 0:
         raise HTTPException(status_code=400, detail="Файл пустой")
 
-    # Анализ
-    try:
-        result = await DocumentAnalysisService.analyze_document(
-            file_bytes=file_bytes,
-            filename=filename,
-            doc_type=doc_type,
-        )
-    except Exception as e:
-        logger.error("Ошибка анализа документа '%s': %s", filename, e)
-        raise HTTPException(
-            status_code=500,
-            detail="Ошибка при анализе документа",
-        )
+    # Сессия
+    sid = session_id.strip() if session_id else str(uuid.uuid4())
 
-    return result
+    # Проверка лимита файлов на сессию
+    session_docs = [d for d in _documents.values() if d["session_id"] == sid]
+    if len(session_docs) >= MAX_FILES_PER_SESSION:
+        raise HTTPException(status_code=400, detail=f"Максимум {MAX_FILES_PER_SESSION} файлов на сессию")
+
+    # Сохраняем файл
+    doc_id = str(uuid.uuid4())
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    file_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{extension}")
+    with open(file_path, "wb") as f:
+        f.write(file_bytes)
+
+    doc_info = DOC_TYPES[doc_type]
+    doc = {
+        "id": doc_id,
+        "session_id": sid,
+        "filename": filename,
+        "doc_type": doc_type,
+        "doc_type_label": doc_info["label"],
+        "size_bytes": len(file_bytes),
+        "checklist_key": doc_info["checklist_key"],
+        "file_path": file_path,
+        "uploaded_at": datetime.utcnow().isoformat(),
+    }
+    _documents[doc_id] = doc
+
+    return DocUploadResponse(**{k: v for k, v in doc.items() if k != "file_path"})
 
 
-@router.get(
-    "/analysis/{doc_id}",
-    summary="Получение результата анализа по ID",
-)
-async def get_analysis(
+@router.get("/{session_id}", summary="Список документов DD-сессии")
+async def list_session_documents(
+    session_id: str,
+    _current_user=Depends(get_current_user),
+):
+    """
+    Получение списка загруженных документов для DD-сессии.
+    """
+    docs = [
+        {k: v for k, v in d.items() if k != "file_path"}
+        for d in _documents.values()
+        if d["session_id"] == session_id
+    ]
+    return {"session_id": session_id, "total": len(docs), "documents": docs}
+
+
+@router.delete("/{doc_id}", summary="Удаление DD-документа")
+async def delete_document(
     doc_id: str,
     _current_user=Depends(get_current_user),
 ):
     """
-    Получение результата предыдущего анализа документа.
+    Удаление загруженного документа по ID.
     """
-    analysis = DocumentAnalysisService.get_analysis(doc_id)
-    if not analysis:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Анализ с ID {doc_id} не найден",
-        )
-    return analysis
+    doc = _documents.get(doc_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Документ {doc_id} не найден")
+
+    # Удаляем файл с диска
+    file_path = doc.get("file_path", "")
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+
+    del _documents[doc_id]
+    return {"status": "deleted", "doc_id": doc_id}
 
 
-@router.get("/templates", summary="Доступные шаблоны анализа")
-async def get_templates(
+@router.get("/templates", summary="Типы DD-документов")
+async def get_document_types(
     _current_user=Depends(get_current_user),
 ):
     """
-    Список доступных шаблонов анализа документов.
-
-    Типы: financial_report, charter, license, contract.
+    Список доступных типов документов для DD.
+    Каждый тип привязан к пункту чеклиста.
     """
-    return DocumentAnalysisService.get_templates()
+    return [
+        {
+            "key": key,
+            "label": info["label"],
+            "checklist_key": info["checklist_key"],
+        }
+        for key, info in DOC_TYPES.items()
+    ]
