@@ -153,7 +153,8 @@ async def get_dashboard_realdata(
     from app.services.currency_service import get_latest_rates_cached
     from app.services.redis_cache_service import RedisCacheService
 
-    # 1. Currency rates (Redis TTL 6h)
+    # 1. Currency rates (Redis TTL 6h, fallback to DB)
+    currencies = []
     try:
         raw_rates = await get_latest_rates_cached(
             codes=["USD", "EUR", "GBP", "RUB", "CNY", "JPY", "KZT", "CHF"]
@@ -169,7 +170,27 @@ async def get_dashboard_realdata(
             for r in raw_rates
         ]
     except Exception:
-        currencies = []
+        pass
+
+    # Fallback: load from DB if cbu.uz was unreachable
+    if not currencies:
+        try:
+            from app.services.currency_service import get_latest_rates
+            db_rates = get_latest_rates(
+                db, codes=["USD", "EUR", "GBP", "RUB", "CNY", "JPY", "KZT", "CHF"]
+            )
+            currencies = [
+                {
+                    "code": r.code,
+                    "name_ru": r.ccy_name_ru or r.code,
+                    "rate": float(r.rate),
+                    "diff": float(r.diff or 0),
+                    "date": str(r.rate_date) if r.rate_date else "",
+                }
+                for r in db_rates
+            ]
+        except Exception:
+            currencies = []
 
     # 2. Stock market summary (from DB)
     try:
@@ -195,10 +216,10 @@ async def get_dashboard_realdata(
     except Exception:
         companies = {"total_cached": 0, "sources": []}
 
-    # 5. Macro data (Redis TTL 24h)
+    # 5. Macro data (Redis TTL 24h, fallback to DB)
+    macro: dict = {}
     try:
         from app.services.macro_data_service import fetch_indicator
-        macro: dict = {}
         gdp_data = await fetch_indicator("NY.GDP.MKTP.CD", per_page=1)
         if gdp_data:
             macro["gdp_total"] = gdp_data[0]["value"]
@@ -216,7 +237,30 @@ async def get_dashboard_realdata(
         if pop_data:
             macro["population_mln"] = round(pop_data[0]["value"] / 1_000_000, 1)
     except Exception:
-        macro = {}
+        pass
+
+    # Fallback: load macro from DB if World Bank API was unreachable
+    if not macro:
+        try:
+            from app.db.models.macro_data import MacroIndicator
+            indicators = (
+                db.query(MacroIndicator)
+                .order_by(MacroIndicator.period_date.desc())
+                .all()
+            )
+            for ind in indicators:
+                code = ind.indicator_code
+                if code == "NY.GDP.MKTP.CD" and "gdp_total" not in macro:
+                    macro["gdp_total"] = ind.value
+                    macro["data_year"] = ind.period_date.year if ind.period_date else None
+                elif code == "NY.GDP.MKTP.KD.ZG" and "gdp_growth_pct" not in macro:
+                    macro["gdp_growth_pct"] = round(ind.value, 1) if ind.value else None
+                elif code == "FP.CPI.TOTL.ZG" and "inflation_pct" not in macro:
+                    macro["inflation_pct"] = round(ind.value, 1) if ind.value else None
+                elif code == "SP.POP.TOTL" and "population_mln" not in macro:
+                    macro["population_mln"] = round(ind.value / 1_000_000, 1) if ind.value else None
+        except Exception:
+            pass
 
     from datetime import datetime
     return {

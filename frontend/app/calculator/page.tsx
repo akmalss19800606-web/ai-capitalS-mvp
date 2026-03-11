@@ -149,6 +149,25 @@ export default function CalculatorPage() {
     const bankReturn = inv * Math.pow(1 + bankRate, yrs);
     const inflationLoss = inv * Math.pow(1 + inflation, yrs);
 
+    // Build chart data and core calculations (always available, no AI needed)
+    const chartData = Array.from({ length: yrs }, (_, i) => ({
+      year: `Год ${i + 1}`,
+      'Банковский депозит': Math.round(inv * Math.pow(1 + bankRate, i + 1)),
+      'Обесценивание (инфляция)': Math.round(inv * Math.pow(1 + inflation, i + 1)),
+    }));
+
+    const baseResult = {
+      bankReturn: Math.round(bankReturn),
+      inflationImpact: Math.round(inflationLoss),
+      bankRate: Math.round(bankRate * 100),
+      bankProfit: Math.round(bankReturn - inv),
+      bankProfitUZS: Math.round((bankReturn - inv) * uzsRate),
+      chartData,
+      aiAnalysis: '',
+    };
+
+    // Try AI analysis, but show results regardless
+    let aiText = '';
     try {
       const res = await apiRequest('/ai/market-analysis', {
         method: 'POST',
@@ -157,29 +176,38 @@ export default function CalculatorPage() {
           language: 'ru'
         })
       });
-
-      // PORT-003: Убраны фиктивные ROI-ставки по отраслям.
-      // Сравнение только с банковским депозитом и инфляцией — оба динамические.
-      const chartData = Array.from({ length: yrs }, (_, i) => ({
-        year: `Год ${i + 1}`,
-        'Банковский депозит': Math.round(inv * Math.pow(1 + bankRate, i + 1)),
-        'Обесценивание (инфляция)': Math.round(inv * Math.pow(1 + inflation, i + 1)),
-      }));
-
-      setResult({
-        bankReturn: Math.round(bankReturn),
-        inflationImpact: Math.round(inflationLoss),
-        bankRate: Math.round(bankRate * 100),
-        bankProfit: Math.round(bankReturn - inv),
-        bankProfitUZS: Math.round((bankReturn - inv) * uzsRate),
-        chartData,
-        aiAnalysis: res.analysis,
-      });
-    } catch (e) {
-      alert('Ошибка расчёта');
-    } finally {
-      setLoading(false);
+      aiText = res.analysis || '';
+    } catch {
+      // AI unavailable — generate local fallback analysis
     }
+
+    if (!aiText) {
+      const realReturn = ((bankReturn - inv) / inv * 100).toFixed(1);
+      const realAfterInflation = ((bankReturn - inflationLoss) / inv * 100).toFixed(1);
+      aiText = [
+        `📊 Анализ инвестиции: $${inv.toLocaleString()} в «${industry}» на ${yrs} лет`,
+        ``,
+        `🏦 Банковский депозит (${Math.round(bankRate * 100)}% годовых):`,
+        `  • Итого через ${yrs} лет: $${Math.round(bankReturn).toLocaleString()}`,
+        `  • Чистый доход: +$${Math.round(bankReturn - inv).toLocaleString()} (${realReturn}%)`,
+        `  • В сумах: ${Math.round((bankReturn - inv) * uzsRate).toLocaleString()} UZS`,
+        ``,
+        `📈 Инфляция (${(inflation * 100).toFixed(1)}% годовых):`,
+        `  • Стоимость $${inv.toLocaleString()} через ${yrs} лет: $${Math.round(inflationLoss).toLocaleString()}`,
+        `  • Реальная доходность депозита: ${realAfterInflation}%`,
+        ``,
+        parseFloat(realAfterInflation) > 0
+          ? `✅ Вывод: Депозит перекрывает инфляцию на ${realAfterInflation}%. Инвестиция в «${industry}» может обеспечить более высокую доходность при соответствующих рисках.`
+          : `⚠️ Вывод: Депозит не перекрывает инфляцию. Рассмотрите инвестиции в «${industry}» для сохранения покупательной способности капитала.`,
+        ``,
+        `💡 Рекомендация: диверсифицируйте — часть средств на депозит, часть в «${industry}».`,
+        ``,
+        `⚙️ Расчёт выполнен локально (AI-провайдеры недоступны).`,
+      ].join('\n');
+    }
+
+    setResult({ ...baseResult, aiAnalysis: aiText });
+    setLoading(false);
   };
 
   const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', fontWeight: '600' as const, backgroundColor: '#f8fafc', color: '#1e293b' };

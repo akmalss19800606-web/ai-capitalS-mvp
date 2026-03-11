@@ -383,6 +383,66 @@ def get_quotes(
     return query.order_by(StockQuote.trade_date.desc()).limit(limit).all()
 
 
+def get_stock_summary(db: Session) -> dict:
+    """
+    Summary of stock exchange data for dashboard widget.
+
+    Returns dict with total_issuers, total_trades, total_volume,
+    total_turnover, last_trade_date, top_issuers.
+    """
+    from sqlalchemy import func as sa_func
+
+    emitter_count = db.query(StockEmitter).count()
+    quote_count = db.query(StockQuote).count()
+
+    total_volume = db.query(sa_func.coalesce(sa_func.sum(StockQuote.volume), 0)).scalar() or 0
+
+    # Approximate turnover: sum(close_price * volume) where both exist
+    turnover_q = (
+        db.query(sa_func.sum(StockQuote.close_price * StockQuote.volume))
+        .filter(StockQuote.close_price.isnot(None), StockQuote.volume.isnot(None))
+        .scalar()
+    )
+    total_turnover = float(turnover_q or 0)
+
+    last_quote = db.query(StockQuote).order_by(StockQuote.trade_date.desc()).first()
+    last_date = str(last_quote.trade_date) if last_quote else None
+
+    # Top issuers by turnover
+    top_rows = (
+        db.query(
+            StockQuote.ticker,
+            StockQuote.emitter_name,
+            sa_func.count(StockQuote.id).label("trades"),
+            sa_func.sum(StockQuote.close_price * StockQuote.volume).label("turnover"),
+        )
+        .filter(StockQuote.close_price.isnot(None), StockQuote.volume.isnot(None))
+        .group_by(StockQuote.ticker, StockQuote.emitter_name)
+        .order_by(sa_func.sum(StockQuote.close_price * StockQuote.volume).desc())
+        .limit(5)
+        .all()
+    )
+
+    top_issuers = [
+        {
+            "code": row.ticker,
+            "name": row.emitter_name or row.ticker,
+            "trades": row.trades,
+            "turnover": float(row.turnover or 0),
+        }
+        for row in top_rows
+    ]
+
+    return {
+        "total_issuers": emitter_count,
+        "total_trades": quote_count,
+        "total_volume": int(total_volume),
+        "total_turnover": total_turnover,
+        "last_trade_date": last_date,
+        "top_issuers": top_issuers,
+    }
+
+
 def get_emitters(db: Session) -> list[StockEmitter]:
     """
     Получить список эмитентов из БД.
