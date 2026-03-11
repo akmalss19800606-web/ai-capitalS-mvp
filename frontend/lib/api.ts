@@ -1237,5 +1237,28 @@ export const aiOrchestrator = {
 // ─── Фаза 5: Demo Seed Data (DEMO-001) ─────────────────────────────────────
 
 export const demo = {
+    seed: () => apiRequest('/demo/seed', { method: 'POST' }),
+};
+
+  // --- DD Documents (DD-002) -----------------------------------------------
+
+export const ddDocuments = {
+  upload: async (file: File, docType: string = 'auto') => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const formData = new FormData();
+    formData.append('file', file);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_URL}/dd-documents/upload?doc_type=${docType}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  getAnalysis: (docId: string) => apiRequest(`/dd-documents/analysis/${docId}`),
+  templates: () => apiRequest('/dd-documents/templates'),
+};
   seed: () => apiRequest('/demo/seed', { method: 'POST' }),
 };
