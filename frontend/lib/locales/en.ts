@@ -99,6 +99,7 @@ export const en: Locale = {
       stockExchange: 'Stock Exchange',
       islamicFinance: 'Islamic Finance',
       calculator: 'Calculator',
+      businessCases: 'Business Cases',
     },
   },
 

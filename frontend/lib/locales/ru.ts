@@ -97,6 +97,7 @@
       stockExchange: 'Фондовая биржа',
       islamicFinance: 'Исламские финансы',
       calculator: 'Калькулятор',
+      businessCases: 'Бизнес-кейсы',
     },
   },
 

@@ -43,6 +43,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon paths={<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></>} /> },
       { labelKey: 'charts', path: '/charts',
         icon: <Icon paths={<><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></>} /> },
+      { labelKey: 'businessCases', path: '/business-cases',
+        icon: <Icon paths={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} /> },
     ],
   },
   {
