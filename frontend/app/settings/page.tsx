@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useLocale, setStoredLocale, getStoredLocale } from '@/lib/i18n';
-import { auth, preferences as prefsApi } from '@/lib/api';
+import { auth, preferences as prefsApi, demo } from '@/lib/api';
 
 /* ─── Toggle switch ─── */
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
@@ -103,6 +103,8 @@ export default function SettingsPage() {
 
   /* ─── System state ─── */
   const [cacheCleared, setCacheCleared] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoResult, setDemoResult] = useState<string | null>(null);
 
   /* Load profile on mount */
   useEffect(() => {
@@ -145,6 +147,19 @@ export default function SettingsPage() {
       email_notifications: emailNotif,
       in_app_notifications: inAppNotif,
     }).catch(() => {});
+  };
+
+  const handleSeedDemo = async () => {
+    setDemoLoading(true);
+    setDemoResult(null);
+    try {
+      const data = await demo.seed();
+      setDemoResult(data?.message || 'Демо-данные загружены');
+    } catch {
+      setDemoResult('Ошибка загрузки демо-данных');
+    }
+    setDemoLoading(false);
+    setTimeout(() => setDemoResult(null), 5000);
   };
 
   const handleClearCache = () => {
@@ -503,6 +518,30 @@ export default function SettingsPage() {
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#fff')}
               >
                 {s.system.clearCache}
+              </button>
+            </div>
+          </SettingsRow>
+
+          <SettingsRow label="Демо-данные" description="Загрузить реалистичные данные для презентации инвесторам">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {demoResult && (
+                <span style={{ fontSize: '12px', color: demoResult.includes('Ошибка') ? '#ef4444' : '#22c55e', fontWeight: 500, maxWidth: '200px', textAlign: 'right' }}>
+                  {demoResult}
+                </span>
+              )}
+              <button onClick={handleSeedDemo} disabled={demoLoading}
+                style={{
+                  padding: '6px 16px', borderRadius: '8px',
+                  border: '1px solid #6366f1', backgroundColor: '#eef2ff',
+                  fontSize: '13px', fontWeight: 500, cursor: demoLoading ? 'wait' : 'pointer',
+                  color: '#4f46e5', transition: 'all 0.15s',
+                  fontFamily: 'Inter, sans-serif',
+                  opacity: demoLoading ? 0.6 : 1,
+                }}
+                onMouseEnter={e => { if (!demoLoading) e.currentTarget.style.backgroundColor = '#e0e7ff'; }}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#eef2ff')}
+              >
+                {demoLoading ? 'Загрузка...' : 'Загрузить демо'}
               </button>
             </div>
           </SettingsRow>

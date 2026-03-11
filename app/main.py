@@ -75,6 +75,9 @@ from app.api.v1.routers import xai
 from app.api.v1.routers import ai_orchestrator as ai_orch_router
 from app.api.v1.routers import ai_provider_health
 
+# Phase 5: Demo seed data
+from app.api.v1.routers import demo as demo_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown: Redis + Telegram Bot."""
@@ -108,9 +111,47 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
+    title="AI Capital Management API",
+    description=(
+        "Интеллектуальная система управления инвестициями для рынка Центральной Азии.\n\n"
+        "## Возможности\n\n"
+        "- **Портфельный анализ**: CRUD портфелей, инвестиционные решения, версионирование\n"
+        "- **AI-аналитика**: Monte Carlo, SHAP, XAI (объяснимость), мульти-провайдер оркестрация\n"
+        "- **Due Diligence**: скоринг компаний, загрузка документов, чеклисты\n"
+        "- **Калькулятор**: DCF, NPV, IRR, Payback, WACC\n"
+        "- **Исламские финансы**: шариатский скрининг, закят-калькулятор\n"
+        "- **50+ бизнес-кейсов**: валидация через аналитический движок\n"
+        "- **Экспорт**: брендированный PDF, Excel с формулами\n"
+        "- **Интеграции**: Telegram Bot, курсы ЦБ Узбекистана, биржа UZSE\n\n"
+        "## Аутентификация\n\n"
+        "API использует JWT Bearer Token. Получите токен через `POST /api/v1/auth/login`.\n\n"
+        "## Rate Limiting\n\n"
+        "120 запросов / 60 секунд на клиента."
+    ),
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
+    openapi_tags=[
+        {"name": "auth", "description": "Аутентификация и авторизация (JWT, MFA, SSO)"},
+        {"name": "portfolios", "description": "Управление инвестиционными портфелями"},
+        {"name": "decisions", "description": "Инвестиционные решения (CRUD, версионирование)"},
+        {"name": "ai-analytics", "description": "AI-аналитика: Monte Carlo, SHAP, Frontier"},
+        {"name": "due-diligence", "description": "Due Diligence скоринг компаний"},
+        {"name": "Investment Calculator", "description": "Финансовые расчёты: DCF, NPV, IRR, WACC"},
+        {"name": "Business Cases", "description": "50+ бизнес-кейсов с валидацией"},
+        {"name": "Monte Carlo v2", "description": "Monte Carlo v2 — калиброванный под экономику УЗ"},
+        {"name": "xai", "description": "Объяснимость AI-решений (XAI)"},
+        {"name": "islamic-finance", "description": "Исламские финансы: скрининг, закят"},
+        {"name": "Currency Rates", "description": "Курсы валют ЦБ Узбекистана"},
+        {"name": "export", "description": "Экспорт отчётов в PDF"},
+        {"name": "Excel Export", "description": "Экспорт данных в Excel"},
+        {"name": "dashboard", "description": "Дашборд и KPI"},
+        {"name": "users", "description": "Управление пользователями"},
+        {"name": "ai", "description": "AI-ассистент: анализ, чат"},
+        {"name": "ai-orchestrator", "description": "Оркестрация AI-провайдеров"},
+        {"name": "ai-provider-health", "description": "Мониторинг AI-провайдеров"},
+    ],
 )
 
 app.add_middleware(
@@ -184,3 +225,5 @@ app.include_router(monte_carlo_v2.router, prefix="/api/v1")
 app.include_router(xai.router, prefix="/api/v1")
 app.include_router(ai_orch_router.router, prefix="/api/v1")
 app.include_router(ai_provider_health.router, prefix="/api/v1")
+# Phase 5: Demo seed data
+app.include_router(demo_router.router, prefix="/api/v1")
