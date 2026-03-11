@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/api';
 import { useLocale, setStoredLocale, getStoredLocale } from '@/lib/i18n';
+import Image from 'next/image';
 
-/* ─── Animated dots background (SVG-based, lightweight) ─── */
+/* --- Animated dots background (SVG-based, lightweight) --- */
 function BackgroundPattern() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
@@ -45,25 +46,20 @@ function BackgroundPattern() {
   );
 }
 
-/* ─── Logo component ─── */
+/* --- Logo component using /logo.svg --- */
 function Logo({ size = 48 }: { size?: number }) {
   return (
-    <div style={{
-      width: `${size}px`, height: `${size}px`, borderRadius: `${size * 0.25}px`,
-      background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 8px 32px rgba(59,130,246,0.3)',
-      flexShrink: 0,
-    }}>
-      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none"
-        stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-      </svg>
-    </div>
+    <img
+      src="/logo.svg"
+      alt="AI Capital Management"
+      width={size}
+      height={size}
+      style={{ flexShrink: 0 }}
+    />
   );
 }
 
-/* ─── Language Switcher (compact) ─── */
+/* --- Language Switcher (compact) --- */
 function LangSwitcher() {
   const [current, setCurrent] = useState(getStoredLocale());
   const langs: Array<{ code: 'ru' | 'uz' | 'en'; label: string }> = [
@@ -89,7 +85,7 @@ function LangSwitcher() {
   );
 }
 
-/* ─── Feature bullet ─── */
+/* --- Feature bullet --- */
 function FeatureBullet({ text }: { text: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -110,7 +106,7 @@ function FeatureBullet({ text }: { text: string }) {
   );
 }
 
-/* ─── Main Login Page ─── */
+/* --- Main Login Page --- */
 export default function LoginPage() {
   const router = useRouter();
   const { t } = useLocale();
@@ -121,7 +117,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   /* MFA step */
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaTempToken, setMfaTempToken] = useState('');
@@ -168,7 +163,7 @@ export default function LoginPage() {
     }
   };
 
-  /* ─── Styles ─── */
+  /* --- Styles --- */
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '12px 16px', borderRadius: '10px',
     border: '1px solid #e2e8f0', backgroundColor: '#f8fafc',
@@ -193,7 +188,7 @@ export default function LoginPage() {
     borderRadius: '10px', padding: '10px 14px', fontSize: '13px', color: '#dc2626',
   };
 
-  /* ─── MFA screen ─── */
+  /* --- MFA screen --- */
   if (mfaRequired) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', position: 'relative' }}>
@@ -245,22 +240,19 @@ export default function LoginPage() {
     );
   }
 
-  /* ─── Main login/register ─── */
+  /* --- Main login/register --- */
   return (
     <div style={{ minHeight: '100vh', display: 'flex', position: 'relative' }}>
       <BackgroundPattern />
-
-      {/* ─── Left: Branding hero panel (hidden on small screens via CSS) ─── */}
+      {/* --- Left: Branding hero panel --- */}
       <div className="login-hero" style={{
         flex: 1, position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
         padding: '60px',
       }}>
-        {/* Top: lang switcher */}
         <div style={{ position: 'absolute', top: '24px', left: '24px' }}>
           <LangSwitcher />
         </div>
-
         <div style={{ maxWidth: '480px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '32px' }}>
             <Logo size={52} />
@@ -273,51 +265,40 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-
           <h1 style={{
             fontSize: '36px', fontWeight: 800, color: '#ffffff',
-            lineHeight: 1.2, marginBottom: '16px',
-            letterSpacing: '-0.02em',
+            lineHeight: 1.2, marginBottom: '16px', letterSpacing: '-0.02em',
           }}>
             {t.login.heroTagline}
           </h1>
-
           <p style={{
             fontSize: '15px', color: 'rgba(255,255,255,0.6)',
             lineHeight: 1.6, marginBottom: '36px',
           }}>
             {t.login.subtitle}
           </p>
-
-          {/* Feature bullets */}
           <div style={{ marginBottom: '40px' }}>
-            {t.login.heroFeatures.map((feat, i) => (
+            {t.login.heroFeatures.map((feat: string, i: number) => (
               <FeatureBullet key={i} text={feat} />
             ))}
           </div>
-
           <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>
             {t.login.trustedBy}
           </p>
         </div>
       </div>
-
-      {/* ─── Right: Form panel ─── */}
+      {/* --- Right: Form panel --- */}
       <div style={{
         width: '480px', minWidth: '380px', position: 'relative', zIndex: 1,
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '40px',
-        backgroundColor: '#ffffff',
+        padding: '40px', backgroundColor: '#ffffff',
         boxShadow: '-8px 0 40px rgba(0,0,0,0.15)',
       }}>
-        {/* Mobile lang switcher (visible only on small screens) */}
         <div className="login-mobile-lang" style={{
           position: 'absolute', top: '16px', right: '16px', display: 'none',
         }}>
           <LangSwitcher />
         </div>
-
-        {/* Mobile logo (visible only on small screens) */}
         <div className="login-mobile-logo" style={{
           display: 'none', textAlign: 'center', marginBottom: '24px',
         }}>
@@ -329,15 +310,13 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-
         <div style={{ maxWidth: '360px', width: '100%', margin: '0 auto' }}>
           <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>
             {isRegister ? t.login.signUp : t.login.signIn}
           </h2>
           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '28px' }}>
-            {isRegister ? t.login.subtitle : t.login.subtitle}
+            {t.login.subtitle}
           </p>
-
           <form onSubmit={handleSubmit}>
             {isRegister && (
               <div className="mb-4">
@@ -384,15 +363,12 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
-
             {error && <div style={{ ...errStyle, marginBottom: '16px' }}>{error}</div>}
-
             <button type="submit" disabled={loading}
               style={{ ...btnPrimary, opacity: loading ? 0.7 : 1 }}>
               {loading ? t.login.loadingText : isRegister ? t.login.submitRegister : t.login.submitLogin}
             </button>
           </form>
-
           <div style={{
             marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #f1f5f9',
             textAlign: 'center',
@@ -409,17 +385,13 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-
-        {/* Bottom: patent */}
         <p style={{
-          textAlign: 'center', fontSize: '11px', color: '#94a3b8',
-          marginTop: '40px',
+          textAlign: 'center', fontSize: '11px', color: '#94a3b8', marginTop: '40px',
         }}>
           {t.patent(new Date().getFullYear())}
         </p>
       </div>
-
-      {/* ─── Responsive CSS ─── */}
+      {/* --- Responsive CSS --- */}
       <style>{`
         .login-hero { display: flex; }
         .login-mobile-logo { display: none !important; }
