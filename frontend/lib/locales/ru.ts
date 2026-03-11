@@ -24,7 +24,7 @@
   /* ─── Auth / Login ─── */
   login: {
     title: 'AI Capital Management',
-    subtitle: 'Интеллектуальная система управления инвестициями',
+        subtitle: 'AI-платформа для управления инвестициями: аналитика, Due Diligence, Рынок Узбекистана и исламские финансы',
     heroTagline: 'Анализ. Решения. Результат.',
     heroFeatures: [
       'Портфельная аналитика и Monte Carlo-симуляции',
