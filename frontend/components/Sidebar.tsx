@@ -214,7 +214,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const renderLogo = (showText: boolean) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], overflow: 'hidden' }}>
       <img
-        src="/logo.svg"
+        src="/logo.png"
         alt="AI Capital Management"
         width={140}
         height={34}
