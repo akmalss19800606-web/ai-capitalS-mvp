@@ -158,23 +158,20 @@ export default function CalculatorPage() {
         })
       });
 
-      const roi = industry.includes('IT') ? 0.35 : industry.includes('недвижим') ? 0.28 : industry.includes('мук') ? 0.25 : 0.22;
-      const investReturn = inv * Math.pow(1 + roi, yrs);
-
+      // PORT-003: Убраны фиктивные ROI-ставки по отраслям.
+      // Сравнение только с банковским депозитом и инфляцией — оба динамические.
       const chartData = Array.from({ length: yrs }, (_, i) => ({
         year: `Год ${i + 1}`,
-        'Ваша инвестиция': Math.round(inv * Math.pow(1 + roi, i + 1)),
         'Банковский депозит': Math.round(inv * Math.pow(1 + bankRate, i + 1)),
-        'Инфляция': Math.round(inv * Math.pow(1 + inflation, i + 1)),
+        'Обесценивание (инфляция)': Math.round(inv * Math.pow(1 + inflation, i + 1)),
       }));
 
       setResult({
-        investReturn: Math.round(investReturn),
         bankReturn: Math.round(bankReturn),
         inflationImpact: Math.round(inflationLoss),
-        roi: Math.round(roi * 100),
-        profit: Math.round(investReturn - inv),
-        profitUZS: Math.round((investReturn - inv) * uzsRate),
+        bankRate: Math.round(bankRate * 100),
+        bankProfit: Math.round(bankReturn - inv),
+        bankProfitUZS: Math.round((bankReturn - inv) * uzsRate),
         chartData,
         aiAnalysis: res.analysis,
       });
@@ -261,10 +258,9 @@ export default function CalculatorPage() {
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             {[
-              { label: 'Ваша инвестиция вернёт', value: `$${result.investReturn.toLocaleString()}`, sub: `+$${result.profit.toLocaleString()} прибыль`, color: '#22c55e', bg: '#f0fdf4' },
-              { label: 'Банковский депозит', value: `$${result.bankReturn.toLocaleString()}`, sub: `Ставка ${Math.round(bankRate * 100)}% годовых`, color: '#3b82f6', bg: '#eff6ff' },
-              { label: 'Потери от инфляции', value: `$${result.inflationImpact.toLocaleString()}`, sub: 'Реальная стоимость', color: '#ef4444', bg: '#fef2f2' },
-              { label: 'Прибыль в сумах', value: `${result.profitUZS.toLocaleString()}`, sub: `ROI: ${result.roi}% годовых`, color: '#8b5cf6', bg: '#f5f3ff' },
+              { label: 'Банковский депозит', value: `$${result.bankReturn.toLocaleString()}`, sub: `Ставка ${result.bankRate}% годовых`, color: '#3b82f6', bg: '#eff6ff' },
+              { label: 'Доход от депозита', value: `+$${result.bankProfit.toLocaleString()}`, sub: `${result.bankProfitUZS.toLocaleString()} сум`, color: '#22c55e', bg: '#f0fdf4' },
+              { label: 'Потери от инфляции', value: `$${result.inflationImpact.toLocaleString()}`, sub: 'Реальная стоимость без вложений', color: '#ef4444', bg: '#fef2f2' },
             ].map((card, i) => (
               <div key={i} style={{ backgroundColor: card.bg, borderRadius: '12px', padding: '20px', border: `1px solid ${card.color}30` }}>
                 <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>{card.label}</p>
@@ -283,9 +279,8 @@ export default function CalculatorPage() {
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="Ваша инвестиция" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Банковский депозит" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Инфляция" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Обесценивание (инфляция)" fill="#ef4444" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
