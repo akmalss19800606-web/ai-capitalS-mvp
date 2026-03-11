@@ -46,11 +46,11 @@ function BackgroundPattern() {
   );
 }
 
-/* --- Logo component using /logo.svg --- */
+/* --- Logo component using /logo.png --- */
 function Logo({ size = 48 }: { size?: number }) {
   return (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="AI Capital Management"
       width={size}
       height={size}
