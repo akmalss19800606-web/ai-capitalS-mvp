@@ -601,6 +601,32 @@ export default function OverviewDashboard() {
         />
       </div>
 
+            {/* Quick Tools - visible without scrolling */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: spacing[2], marginBottom: spacing[4],
+      }}>
+        {[
+          { label: t.dashboardPage.actions.dueDiligence, path: '/due-diligence', color: semantic.textPrimary },
+          { label: t.dashboardPage.actions.marketUz, path: '/market-uz', color: semantic.accent },
+          { label: t.dashboardPage.actions.aiAnalytics, path: '/ai-analytics', color: colors.primary[600] },
+          { label: t.dashboardPage.actions.macroData, path: '/macro-uz', color: colors.success[600] },
+          { label: t.dashboardPage.actions.reports, path: '/report', color: colors.warning[700] },
+        ].map((a) => (
+          <button key={a.path} onClick={() => router.push(a.path)} style={{
+            display: 'flex', alignItems: 'center', gap: spacing[2],
+            padding: `${spacing[3]} ${spacing[4]}`, borderRadius: radius.lg,
+            border: `1px solid ${semantic.border}`, backgroundColor: semantic.bgCard,
+            cursor: 'pointer', textAlign: 'left', transition: transitions.fast,
+          }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = a.color)}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = semantic.border)}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: radius.full, backgroundColor: a.color, flexShrink: 0 }} />
+            <span style={{ fontSize: typography.fontSize.sm, fontWeight: typography.fontWeight.medium, color: semantic.textPrimary }}>{a.label}</span>
+          </button>
+        ))}
+      </div>
       {/* ─── Main 2-column grid ─── */}
       <div style={{
         display: 'grid', gridTemplateColumns: '1fr 360px',
@@ -787,42 +813,6 @@ export default function OverviewDashboard() {
               </div>
             </Section>
           )}
-
-          {/* Quick actions */}
-          <Section title={t.dashboardPage.quickActions}>
-            <div style={{ padding: `${spacing[3]} ${spacing[4]}`, display: 'flex', flexDirection: 'column', gap: spacing[1] }}>
-              {[
-                { label: t.dashboardPage.actions.dueDiligence, desc: t.dashboardPage.actions.ddDesc, path: '/due-diligence', color: semantic.textPrimary },
-                { label: t.dashboardPage.actions.marketUz, desc: t.dashboardPage.actions.marketDesc, path: '/market-uz', color: semantic.accent },
-                { label: t.dashboardPage.actions.aiAnalytics, desc: t.dashboardPage.actions.aiDesc, path: '/ai-analytics', color: colors.primary[600] },
-                { label: t.dashboardPage.actions.macroData, desc: t.dashboardPage.actions.macroDesc, path: '/macro-uz', color: colors.success[600] },
-                { label: t.dashboardPage.actions.reports, desc: t.dashboardPage.actions.reportsDesc, path: '/report', color: colors.warning[700] },
-              ].map((a) => (
-                <button key={a.path} onClick={() => router.push(a.path)} style={{
-                  display: 'flex', alignItems: 'center', gap: spacing[3],
-                  padding: `${spacing[2]} ${spacing[3]}`, borderRadius: radius.lg, border: 'none',
-                  backgroundColor: 'transparent', cursor: 'pointer', textAlign: 'left',
-                  width: '100%', transition: transitions.fast,
-                }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = semantic.bgHover)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <div style={{
-                    width: 8, height: 8, borderRadius: radius.full,
-                    backgroundColor: a.color, flexShrink: 0,
-                  }} />
-                  <div>
-                    <div style={{ fontSize: typography.fontSize.base, fontWeight: typography.fontWeight.medium, color: semantic.textPrimary }}>{a.label}</div>
-                    <div style={{ fontSize: typography.fontSize.xs, color: semantic.textMuted }}>{a.desc}</div>
-                  </div>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={colors.neutral[300]}
-                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 'auto' }}>
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </button>
-              ))}
-            </div>
-          </Section>
 
           {/* Data freshness indicator */}
           {realData?.data_freshness && (
