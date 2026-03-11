@@ -2,14 +2,18 @@
 DEMO-001: Скрипт загрузки демо-данных для презентации инвесторам.
 
 Идемпотентный — безопасно запускать повторно.
-Создаёт демо-пользователя, 5 портфелей, 12 инвестиционных решений.
+Создаёт демо-пользователя, 5 портфелей, 12 инвестиционных решений,
+а также курсы валют, данные ИПЦ, биржевые котировки и макропоказатели.
 """
 
 import logging
+from datetime import date
 
 from sqlalchemy.orm import Session
 
 from app.core.security import get_password_hash
+from app.db.models.cpi_data import CPIRecord
+from app.db.models.currency_rate import CurrencyRate
 from app.db.models.investment_decision import (
     DecisionCategory,
     DecisionPriority,
@@ -17,7 +21,9 @@ from app.db.models.investment_decision import (
     DecisionType,
     InvestmentDecision,
 )
+from app.db.models.macro_data import MacroIndicator
 from app.db.models.portfolio import Portfolio
+from app.db.models.stock_exchange import StockEmitter, StockQuote
 from app.db.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -352,6 +358,148 @@ def seed_demo_data(db: Session) -> dict:
         db.add(decision)
         stats["decisions"] += 1
 
+    # ── 4. Currency Rates (демо-курсы ЦБ Узбекистана) ──
+    today = date.today()
+    currency_rates_data = [
+        {"code": "USD", "ccy_name_ru": "Доллар США", "nominal": 1, "rate": 12_876.54, "diff": 15.23},
+        {"code": "EUR", "ccy_name_ru": "Евро", "nominal": 1, "rate": 13_945.80, "diff": -12.45},
+        {"code": "RUB", "ccy_name_ru": "Российский рубль", "nominal": 1, "rate": 137.52, "diff": 0.68},
+        {"code": "GBP", "ccy_name_ru": "Фунт стерлингов", "nominal": 1, "rate": 16_234.90, "diff": 45.12},
+        {"code": "CNY", "ccy_name_ru": "Китайский юань", "nominal": 1, "rate": 1_782.30, "diff": -3.15},
+        {"code": "JPY", "ccy_name_ru": "Японская иена", "nominal": 100, "rate": 8_654.20, "diff": 22.80},
+        {"code": "KZT", "ccy_name_ru": "Казахстанский тенге", "nominal": 100, "rate": 2_581.40, "diff": -1.20},
+        {"code": "CHF", "ccy_name_ru": "Швейцарский франк", "nominal": 1, "rate": 14_523.60, "diff": 8.90},
+    ]
+    stats["currency_rates"] = 0
+    for cdata in currency_rates_data:
+        existing = db.query(CurrencyRate).filter(
+            CurrencyRate.code == cdata["code"],
+            CurrencyRate.rate_date == today,
+        ).first()
+        if existing:
+            continue
+        rate = CurrencyRate(
+            code=cdata["code"],
+            ccy_name_ru=cdata["ccy_name_ru"],
+            nominal=cdata["nominal"],
+            rate=cdata["rate"],
+            diff=cdata["diff"],
+            rate_date=today,
+        )
+        db.add(rate)
+        stats["currency_rates"] += 1
+
+    # ── 5. CPI / Inflation Records (ИПЦ Узбекистана) ──
+    cpi_data = [
+        {"year": 2024, "value": 10.0},
+        {"year": 2023, "value": 10.8},
+        {"year": 2022, "value": 12.3},
+        {"year": 2021, "value": 10.0},
+        {"year": 2020, "value": 11.1},
+        {"year": 2019, "value": 15.2},
+        {"year": 2018, "value": 17.5},
+        {"year": 2017, "value": 13.9},
+        {"year": 2016, "value": 8.0},
+        {"year": 2015, "value": 8.5},
+    ]
+    stats["cpi_records"] = 0
+    for cpd in cpi_data:
+        period = date(cpd["year"], 1, 1)
+        existing = db.query(CPIRecord).filter(
+            CPIRecord.source == "worldbank",
+            CPIRecord.region == "Узбекистан",
+            CPIRecord.period_date == period,
+        ).first()
+        if existing:
+            continue
+        rec = CPIRecord(
+            region="Узбекистан",
+            category="Общий ИПЦ",
+            value=cpd["value"],
+            period_date=period,
+            source="worldbank",
+        )
+        db.add(rec)
+        stats["cpi_records"] += 1
+
+    # ── 6. Stock Exchange (биржа UZSE — демо-данные) ──
+    stock_emitters_data = [
+        {"ticker": "HMKB", "full_name": "Hamkorbank ATB", "sector": "Банки"},
+        {"ticker": "SQBN", "full_name": "SQB (Узнацбанк)", "sector": "Банки"},
+        {"ticker": "TPLK", "full_name": "Tashkent Pharmaceutical", "sector": "Фармацевтика"},
+        {"ticker": "KVTS", "full_name": "Kvarts", "sector": "Промышленность"},
+        {"ticker": "UZFR", "full_name": "UzAuto Finance", "sector": "Финансы"},
+    ]
+    stats["stock_emitters"] = 0
+    stats["stock_quotes"] = 0
+    for edata in stock_emitters_data:
+        existing = db.query(StockEmitter).filter(
+            StockEmitter.ticker == edata["ticker"]
+        ).first()
+        if not existing:
+            emitter = StockEmitter(
+                ticker=edata["ticker"],
+                full_name=edata["full_name"],
+                sector=edata["sector"],
+            )
+            db.add(emitter)
+            stats["stock_emitters"] += 1
+
+    stock_quotes_data = [
+        {"ticker": "HMKB", "emitter_name": "Hamkorbank ATB", "close_price": 58.0, "volume": 125_000, "high_price": 59.5, "low_price": 57.2, "open_price": 57.5},
+        {"ticker": "SQBN", "emitter_name": "SQB (Узнацбанк)", "close_price": 120.5, "volume": 80_000, "high_price": 122.0, "low_price": 119.0, "open_price": 119.5},
+        {"ticker": "TPLK", "emitter_name": "Tashkent Pharmaceutical", "close_price": 15_200.0, "volume": 5_400, "high_price": 15_500.0, "low_price": 15_000.0, "open_price": 15_100.0},
+        {"ticker": "KVTS", "emitter_name": "Kvarts", "close_price": 3_800.0, "volume": 12_000, "high_price": 3_900.0, "low_price": 3_750.0, "open_price": 3_780.0},
+        {"ticker": "UZFR", "emitter_name": "UzAuto Finance", "close_price": 8_950.0, "volume": 8_500, "high_price": 9_100.0, "low_price": 8_800.0, "open_price": 8_850.0},
+    ]
+    for qdata in stock_quotes_data:
+        existing = db.query(StockQuote).filter(
+            StockQuote.ticker == qdata["ticker"],
+            StockQuote.trade_date == today,
+        ).first()
+        if existing:
+            continue
+        quote = StockQuote(
+            ticker=qdata["ticker"],
+            emitter_name=qdata["emitter_name"],
+            close_price=qdata["close_price"],
+            open_price=qdata["open_price"],
+            high_price=qdata["high_price"],
+            low_price=qdata["low_price"],
+            volume=qdata["volume"],
+            trade_date=today,
+        )
+        db.add(quote)
+        stats["stock_quotes"] += 1
+
+    # ── 7. Macro Indicators (макроэкономика Узбекистана — демо) ──
+    macro_data = [
+        {"code": "NY.GDP.MKTP.CD", "name": "ВВП (текущий, USD)", "value": 92_300_000_000, "unit": "USD", "year": 2024},
+        {"code": "NY.GDP.MKTP.KD.ZG", "name": "Рост ВВП", "value": 6.2, "unit": "%", "year": 2024},
+        {"code": "FP.CPI.TOTL.ZG", "name": "Инфляция (потребительские цены)", "value": 10.0, "unit": "%", "year": 2024},
+        {"code": "SP.POP.TOTL", "name": "Население", "value": 36_800_000, "unit": "человек", "year": 2024},
+        {"code": "NV.IND.TOTL.ZS", "name": "Промышленность (% ВВП)", "value": 28.5, "unit": "%", "year": 2024},
+    ]
+    stats["macro_indicators"] = 0
+    for mdata in macro_data:
+        period = date(mdata["year"], 1, 1)
+        existing = db.query(MacroIndicator).filter(
+            MacroIndicator.indicator_code == mdata["code"],
+            MacroIndicator.period_date == period,
+        ).first()
+        if existing:
+            continue
+        ind = MacroIndicator(
+            source="worldbank",
+            indicator_code=mdata["code"],
+            indicator_name=mdata["name"],
+            value=mdata["value"],
+            unit=mdata["unit"],
+            period_date=period,
+        )
+        db.add(ind)
+        stats["macro_indicators"] += 1
+
     db.commit()
 
     total_portfolios = len(created_portfolios)
@@ -368,11 +516,20 @@ def seed_demo_data(db: Session) -> dict:
         "user_created": stats["user"],
         "new_portfolios": stats["portfolios"],
         "new_decisions": stats["decisions"],
+        "currency_rates": stats["currency_rates"],
+        "cpi_records": stats["cpi_records"],
+        "stock_emitters": stats["stock_emitters"],
+        "stock_quotes": stats["stock_quotes"],
+        "macro_indicators": stats["macro_indicators"],
         "total_portfolios": total_portfolios,
         "total_decisions": total_decisions,
         "message": (
             f"Демо-данные загружены: {total_portfolios} портфелей, "
-            f"{total_decisions} решений. "
+            f"{total_decisions} решений, "
+            f"{stats['currency_rates']} курсов валют, "
+            f"{stats['cpi_records']} записей ИПЦ, "
+            f"{stats['stock_quotes']} биржевых котировок, "
+            f"{stats['macro_indicators']} макропоказателей. "
             f"Вход: {DEMO_EMAIL} / {DEMO_PASSWORD}"
         ),
     }

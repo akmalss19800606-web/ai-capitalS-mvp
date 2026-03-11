@@ -204,6 +204,42 @@ def get_current_cpi(db: Session) -> Optional[dict]:
     }
 
 
+def get_cpi_summary(db: Session) -> dict:
+    """
+    Summary of CPI data for dashboard widget.
+
+    Returns dict with headline_value, headline_period, categories_count,
+    data_points, latest_year.
+    """
+    total = db.query(CPIRecord).filter(CPIRecord.source == "worldbank").count()
+
+    categories = (
+        db.query(CPIRecord.category)
+        .filter(CPIRecord.source == "worldbank")
+        .distinct()
+        .count()
+    )
+
+    latest = (
+        db.query(CPIRecord)
+        .filter(CPIRecord.source == "worldbank", CPIRecord.value.isnot(None))
+        .order_by(CPIRecord.period_date.desc())
+        .first()
+    )
+
+    result: dict = {
+        "categories_count": categories,
+        "data_points": total,
+    }
+
+    if latest and latest.value is not None:
+        result["headline_value"] = round(latest.value, 1)
+        result["headline_period"] = latest.category or ""
+        result["latest_year"] = latest.period_date.year if latest.period_date else None
+
+    return result
+
+
 def get_cpi_trend(db: Session, years: int = 10) -> list[dict]:
     """
     Получить тренд ИПЦ за N лет для графика.
