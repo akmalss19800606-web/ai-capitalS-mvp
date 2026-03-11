@@ -75,6 +75,14 @@ const labelStyle: React.CSSProperties = {
   color: semantic.textSecondary, marginBottom: spacing[1],
 };
 
+
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div style={{ marginBottom: spacing[3] }}>
+    <label style={labelStyle}>{label}</label>
+    {children}
+  </div>
+);
+
 export default function BusinessCasesPage() {
   const [form, setForm] = useState<any>({ ...INITIAL_FORM });
   const [result, setResult] = useState<EvalResult | null>(null);
@@ -124,13 +132,6 @@ export default function BusinessCasesPage() {
       setLoading(false);
     }
   };
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div style={{ marginBottom: spacing[3] }}>
-      <label style={labelStyle}>{label}</label>
-      {children}
-    </div>
-  );
 
   return (
     <div style={{ maxWidth: 960, margin: '0 auto', padding: spacing[4] }}>
