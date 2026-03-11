@@ -1,0 +1,378 @@
+"""
+DEMO-001: Скрипт загрузки демо-данных для презентации инвесторам.
+
+Идемпотентный — безопасно запускать повторно.
+Создаёт демо-пользователя, 5 портфелей, 12 инвестиционных решений.
+"""
+
+import logging
+
+from sqlalchemy.orm import Session
+
+from app.core.security import get_password_hash
+from app.db.models.investment_decision import (
+    DecisionCategory,
+    DecisionPriority,
+    DecisionStatus,
+    DecisionType,
+    InvestmentDecision,
+)
+from app.db.models.portfolio import Portfolio
+from app.db.models.user import User
+
+logger = logging.getLogger(__name__)
+
+DEMO_EMAIL = "demo@ai-capital.uz"
+DEMO_PASSWORD = "DemoPass2026!"
+DEMO_NAME = "Демо Инвестор"
+
+
+def seed_demo_data(db: Session) -> dict:
+    """
+    Загрузить демо-данные. Идемпотентно: если данные уже есть, обновляет.
+
+    Returns:
+        dict со статистикой загруженных данных
+    """
+    stats = {"user": False, "portfolios": 0, "decisions": 0}
+
+    # ── 1. Демо-пользователь ──
+    user = db.query(User).filter(User.email == DEMO_EMAIL).first()
+    if not user:
+        user = User(
+            email=DEMO_EMAIL,
+            full_name=DEMO_NAME,
+            hashed_password=get_password_hash(DEMO_PASSWORD),
+            is_active=True,
+        )
+        db.add(user)
+        db.flush()
+        stats["user"] = True
+        logger.info("Демо-пользователь создан: %s", DEMO_EMAIL)
+    else:
+        logger.info("Демо-пользователь уже существует: %s", DEMO_EMAIL)
+
+    # ── 2. Портфели ──
+    portfolios_data = [
+        {
+            "name": "Агротех Узбекистан",
+            "description": "Инвестиции в агротехнологические компании: хлопок, фрукты, зерно",
+            "total_value": 8_500_000_000,
+        },
+        {
+            "name": "IT Park Стартапы",
+            "description": "Финтех, EdTech, e-commerce стартапы IT Park Ташкент",
+            "total_value": 3_200_000_000,
+        },
+        {
+            "name": "Торговый Дом",
+            "description": "Импорт/экспорт, оптовая торговля, логистика",
+            "total_value": 5_700_000_000,
+        },
+        {
+            "name": "Исламские Инвестиции",
+            "description": "Шариат-комплаентный портфель: сукук, мурабаха, иджара",
+            "total_value": 4_100_000_000,
+        },
+        {
+            "name": "Диверсифицированный",
+            "description": "Смешанный портфель: IT, строительство, промышленность, торговля",
+            "total_value": 12_000_000_000,
+        },
+    ]
+
+    created_portfolios = []
+    for pdata in portfolios_data:
+        existing = (
+            db.query(Portfolio)
+            .filter(Portfolio.owner_id == user.id, Portfolio.name == pdata["name"])
+            .first()
+        )
+        if existing:
+            created_portfolios.append(existing)
+            continue
+
+        portfolio = Portfolio(
+            name=pdata["name"],
+            description=pdata["description"],
+            total_value=pdata["total_value"],
+            currency="UZS",
+            owner_id=user.id,
+        )
+        db.add(portfolio)
+        db.flush()
+        created_portfolios.append(portfolio)
+        stats["portfolios"] += 1
+
+    # ── 3. Инвестиционные решения ──
+    decisions_data = [
+        # Агротех Узбекистан (портфель 0)
+        {
+            "portfolio_idx": 0,
+            "asset_name": "Cotton Processing LLC",
+            "asset_symbol": "COTTON",
+            "decision_type": DecisionType.BUY,
+            "amount": 5000,
+            "price": 350_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.HIGH,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.22,
+            "risk_level": "medium",
+            "rationale": "Хлопкопереработка — ключевой экспортный сектор. "
+            "Компания занимает 15% рынка. Рост экспорта +18% за 2025 год.",
+            "days_ago": 45,
+        },
+        {
+            "portfolio_idx": 0,
+            "asset_name": "Agro Fruit Export",
+            "asset_symbol": "AGFRT",
+            "decision_type": DecisionType.BUY,
+            "amount": 3000,
+            "price": 420_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.MEDIUM,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.18,
+            "risk_level": "low",
+            "rationale": "Экспорт фруктов в РФ и ЕС. Стабильный спрос, "
+            "господдержка экспортёров по УП-189.",
+            "days_ago": 30,
+        },
+        # IT Park Стартапы (портфель 1)
+        {
+            "portfolio_idx": 1,
+            "asset_name": "Uzum Market",
+            "asset_symbol": "UZUM",
+            "decision_type": DecisionType.BUY,
+            "amount": 1000,
+            "price": 1_200_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.CRITICAL,
+            "category": DecisionCategory.VENTURE,
+            "geography": "UZ",
+            "target_return": 0.45,
+            "risk_level": "high",
+            "rationale": "Крупнейшая e-commerce платформа Узбекистана. "
+            "GMV $200M+. Раунд Series B.",
+            "days_ago": 60,
+        },
+        {
+            "portfolio_idx": 1,
+            "asset_name": "Humans.uz",
+            "asset_symbol": "HMNS",
+            "decision_type": DecisionType.BUY,
+            "amount": 2000,
+            "price": 500_000,
+            "status": DecisionStatus.REVIEW,
+            "priority": DecisionPriority.HIGH,
+            "category": DecisionCategory.VENTURE,
+            "geography": "UZ",
+            "target_return": 0.35,
+            "risk_level": "high",
+            "rationale": "HR-tech платформа. 500K+ пользователей. "
+            "Монетизация через премиум-подписки и рекрутинг.",
+            "days_ago": 15,
+        },
+        {
+            "portfolio_idx": 1,
+            "asset_name": "PayMe Fintech",
+            "asset_symbol": "PAYME",
+            "decision_type": DecisionType.HOLD,
+            "amount": 1500,
+            "price": 800_000,
+            "status": DecisionStatus.COMPLETED,
+            "priority": DecisionPriority.MEDIUM,
+            "category": DecisionCategory.VENTURE,
+            "geography": "UZ",
+            "target_return": 0.30,
+            "risk_level": "medium",
+            "rationale": "Лидер рынка мобильных платежей. "
+            "20M+ транзакций/мес. Рост +40% YoY.",
+            "days_ago": 75,
+        },
+        # Торговый Дом (портфель 2)
+        {
+            "portfolio_idx": 2,
+            "asset_name": "Asia Trade Group",
+            "asset_symbol": "ASTG",
+            "decision_type": DecisionType.BUY,
+            "amount": 10000,
+            "price": 180_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.MEDIUM,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.20,
+            "risk_level": "low",
+            "rationale": "Оптовая торговля стройматериалами. "
+            "Стабильный денежный поток, низкая волатильность.",
+            "days_ago": 40,
+        },
+        {
+            "portfolio_idx": 2,
+            "asset_name": "Silk Road Logistics",
+            "asset_symbol": "SRLG",
+            "decision_type": DecisionType.BUY,
+            "amount": 5000,
+            "price": 250_000,
+            "status": DecisionStatus.DRAFT,
+            "priority": DecisionPriority.HIGH,
+            "category": DecisionCategory.INFRASTRUCTURE,
+            "geography": "UZ",
+            "target_return": 0.25,
+            "risk_level": "medium",
+            "rationale": "Логистическая компания на маршруте Китай-ЦА-Европа. "
+            "Рост транзитных грузов +30% за 2025.",
+            "days_ago": 5,
+        },
+        # Исламские Инвестиции (портфель 3)
+        {
+            "portfolio_idx": 3,
+            "asset_name": "Hamkorbank Sukuk",
+            "asset_symbol": "HMKB-S",
+            "decision_type": DecisionType.BUY,
+            "amount": 8000,
+            "price": 200_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.HIGH,
+            "category": DecisionCategory.DEBT,
+            "geography": "UZ",
+            "target_return": 0.16,
+            "risk_level": "low",
+            "rationale": "Сукук от крупнейшего частного банка. "
+            "Рейтинг B+ (Fitch). Шариат-комплаент.",
+            "days_ago": 50,
+        },
+        {
+            "portfolio_idx": 3,
+            "asset_name": "Halal Food Production",
+            "asset_symbol": "HLFD",
+            "decision_type": DecisionType.BUY,
+            "amount": 4000,
+            "price": 300_000,
+            "status": DecisionStatus.REVIEW,
+            "priority": DecisionPriority.MEDIUM,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.20,
+            "risk_level": "low",
+            "rationale": "Халяль-сертифицированное производство. "
+            "Экспорт в 12 стран. Рост рынка халяль +25%/год.",
+            "days_ago": 20,
+        },
+        # Диверсифицированный (портфель 4)
+        {
+            "portfolio_idx": 4,
+            "asset_name": "Artel Electronics",
+            "asset_symbol": "ARTL",
+            "decision_type": DecisionType.BUY,
+            "amount": 3000,
+            "price": 450_000,
+            "status": DecisionStatus.APPROVED,
+            "priority": DecisionPriority.HIGH,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.28,
+            "risk_level": "medium",
+            "rationale": "Крупнейший производитель электроники в ЦА. "
+            "Экспорт в 20+ стран. Рост выручки +35% YoY.",
+            "days_ago": 55,
+        },
+        {
+            "portfolio_idx": 4,
+            "asset_name": "UzAuto Motors",
+            "asset_symbol": "UZAM",
+            "decision_type": DecisionType.SELL,
+            "amount": 2000,
+            "price": 600_000,
+            "status": DecisionStatus.REJECTED,
+            "priority": DecisionPriority.LOW,
+            "category": DecisionCategory.EQUITY,
+            "geography": "UZ",
+            "target_return": 0.12,
+            "risk_level": "high",
+            "rationale": "Высокая зависимость от GM. Рост конкуренции. "
+            "Рекомендация: фиксация прибыли.",
+            "days_ago": 10,
+        },
+        {
+            "portfolio_idx": 4,
+            "asset_name": "Tashkent City Mall",
+            "asset_symbol": "TCML",
+            "decision_type": DecisionType.BUY,
+            "amount": 6000,
+            "price": 380_000,
+            "status": DecisionStatus.IN_PROGRESS,
+            "priority": DecisionPriority.MEDIUM,
+            "category": DecisionCategory.REAL_ESTATE,
+            "geography": "UZ",
+            "target_return": 0.18,
+            "risk_level": "medium",
+            "rationale": "Коммерческая недвижимость в центре Ташкента. "
+            "Заполняемость 95%. Стабильная арендная доходность.",
+            "days_ago": 25,
+        },
+    ]
+
+    for ddata in decisions_data:
+        portfolio = created_portfolios[ddata["portfolio_idx"]]
+        existing = (
+            db.query(InvestmentDecision)
+            .filter(
+                InvestmentDecision.portfolio_id == portfolio.id,
+                InvestmentDecision.asset_symbol == ddata["asset_symbol"],
+                InvestmentDecision.created_by == user.id,
+            )
+            .first()
+        )
+        if existing:
+            continue
+
+        decision = InvestmentDecision(
+            asset_name=ddata["asset_name"],
+            asset_symbol=ddata["asset_symbol"],
+            decision_type=ddata["decision_type"],
+            amount=ddata["amount"],
+            price=ddata["price"],
+            status=ddata["status"],
+            priority=ddata["priority"],
+            category=ddata["category"],
+            geography=ddata["geography"],
+            target_return=ddata["target_return"],
+            risk_level=ddata["risk_level"],
+            rationale=ddata["rationale"],
+            total_value=ddata["amount"] * ddata["price"],
+            portfolio_id=portfolio.id,
+            created_by=user.id,
+            notes=f"Демо-решение: {ddata['asset_name']}",
+        )
+        db.add(decision)
+        stats["decisions"] += 1
+
+    db.commit()
+
+    total_portfolios = len(created_portfolios)
+    total_decisions = (
+        db.query(InvestmentDecision)
+        .filter(InvestmentDecision.created_by == user.id)
+        .count()
+    )
+
+    return {
+        "status": "success",
+        "demo_email": DEMO_EMAIL,
+        "demo_password": DEMO_PASSWORD,
+        "user_created": stats["user"],
+        "new_portfolios": stats["portfolios"],
+        "new_decisions": stats["decisions"],
+        "total_portfolios": total_portfolios,
+        "total_decisions": total_decisions,
+        "message": (
+            f"Демо-данные загружены: {total_portfolios} портфелей, "
+            f"{total_decisions} решений. "
+            f"Вход: {DEMO_EMAIL} / {DEMO_PASSWORD}"
+        ),
+    }

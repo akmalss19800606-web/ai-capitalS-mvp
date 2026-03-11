@@ -75,6 +75,9 @@ from app.api.v1.routers import xai
 from app.api.v1.routers import ai_orchestrator as ai_orch_router
 from app.api.v1.routers import ai_provider_health
 
+# Phase 5: Demo seed data
+from app.api.v1.routers import demo as demo_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown: Redis + Telegram Bot."""
@@ -222,3 +225,5 @@ app.include_router(monte_carlo_v2.router, prefix="/api/v1")
 app.include_router(xai.router, prefix="/api/v1")
 app.include_router(ai_orch_router.router, prefix="/api/v1")
 app.include_router(ai_provider_health.router, prefix="/api/v1")
+# Phase 5: Demo seed data
+app.include_router(demo_router.router, prefix="/api/v1")

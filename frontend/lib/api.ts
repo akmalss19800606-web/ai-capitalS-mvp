@@ -1233,3 +1233,9 @@ export const aiOrchestrator = {
   providerHealth: () => apiRequest('/ai-provider-health/status'),
   providerStats: () => apiRequest('/ai-provider-health/stats'),
 };
+
+// ─── Фаза 5: Demo Seed Data (DEMO-001) ─────────────────────────────────────
+
+export const demo = {
+  seed: () => apiRequest('/demo/seed', { method: 'POST' }),
+};
