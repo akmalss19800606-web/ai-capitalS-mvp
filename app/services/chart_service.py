@@ -49,7 +49,7 @@ def build_waterfall(db: Session, portfolio_id: int | None = None) -> dict[str, A
     """
     query = db.query(
         InvestmentDecision.category,
-        func.sum(InvestmentDecision.expected_value).label("total_ev"),
+        func.sum(InvestmentDecision.total_value).label("total_ev"),
     ).group_by(InvestmentDecision.category)
 
     if portfolio_id:
@@ -121,7 +121,7 @@ def build_tornado(db: Session, portfolio_id: int | None = None) -> dict[str, Any
     if not decisions:
         return _tornado_demo()
 
-    base_total = sum(float(d.expected_value or 0) for d in decisions)
+    base_total = sum(float(d.total_value or 0) for d in decisions)
     if base_total == 0:
         return _tornado_demo()
 
@@ -129,7 +129,7 @@ def build_tornado(db: Session, portfolio_id: int | None = None) -> dict[str, Any
     factors_map: dict[str, float] = {}
     for d in decisions:
         cat = d.category or "Другое"
-        factors_map[cat] = factors_map.get(cat, 0) + float(d.expected_value or 0)
+        factors_map[cat] = factors_map.get(cat, 0) + float(d.total_value or 0)
 
     result = []
     for factor, contrib in sorted(factors_map.items(), key=lambda x: abs(x[1]), reverse=True):
@@ -173,7 +173,7 @@ def _tornado_demo() -> dict[str, Any]:
 def build_bubble(db: Session, portfolio_id: int | None = None) -> dict[str, Any]:
     """
     Пузырьковая диаграмма — 3 оси:
-      X = ожидаемая доходность (expected_value)
+      X = ожидаемая доходность (total_value)
       Y = уровень риска (risk_level → число)
       Size = объём инвестиции
     """
@@ -188,11 +188,11 @@ def build_bubble(db: Session, portfolio_id: int | None = None) -> dict[str, Any]
     risk_map = {"low": 1, "medium": 2, "high": 3, "critical": 4}
     items = []
     for d in decisions:
-        ev = float(d.expected_value or 0)
+        ev = float(d.total_value or 0)
         rl = risk_map.get((d.risk_level or "medium").lower(), 2)
         sz = abs(ev) if ev else 10
         items.append({
-            "name": d.title or f"Решение #{d.id}",
+            "name": d.asset_name or f"Решение #{d.id}",
             "x": _round(ev),
             "y": rl,
             "z": _round(sz),
@@ -235,13 +235,13 @@ def _bubble_demo() -> dict[str, Any]:
 def build_heatmap(db: Session, portfolio_id: int | None = None) -> dict[str, Any]:
     """
     Тепловая карта корреляций/концентраций.
-    Строки = категории решений, столбцы = статусы, значения = суммарные expected_value.
+    Строки = категории решений, столбцы = статусы, значения = суммарные total_value.
     """
     query = db.query(
         InvestmentDecision.category,
         InvestmentDecision.status,
         func.count(InvestmentDecision.id).label("cnt"),
-        func.sum(InvestmentDecision.expected_value).label("total_ev"),
+        func.sum(InvestmentDecision.total_value).label("total_ev"),
     ).group_by(InvestmentDecision.category, InvestmentDecision.status)
 
     if portfolio_id:
