@@ -30,6 +30,19 @@ def seed_demo(db: Session = Depends(get_db)):
     """Загрузить демо-данные: портфели, решения, компании."""
     from app.scripts.seed_demo_data import seed_demo_data
 
-    result = seed_demo_data(db)
-    logger.info("Демо-данные загружены: %s", result["message"])
-    return result
+    try:
+        # Ensure all tables exist before seeding
+        from app.db.base import Base  # noqa
+        from app.db.session import engine
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+    except Exception as e:
+        logger.warning("Could not verify tables before seed: %s", e)
+
+    try:
+        result = seed_demo_data(db)
+        logger.info("Демо-данные загружены: %s", result["message"])
+        return result
+    except Exception as e:
+        logger.error("Seed failed: %s", e, exc_info=True)
+        db.rollback()
+        return {"status": "error", "message": f"Ошибка загрузки демо-данных: {str(e)}"}

@@ -80,9 +80,18 @@ from app.api.v1.routers import demo as demo_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup / shutdown: Redis + Telegram Bot."""
+    """Startup / shutdown: Redis + Telegram Bot + Auto-create tables."""
     import logging
     logger = logging.getLogger(__name__)
+
+    # Startup — Ensure all DB tables exist (checkfirst=True is safe for existing DBs)
+    try:
+        from app.db.base import Base  # noqa — imports all models
+        from app.db.session import engine
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        logger.info("Database tables verified/created")
+    except Exception as e:
+        logger.error("Failed to verify/create database tables: %s", e)
 
     # Startup — Redis
     redis_ok = await RedisCacheService.ping()

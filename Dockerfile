@@ -30,5 +30,7 @@ RUN pip install --no-cache-dir \
     python-telegram-bot \
     numpy-financial
 COPY ./app /app/app
+COPY ./alembic /app/alembic
+COPY ./alembic.ini /app/alembic.ini
 ENV PYTHONPATH=/app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
