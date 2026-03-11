@@ -98,6 +98,7 @@
       islamicFinance: 'Исламские финансы',
       calculator: 'Калькулятор',
       businessCases: 'Бизнес-кейсы',
+      xaiAnalysis: 'Объяснимость AI',
     },
   },
 

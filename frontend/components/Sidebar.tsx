@@ -45,6 +45,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon paths={<><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></>} /> },
       { labelKey: 'businessCases', path: '/business-cases',
         icon: <Icon paths={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} /> },
+      { labelKey: 'xaiAnalysis', path: '/xai-analysis',
+        icon: <Icon paths={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} /> },
     ],
   },
   {

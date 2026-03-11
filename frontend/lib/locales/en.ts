@@ -100,6 +100,7 @@ export const en: Locale = {
       islamicFinance: 'Islamic Finance',
       calculator: 'Calculator',
       businessCases: 'Business Cases',
+      xaiAnalysis: 'AI Explainability',
     },
   },
 

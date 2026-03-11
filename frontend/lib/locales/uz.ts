@@ -100,6 +100,7 @@ export const uz: Locale = {
       islamicFinance: 'Islom moliyasi',
       calculator: 'Kalkulyator',
       businessCases: 'Biznes-keyslar',
+      xaiAnalysis: 'AI tushuntirish',
     },
   },
 
