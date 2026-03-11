@@ -32,12 +32,8 @@ services:
     buildCommand: npm ci && npm run build
     startCommand: node .next/standalone/server.js
     envVars:
-      - key: NEXT_PUBLIC_API_URL
-        fromService:
-          name: ai-capital-backend
-          type: web
-          property: host
-          envVarKey: BACKEND_URL
+      - key: BACKEND_URL
+        value: https://ai-capital-backend.onrender.com
       - key: PORT
         value: 10000
       - key: NODE_ENV
