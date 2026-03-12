@@ -186,3 +186,118 @@ async def full_analysis(
     except Exception as e:
         logger.error("Ошибка полного анализа: %s", e)
         raise HTTPException(status_code=500, detail="Ошибка расчёта")
+
+# ── Новые схемы запросов (CALC-002) ──────────────────────────
+
+class MonteCarloRequest(BaseModel):
+    initial_investment: float = Field(..., description="Начальная инвестиция", gt=0)
+    base_cash_flows: list[float] = Field(..., min_length=1)
+    discount_rate: float = Field(0.10, ge=0, le=1)
+    n_simulations: int = Field(10000, ge=100, le=50000)
+    revenue_std: float = Field(0.15, ge=0, le=1)
+    cost_std: float = Field(0.10, ge=0, le=1)
+    rate_std: float = Field(0.02, ge=0, le=0.5)
+
+
+class SensitivityRequest(BaseModel):
+    cash_flows: list[float] = Field(..., min_length=1)
+    discount_rate: float = Field(0.10, ge=0, le=1)
+    initial_investment: float = Field(..., gt=0)
+    variation_pct: float = Field(20.0, ge=1, le=50)
+
+
+class BenchmarkRequest(BaseModel):
+    npv: float = Field(0)
+    irr_pct: float = Field(0)
+    investment_usd: float = Field(0, ge=0)
+    horizon_years: int = Field(3, ge=1, le=30)
+
+
+class CompareRequest(BaseModel):
+    scenarios: list[FullAnalysisRequest] = Field(..., min_length=2, max_length=5)
+
+
+# ── Новые эндпоинты (CALC-002) ──────────────────────────────
+
+@router.post("/monte-carlo", summary="Monte Carlo симуляция NPV")
+async def monte_carlo(
+    body: MonteCarloRequest,
+    _current_user=Depends(get_current_user),
+):
+    """Monte Carlo: распределение NPV, P10/P50/P90, VaR, CVaR."""
+    try:
+        return calc.monte_carlo_npv(
+            initial_investment=body.initial_investment,
+            base_cash_flows=body.base_cash_flows,
+            discount_rate=body.discount_rate,
+            n_simulations=body.n_simulations,
+            revenue_std=body.revenue_std,
+            cost_std=body.cost_std,
+            rate_std=body.rate_std,
+        )
+    except Exception as e:
+        logger.error("Monte Carlo error: %s", e)
+        raise HTTPException(status_code=500, detail="Ошибка Monte Carlo")
+
+
+@router.post("/sensitivity", summary="Sensitivity анализ")
+async def sensitivity(
+    body: SensitivityRequest,
+    _current_user=Depends(get_current_user),
+):
+    """Tornado + Spider chart данные."""
+    try:
+        return calc.sensitivity_analysis(
+            cash_flows=body.cash_flows,
+            discount_rate=body.discount_rate,
+            initial_investment=body.initial_investment,
+            variation_pct=body.variation_pct,
+        )
+    except Exception as e:
+        logger.error("Sensitivity error: %s", e)
+        raise HTTPException(status_code=500, detail="Ошибка Sensitivity")
+
+
+@router.post("/benchmarks", summary="Сравнение с бенчмарками УЗ")
+async def benchmarks(
+    body: BenchmarkRequest,
+    _current_user=Depends(get_current_user),
+):
+    """Сравнение IRR проекта с депозитами, облигациями, TSMI."""
+    try:
+        return calc.get_benchmarks(
+            npv=body.npv,
+            irr_pct=body.irr_pct,
+            investment_usd=body.investment_usd,
+            horizon_years=body.horizon_years,
+        )
+    except Exception as e:
+        logger.error("Benchmarks error: %s", e)
+        raise HTTPException(status_code=500, detail="Ошибка бенчмарков")
+
+
+@router.post("/compare", summary="Сравнение до 5 сценариев")
+async def compare_scenarios(
+    body: CompareRequest,
+    _current_user=Depends(get_current_user),
+):
+    """Side-by-side сравнение нескольких инвестиционных сценариев."""
+    try:
+        results = []
+        for i, sc in enumerate(body.scenarios):
+            r = calc.full_analysis(
+                cash_flows=sc.cash_flows,
+                discount_rate=sc.discount_rate,
+                equity=sc.equity,
+                debt=sc.debt,
+                cost_equity=sc.cost_equity,
+                cost_debt=sc.cost_debt,
+                tax_rate=sc.tax_rate,
+                terminal_growth=sc.terminal_growth,
+            )
+            r["scenario_index"] = i
+            results.append(r)
+        return {"scenarios": results, "count": len(results)}
+    except Exception as e:
+        logger.error("Compare error: %s", e)
+        raise HTTPException(status_code=500, detail="Ошибка сравнения")
