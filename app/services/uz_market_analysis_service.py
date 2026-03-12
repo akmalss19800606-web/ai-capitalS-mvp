@@ -454,4 +454,7 @@ class UZMarketAnalysisService:
                 "confidence_score": 0.0,
                 "sections": [{"number": i+1, "title": s, "content": "", "charts": []} for i, s in enumerate(DEEP_SECTIONS)],
                 "status": "error",
-                "created_at": datetime.ut
+                                "created_at": datetime.utcnow().isoformat(),
+                "ai_model_used": None,
+                "provider": provider,
+            }
