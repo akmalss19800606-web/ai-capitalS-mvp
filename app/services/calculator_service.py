@@ -12,6 +12,7 @@
 
 import logging
 import math
+import random
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -342,3 +343,192 @@ class InvestmentCalculatorService:
         }
 
         return result
+
+    @staticmethod
+    def monte_carlo_npv(
+        initial_investment: float,
+        base_cash_flows: list,
+        discount_rate: float,
+        n_simulations: int = 10000,
+        revenue_std: float = 0.15,
+        cost_std: float = 0.10,
+        rate_std: float = 0.02,
+    ) -> dict:
+        """
+        Monte Carlo simulation for NPV.
+        Returns distribution of NPV outcomes with P10, P50, P90, VaR, CVaR.
+        """
+        npv_results = []
+        for _ in range(n_simulations):
+            revenue_shock = random.gauss(1.0, revenue_std)
+            cost_shock = random.gauss(1.0, cost_std)
+            rate_shock = random.gauss(0, rate_std)
+            adjusted_cfs = [cf * revenue_shock * cost_shock for cf in base_cash_flows]
+            adjusted_rate = max(discount_rate + rate_shock, 0.01)
+            npv = -initial_investment + sum(
+                cf / ((1 + adjusted_rate) ** t)
+                for t, cf in enumerate(adjusted_cfs, 1)
+            )
+            npv_results.append(round(npv, 2))
+
+        npv_results.sort()
+        n = len(npv_results)
+        mean_npv = sum(npv_results) / n
+        p10 = npv_results[int(n * 0.10)]
+        p50 = npv_results[int(n * 0.50)]
+        p90 = npv_results[int(n * 0.90)]
+        prob_positive = sum(1 for x in npv_results if x > 0) / n
+        var_95 = npv_results[int(n * 0.05)]
+        cvar_95_vals = [x for x in npv_results if x <= var_95]
+        cvar_95 = sum(cvar_95_vals) / max(len(cvar_95_vals), 1)
+
+        # Histogram bins (20 buckets)
+        min_v, max_v = npv_results[0], npv_results[-1]
+        bucket_size = (max_v - min_v) / 20 if max_v > min_v else 1
+        histogram = []
+        for i in range(20):
+            lo = min_v + i * bucket_size
+            hi = lo + bucket_size
+            count = sum(1 for x in npv_results if lo <= x < hi)
+            histogram.append({"bin_start": round(lo, 0), "bin_end": round(hi, 0), "count": count})
+
+        return {
+            "n_simulations": n_simulations,
+            "mean_npv": round(mean_npv, 2),
+            "std_npv": round((sum((x - mean_npv) ** 2 for x in npv_results) / n) ** 0.5, 2),
+            "p10": round(p10, 2),
+            "p50": round(p50, 2),
+            "p90": round(p90, 2),
+            "prob_positive": round(prob_positive * 100, 1),
+            "var_95": round(var_95, 2),
+            "cvar_95": round(cvar_95, 2),
+            "histogram": histogram,
+            "min_npv": round(npv_results[0], 2),
+            "max_npv": round(npv_results[-1], 2),
+        }
+
+    @staticmethod
+    def sensitivity_analysis(
+        cash_flows: list,
+        discount_rate: float,
+        initial_investment: float,
+        variables: dict = None,
+        variation_pct: float = 20.0,
+        steps: int = 11,
+    ) -> dict:
+        """
+        Sensitivity analysis: varies each input +/- variation_pct.
+        Returns tornado data and spider chart data.
+        """
+        if variables is None:
+            variables = {
+                "revenue": 1.0,
+                "costs": 1.0,
+                "discount_rate": discount_rate,
+                "growth": 0.05,
+            }
+
+        def calc_npv(cfs, rate):
+            return -initial_investment + sum(
+                cf / ((1 + rate) ** t) for t, cf in enumerate(cfs, 1)
+            )
+
+        base_npv = calc_npv(cash_flows, discount_rate)
+        tornado = []
+        spider = []
+
+        for var_name, base_val in variables.items():
+            low_val = base_val * (1 - variation_pct / 100)
+            high_val = base_val * (1 + variation_pct / 100)
+
+            if var_name == "discount_rate":
+                npv_low = calc_npv(cash_flows, max(low_val, 0.01))
+                npv_high = calc_npv(cash_flows, high_val)
+            elif var_name == "revenue":
+                npv_low = calc_npv([cf * low_val for cf in cash_flows], discount_rate)
+                npv_high = calc_npv([cf * high_val for cf in cash_flows], discount_rate)
+            elif var_name == "costs":
+                npv_low = calc_npv([cf / low_val if low_val else cf for cf in cash_flows], discount_rate)
+                npv_high = calc_npv([cf / high_val if high_val else cf for cf in cash_flows], discount_rate)
+            else:
+                npv_low = base_npv * (1 - variation_pct / 100)
+                npv_high = base_npv * (1 + variation_pct / 100)
+
+            tornado.append({
+                "variable": var_name,
+                "base_value": round(base_val, 4),
+                "npv_low": round(npv_low, 2),
+                "npv_high": round(npv_high, 2),
+                "npv_range": round(abs(npv_high - npv_low), 2),
+            })
+
+            # Spider chart points
+            spider_points = []
+            for i in range(steps):
+                pct = -variation_pct + (2 * variation_pct * i / (steps - 1))
+                factor = 1 + pct / 100
+                if var_name == "discount_rate":
+                    npv_pt = calc_npv(cash_flows, max(base_val * factor, 0.01))
+                elif var_name == "revenue":
+                    npv_pt = calc_npv([cf * factor for cf in cash_flows], discount_rate)
+                else:
+                    npv_pt = base_npv * factor
+                spider_points.append({"pct_change": round(pct, 1), "npv": round(npv_pt, 2)})
+            spider.append({"variable": var_name, "points": spider_points})
+
+        tornado.sort(key=lambda x: x["npv_range"], reverse=True)
+
+        return {
+            "base_npv": round(base_npv, 2),
+            "variation_pct": variation_pct,
+            "tornado": tornado,
+            "spider": spider,
+        }
+
+    @staticmethod
+    def get_benchmarks(
+        npv: float = 0,
+        irr_pct: float = 0,
+        investment_usd: float = 0,
+        horizon_years: int = 3,
+    ) -> dict:
+        """
+        Compare project metrics vs Uzbekistan market benchmarks 2026.
+        """
+        BENCHMARKS = {
+            "uzs_deposit": {"name": "Депозит UZS", "rate": 22.5, "type": "deposit"},
+            "usd_deposit": {"name": "Депозит USD", "rate": 6.0, "type": "deposit"},
+            "gov_bond_3y": {"name": "Гособлигации 3Y UZS", "rate": 15.8, "type": "bond"},
+            "gov_bond_10y": {"name": "Гособлигации 10Y UZS", "rate": 15.0, "type": "bond"},
+            "gov_bond_usd_7y": {"name": "Евробонды 7Y USD", "rate": 6.95, "type": "bond"},
+            "tsmi_index": {"name": "Индекс TSMI", "rate": 12.0, "type": "equity"},
+            "real_estate": {"name": "Недвижимость", "rate": 10.0, "type": "real_estate"},
+            "inflation": {"name": "Инфляция", "rate": 7.2, "type": "macro"},
+        }
+
+        comparisons = []
+        for key, bm in BENCHMARKS.items():
+            bm_return = investment_usd * ((1 + bm["rate"] / 100) ** horizon_years - 1) if investment_usd else 0
+            delta = irr_pct - bm["rate"]
+            comparisons.append({
+                "benchmark": bm["name"],
+                "benchmark_rate": bm["rate"],
+                "type": bm["type"],
+                "project_irr": round(irr_pct, 2),
+                "delta": round(delta, 2),
+                "benchmark_return_usd": round(bm_return, 2),
+                "beats_benchmark": delta > 0,
+            })
+
+        beaten = sum(1 for c in comparisons if c["beats_benchmark"])
+
+        return {
+            "project_npv": round(npv, 2),
+            "project_irr": round(irr_pct, 2),
+            "investment_usd": round(investment_usd, 2),
+            "horizon_years": horizon_years,
+            "comparisons": comparisons,
+            "benchmarks_beaten": beaten,
+            "total_benchmarks": len(comparisons),
+            "score_pct": round(beaten / len(comparisons) * 100, 1),
+        }
