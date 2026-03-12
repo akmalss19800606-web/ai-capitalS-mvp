@@ -1260,5 +1260,3 @@ export const ddDocuments = {
   getAnalysis: (docId: string) => apiRequest(`/dd-documents/analysis/${docId}`),
   templates: () => apiRequest('/dd-documents/templates'),
 };
-  seed: () => apiRequest('/demo/seed', { method: 'POST' }),
-};
