@@ -49,6 +49,7 @@ from app.api.v1.routers import documents
 from app.api.v1.routers import branded_export
 from app.api.v1.routers import admin_panel
 from app.api.v1.routers.uz_market import router as uz_market_router
+from app.api.v1.routers.reference import router as reference_router
 
 from contextlib import asynccontextmanager
 
@@ -236,6 +237,7 @@ app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(excel_export.router, prefix="/api/v1")
 # Phase 4: New routers
 app.include_router(business_cases.router, prefix="/api/v1")
+app.include_router(reference_router, prefix='/api/v1')
 app.include_router(monte_carlo_v2.router, prefix="/api/v1")
 app.include_router(xai.router, prefix="/api/v1")
 app.include_router(ai_orch_router.router, prefix="/api/v1")
