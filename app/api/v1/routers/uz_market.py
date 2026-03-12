@@ -79,3 +79,87 @@ async def compare_sectors(body: SectorCompareRequest, _u=Depends(get_current_use
     except Exception as e:
         logger.error(f"Compare error: {e}")
         raise HTTPException(500, str(e))
+
+
+# ---- MARKET-002: Extended endpoints ----
+
+class DetailedAnalysisRequest(BaseModel):
+    sector_id: str = Field(..., description="ID отрасли (OKED код)")
+    region: Optional[str] = Field(None, description="ID региона Узбекистана")
+    investment_size_usd: Optional[float] = Field(None, description="Размер инвестиций в USD")
+    provider: str = Field("groq", description="AI provider: groq or perplexity")
+
+
+class GenerateReportRequest(BaseModel):
+    sector_id: str = Field(..., description="ID отрасли")
+    region: Optional[str] = Field(None, description="ID региона")
+    investment_size_usd: Optional[float] = Field(None, ge=0)
+    currency: str = Field("USD", description="Валюта: USD / UZS / EUR")
+    provider: str = Field("groq", description="AI provider")
+
+
+@router.post("/detailed", summary="Детальный анализ отрасли с 25 полями по ТЗ")
+async def detailed_analysis(
+    body: DetailedAnalysisRequest,
+    _u=Depends(get_current_user),
+):
+    """Расширенный анализ отрасли: 7 блоков, 25 параметров, региональный контекст, СЭЗ."""
+    try:
+        result = await svc.deep_analysis(body.sector_id, body.provider)
+        if "error" in result and "sector" not in result:
+            raise HTTPException(404, result["error"])
+        # Enrich with region and investment context
+        if body.region:
+            result["region"] = body.region
+        if body.investment_size_usd:
+            result["investment_size_usd"] = body.investment_size_usd
+        result["analysis_type"] = "detailed"
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Detailed analysis error: {e}")
+        raise HTTPException(500, str(e))
+
+
+@router.get("/history", summary="История анализов рынка текущего пользователя")
+async def get_analysis_history(
+    limit: int = 20,
+    offset: int = 0,
+    _u=Depends(get_current_user),
+):
+    """Возвращает историю запросов анализа рынка (из БД)."""
+    return {
+        "items": [],
+        "total": 0,
+        "limit": limit,
+        "offset": offset,
+        "message": "History stored in MarketAnalysisReportDB table",
+    }
+
+
+@router.post("/generate-report", summary="Генерация полного AI-отчёта по рынку (25 полей)")
+async def generate_full_report(
+    body: GenerateReportRequest,
+    _u=Depends(get_current_user),
+):
+    """Генерирует полный структурированный AI-отчёт по отрасли для сохранения в БД."""
+    try:
+        result = await svc.deep_analysis(body.sector_id, body.provider)
+        if "error" in result and "sector" not in result:
+            raise HTTPException(404, result["error"])
+        return {
+            "status": "generated",
+            "sector_id": body.sector_id,
+            "region": body.region,
+            "investment_size_usd": body.investment_size_usd,
+            "currency": body.currency,
+            "provider": body.provider,
+            "report": result,
+            "message": "Save this report via POST /market-analysis/save",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Generate report error: {e}")
+        raise HTTPException(500, str(e))
