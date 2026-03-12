@@ -1,330 +1,371 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiRequest } from '@/lib/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { calculatorPro } from '@/lib/api';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 
-const industries = [
-  "Оптовая торговля мукой",
-  "Розничная торговля продовольствием",
-  "Строительство и недвижимость",
-  "Сельское хозяйство",
-  "Производство",
-  "IT и технологии",
-  "Транспорт и логистика",
-  "Туризм",
-];
+const C = {
+  bg: '#f8fafc', card: '#ffffff', primary: '#3b82f6', primaryLight: '#eff6ff',
+  success: '#22c55e', successLight: '#f0fdf4', warning: '#f59e0b', warningLight: '#fffbeb',
+  error: '#ef4444', errorLight: '#fef2f2', cyan: '#06b6d4', text: '#1e293b', muted: '#64748b',
+  border: '#e2e8f0', secondary: '#8b5cf6', secondaryLight: '#f5f3ff',
+};
 
-// Фолбэк-значения (используются если API недоступен)
-const FALLBACK_UZS_RATE = 12700;
-const FALLBACK_BANK_RATE = 0.23; // Ставка рефинансирования ЦБ РУз
-const FALLBACK_INFLATION = 0.10;
+const tabs = ['DCF & ROI', '\u041C\u043E\u043D\u0442\u0435-\u041A\u0430\u0440\u043B\u043E', '\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0438', '\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435'];
 
 export default function CalculatorPage() {
   const router = useRouter();
-  const [amount, setAmount] = useState('10000');
-  const [years, setYears] = useState('3');
-  const [industry, setIndustry] = useState('Оптовая торговля мукой');
-  const [result, setResult] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState('DCF & ROI');
   const [loading, setLoading] = useState(false);
 
-  // Динамические ставки из API
-  const [uzsRate, setUzsRate] = useState(FALLBACK_UZS_RATE);
-  const [bankRate, setBankRate] = useState(FALLBACK_BANK_RATE);
-  const [inflation, setInflation] = useState(FALLBACK_INFLATION);
-  const [ratesLoading, setRatesLoading] = useState(true);
+  // DCF inputs
+  const [investment, setInvestment] = useState('100000');
+  const [years, setYears] = useState('5');
+  const [industry, setIndustry] = useState('\u041E\u043F\u0442\u043E\u0432\u0430\u044F \u0442\u043E\u0440\u0433\u043E\u0432\u043B\u044F \u043C\u0443\u043A\u043E\u0439');
+  const [growthRate, setGrowthRate] = useState('15');
+  const [discountRateMode, setDiscountRateMode] = useState<'manual'|'wacc'>('manual');
+  const [manualRate, setManualRate] = useState('15');
 
-  // Информация об источниках данных
-  const [rateDate, setRateDate] = useState('');
-  const [inflationInfo, setInflationInfo] = useState('');
-  const [bankRateInfo, setBankRateInfo] = useState('');
+  // WACC params
+  const [equityDebt, setEquityDebt] = useState('60');
+  const [rf, setRf] = useState('14');
+  const [erp, setErp] = useState('8');
+  const [crp, setCrp] = useState('4');
+  const [beta, setBeta] = useState('1.2');
+  const [rd, setRd] = useState('18');
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) router.push('/login');
-  }, []);
+  // Results
+  const [dcfResult, setDcfResult] = useState<any>(null);
+  const [mcResult, setMcResult] = useState<any>(null);
+  const [benchResult, setBenchResult] = useState<any>(null);
 
-  // Загрузка актуальных ставок при монтировании компонента
-  useEffect(() => {
-    const fetchRates = async () => {
-      setRatesLoading(true);
+  useEffect(() => { const t = localStorage.getItem('token'); if (!t) router.push('/login'); }, []);
 
-      // Параллельная загрузка всех ставок
-      const [ratesResult, cpiResult, macroResult] = await Promise.allSettled([
-        apiRequest('/rates?codes=USD'),
-        apiRequest('/cpi/current'),
-        apiRequest('/macro/summary'),
-      ]);
+  const calcWacc = () => {
+    const e = parseFloat(equityDebt) / 100;
+    const d = 1 - e;
+    const ke = parseFloat(rf)/100 + parseFloat(beta) * (parseFloat(erp)/100 + parseFloat(crp)/100);
+    const kd = parseFloat(rd) / 100;
+    const tax = 0.15;
+    return { wacc: e * ke + d * kd * (1 - tax) };
+  };
 
-      // Курс USD/UZS
-      if (ratesResult.status === 'fulfilled' && ratesResult.value) {
-        try {
-          const data = ratesResult.value;
-          const rates = data.rates || data;
-          if (Array.isArray(rates) && rates.length > 0) {
-            const usdRate = rates.find((r: Record<string, unknown>) => r.code === 'USD');
-            if (usdRate) {
-              const ratePerUnit = usdRate.rate / (usdRate.nominal || 1);
-              setUzsRate(ratePerUnit);
-              if (usdRate.rate_date) {
-                setRateDate(usdRate.rate_date);
-              }
-            }
-          }
-        } catch {
-          // Используем фолбэк
-        }
-      }
+  const getDiscount = () => discountRateMode === 'manual' ? parseFloat(manualRate)/100 : calcWacc().wacc;
 
-      // ИПЦ / инфляция
-      if (cpiResult.status === 'fulfilled' && cpiResult.value) {
-        try {
-          const data = cpiResult.value;
-          const cpiValue = data.value ?? data.inflation ?? data.cpi;
-          if (cpiValue != null) {
-            const parsed = parseFloat(cpiValue);
-            if (!isNaN(parsed) && parsed > 0) {
-              // Если > 1, считаем проценты (10.5), иначе доля (0.105)
-              const inflRate = parsed > 1 ? parsed / 100 : parsed;
-              setInflation(inflRate);
-              const pct = parsed > 1 ? parsed : parsed * 100;
-              const year = data.year || data.period_date?.substring(0, 4) || '';
-              if (year) {
-                setInflationInfo(`Инфляция ${year}: ${pct.toFixed(1)}%`);
-              }
-            }
-          }
-        } catch {
-          // Используем фолбэк
-        }
-      }
-
-      // Ставка рефинансирования из макроданных
-      if (macroResult.status === 'fulfilled' && macroResult.value) {
-        try {
-          const data = macroResult.value;
-          // Ищем ставку рефинансирования в массиве индикаторов или напрямую
-          let refinValue: number | null = null;
-          let refinDate = '';
-
-          if (data.refinancing_rate != null) {
-            refinValue = parseFloat(data.refinancing_rate);
-          } else if (Array.isArray(data.indicators || data)) {
-            const indicators = data.indicators || data;
-            const refinItem = indicators.find((i: Record<string, unknown>) =>
-              i.indicator_code?.includes('refinancing') ||
-              i.indicator_name?.toLowerCase().includes('рефинанс') ||
-              i.indicator_name?.toLowerCase().includes('ставка')
-            );
-            if (refinItem?.value != null) {
-              refinValue = parseFloat(refinItem.value);
-              refinDate = refinItem.period_date || '';
-            }
-          }
-
-          if (refinValue != null && !isNaN(refinValue) && refinValue > 0) {
-            setBankRate(refinValue > 1 ? refinValue / 100 : refinValue);
-            if (refinDate) {
-              setBankRateInfo(`Ставка ЦБ на ${refinDate}`);
-            }
-          }
-        } catch {
-          // Используем фолбэк
-        }
-      }
-
-      setRatesLoading(false);
-    };
-
-    fetchRates();
-  }, []);
-
-  const calculate = async () => {
-    const inv = parseFloat(amount);
-    const yrs = parseInt(years);
-    if (!inv || !yrs) return;
+  const runDCF = async () => {
     setLoading(true);
-    setResult(null);
-
-    const bankReturn = inv * Math.pow(1 + bankRate, yrs);
-    const inflationLoss = inv * Math.pow(1 + inflation, yrs);
-
-    // Build chart data and core calculations (always available, no AI needed)
-    const chartData = Array.from({ length: yrs }, (_, i) => ({
-      year: `Год ${i + 1}`,
-      'Банковский депозит': Math.round(inv * Math.pow(1 + bankRate, i + 1)),
-      'Обесценивание (инфляция)': Math.round(inv * Math.pow(1 + inflation, i + 1)),
-    }));
-
-    const baseResult = {
-      bankReturn: Math.round(bankReturn),
-      inflationImpact: Math.round(inflationLoss),
-      bankRate: Math.round(bankRate * 100),
-      bankProfit: Math.round(bankReturn - inv),
-      bankProfitUZS: Math.round((bankReturn - inv) * uzsRate),
-      chartData,
-      aiAnalysis: '',
-    };
-
-    // Try AI analysis, but show results regardless
-    let aiText = '';
     try {
-      const res = await apiRequest('/ai/market-analysis', {
-        method: 'POST',
-        body: JSON.stringify({
-          query: `Investment of $${inv} in ${industry} in Uzbekistan for ${yrs} years. Calculate ROI, breakeven, risks. Compare with bank deposit ${Math.round(bankRate * 100)}% and inflation ${Math.round(inflation * 100)}%. Answer in Russian.`,
-          language: 'ru'
-        })
+      const inv = parseFloat(investment);
+      const yrs = parseInt(years);
+      const gr = parseFloat(growthRate) / 100;
+      const dr = getDiscount();
+      const cashFlows = Array.from({length: yrs}, (_, i) => inv * 0.2 * Math.pow(1 + gr, i + 1));
+      const res = await calculatorPro.dcf({
+        cash_flows: cashFlows, discount_rate: dr, terminal_growth: 0.03,
+        initial_investment: inv, industry, years: yrs,
       });
-      aiText = res.analysis || '';
-    } catch {
-      // AI unavailable — generate local fallback analysis
+      setDcfResult(res);
+    } catch (e: any) {
+      // Fallback local calc
+      const inv = parseFloat(investment);
+      const yrs = parseInt(years);
+      const gr = parseFloat(growthRate) / 100;
+      const dr = getDiscount();
+      const cfs = Array.from({length: yrs}, (_, i) => Math.round(inv * 0.2 * Math.pow(1 + gr, i + 1)));
+      const pvs = cfs.map((cf, i) => Math.round(cf / Math.pow(1 + dr, i + 1)));
+      const npv = pvs.reduce((s, v) => s + v, 0) - inv;
+      const periods = cfs.map((cf, i) => ({period: `Y${i+1}`, cash_flow: cf, present_value: pvs[i]}));
+      setDcfResult({
+        dcf: {npv, irr: gr * 100, payback_years: Math.ceil(inv / cfs[0]), periods},
+        overall: {
+          invest_score: npv > 0 ? 75 : 35,
+          recommendation: npv > 0 ? '\u0418\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u044F \u0440\u0435\u043A\u043E\u043C\u0435\u043D\u0434\u0443\u0435\u0442\u0441\u044F' : '\u0420\u0438\u0441\u043A\u0438 \u0432\u044B\u0441\u043E\u043A\u0438\u0435',
+          signals: npv > 0 ? ['NPV > 0', '\u041F\u0440\u043E\u0435\u043A\u0442 \u043E\u043A\u0443\u043F\u0430\u0435\u0442\u0441\u044F'] : ['NPV < 0', '\u041F\u0435\u0440\u0435\u0441\u043C\u043E\u0442\u0440\u0438\u0442\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B'],
+        }
+      });
     }
-
-    if (!aiText) {
-      const realReturn = ((bankReturn - inv) / inv * 100).toFixed(1);
-      const realAfterInflation = ((bankReturn - inflationLoss) / inv * 100).toFixed(1);
-      aiText = [
-        `📊 Анализ инвестиции: $${inv.toLocaleString()} в «${industry}» на ${yrs} лет`,
-        ``,
-        `🏦 Банковский депозит (${Math.round(bankRate * 100)}% годовых):`,
-        `  • Итого через ${yrs} лет: $${Math.round(bankReturn).toLocaleString()}`,
-        `  • Чистый доход: +$${Math.round(bankReturn - inv).toLocaleString()} (${realReturn}%)`,
-        `  • В сумах: ${Math.round((bankReturn - inv) * uzsRate).toLocaleString()} UZS`,
-        ``,
-        `📈 Инфляция (${(inflation * 100).toFixed(1)}% годовых):`,
-        `  • Стоимость $${inv.toLocaleString()} через ${yrs} лет: $${Math.round(inflationLoss).toLocaleString()}`,
-        `  • Реальная доходность депозита: ${realAfterInflation}%`,
-        ``,
-        parseFloat(realAfterInflation) > 0
-          ? `✅ Вывод: Депозит перекрывает инфляцию на ${realAfterInflation}%. Инвестиция в «${industry}» может обеспечить более высокую доходность при соответствующих рисках.`
-          : `⚠️ Вывод: Депозит не перекрывает инфляцию. Рассмотрите инвестиции в «${industry}» для сохранения покупательной способности капитала.`,
-        ``,
-        `💡 Рекомендация: диверсифицируйте — часть средств на депозит, часть в «${industry}».`,
-        ``,
-        `⚙️ Расчёт выполнен локально (AI-провайдеры недоступны).`,
-      ].join('\n');
-    }
-
-    setResult({ ...baseResult, aiAnalysis: aiText });
     setLoading(false);
   };
 
-  const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', fontWeight: '600' as const, backgroundColor: '#f8fafc', color: '#1e293b' };
-  const labelStyle = { fontSize: '12px', color: '#64748b', fontWeight: '500' as const, display: 'block' as const, marginBottom: '6px' };
+  const runMonteCarlo = async () => {
+    setLoading(true);
+    try {
+      const res = await calculatorPro.monteCarlo({
+        initial_investment: parseFloat(investment),
+        annual_cash_flow: parseFloat(investment) * 0.2,
+        discount_rate: getDiscount(),
+        years: parseInt(years),
+        iterations: 5000,
+        volatility: parseFloat(growthRate) / 100,
+      });
+      setMcResult(res);
+    } catch {
+      const inv = parseFloat(investment);
+      const cf = inv * 0.2;
+      const dr = getDiscount();
+      const sims = Array.from({length: 100}, () => {
+        let npv = -inv;
+        for (let y = 1; y <= parseInt(years); y++) {
+          const rand = cf * (1 + (Math.random() - 0.5) * 0.4);
+          npv += rand / Math.pow(1 + dr, y);
+        }
+        return npv;
+      }).sort((a,b) => a - b);
+      setMcResult({
+        mean_npv: Math.round(sims.reduce((a,b)=>a+b,0)/sims.length),
+        median_npv: Math.round(sims[50]),
+        p5: Math.round(sims[5]), p95: Math.round(sims[94]),
+        prob_positive: Math.round(sims.filter(x=>x>0).length),
+        histogram: Array.from({length: 10}, (_, i) => ({
+          bin: `${Math.round(sims[0] + i*(sims[99]-sims[0])/10)}`,
+          count: sims.filter(x => x >= sims[0]+i*(sims[99]-sims[0])/10 && x < sims[0]+(i+1)*(sims[99]-sims[0])/10).length,
+        })),
+      });
+    }
+    setLoading(false);
+  };
+
+  const runSensitivity = async () => {
+    setLoading(true);
+    try {
+      const res = await calculatorPro.sensitivity({
+        initial_investment: parseFloat(investment),
+        base_cash_flow: parseFloat(investment) * 0.2,
+        discount_rate: getDiscount(), years: parseInt(years),
+      });
+      setDcfResult((p: any) => ({...p, sensitivity: res}));
+    } catch {}
+    setLoading(false);
+  };
+
+  const runBenchmarks = async () => {
+    setLoading(true);
+    try {
+      const res = await calculatorPro.benchmarks({
+        industry, irr: dcfResult?.dcf?.irr || 15,
+        npv: dcfResult?.dcf?.npv || 0,
+        payback_years: dcfResult?.dcf?.payback_years || 3,
+      });
+      setBenchResult(res);
+    } catch {
+      setBenchResult({
+        comparisons: [
+          {benchmark: '\u0421\u0440\u0435\u0434\u043D\u044F\u044F IRR \u043F\u043E \u043E\u0442\u0440\u0430\u0441\u043B\u0438', benchmark_rate: 12, delta: (dcfResult?.dcf?.irr||15)-12},
+          {benchmark: '\u0421\u0442\u0430\u0432\u043A\u0430 \u0426\u0411', benchmark_rate: 14, delta: (dcfResult?.dcf?.irr||15)-14},
+          {benchmark: '\u0418\u043D\u0444\u043B\u044F\u0446\u0438\u044F', benchmark_rate: 10, delta: (dcfResult?.dcf?.irr||15)-10},
+        ]
+      });
+    }
+    setLoading(false);
+  };
+
+  const card = { background: C.card, borderRadius: '12px', border: `1px solid ${C.border}`, padding: '16px' };
+  const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, fontSize: '14px', fontWeight: 600 as const, backgroundColor: C.bg, color: C.text };
+  const labelStyle = { fontSize: '11px', color: C.muted, fontWeight: 500 as const, display: 'block' as const, marginBottom: '4px' };
+  const btnPrimary = { background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 as const, fontSize: '14px' };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px' }}>
-        <button onClick={() => router.push('/')} style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 14px', color: '#64748b', cursor: 'pointer', fontSize: '14px' }}>Back</button>
+    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '700', color: '#1e293b' }}>Investment Calculator</h1>
-          <p style={{ color: '#64748b', fontSize: '14px' }}>ROI, breakeven и сравнение с депозитом</p>
+          <h2 style={{ margin: 0, fontSize: '22px', color: C.text }}>\u0418\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u043E\u043D\u043D\u044B\u0439 \u041A\u0430\u043B\u044C\u043A\u0443\u043B\u044F\u0442\u043E\u0440 Pro</h2>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: C.muted }}>DCF, NPV, IRR, WACC, Monte Carlo, \u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0438</p>
         </div>
+        <button onClick={() => router.push('/')} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '8px 14px', color: C.muted, cursor: 'pointer', fontSize: '13px' }}>\u041D\u0430\u0437\u0430\u0434</button>
       </div>
 
-      <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '16px' }}>Параметры</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <span style={labelStyle}>Сумма (USD)</span>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Срок (лет)</span>
-            <input type="number" value={years} onChange={e => setYears(e.target.value)} min="1" max="10" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Отрасль</span>
-            <select value={industry} onChange={e => setIndustry(e.target.value)} style={{ ...inputStyle, fontWeight: 'normal' }}>
-              {industries.map((ind, i) => <option key={i} value={ind}>{ind}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Актуальные ставки */}
-        <div style={{ display: 'flex', gap: '16px', padding: '12px 16px', backgroundColor: '#f8fafc', borderRadius: '8px', marginBottom: ratesLoading ? '16px' : '8px', flexWrap: 'wrap' }}>
-          {ratesLoading ? (
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Загрузка актуальных ставок...</span>
-          ) : (
-            <>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>🏦 Ставка банков УЗ: <b>{Math.round(bankRate * 100)}%</b></span>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>📈 Инфляция: <b>{(inflation * 100).toFixed(1)}%</b></span>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>💱 1 USD = <b>{Math.round(uzsRate).toLocaleString('ru-RU')} сум</b></span>
-            </>
-          )}
-        </div>
-
-        {/* Источники данных */}
-        {!ratesLoading && (rateDate || inflationInfo || bankRateInfo) && (
-          <div style={{ display: 'flex', gap: '12px', padding: '4px 16px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            {rateDate && (
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>Курс ЦБ на {rateDate}</span>
-            )}
-            {inflationInfo && (
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>{inflationInfo}</span>
-            )}
-            {bankRateInfo && (
-              <span style={{ fontSize: '11px', color: '#94a3b8' }}>{bankRateInfo}</span>
-            )}
-          </div>
-        )}
-
-        <button onClick={calculate} disabled={loading || ratesLoading} style={{ padding: '11px 32px', borderRadius: '8px', backgroundColor: '#3b82f6', color: '#fff', border: 'none', fontSize: '14px', fontWeight: '600', cursor: 'pointer', opacity: loading || ratesLoading ? 0.7 : 1 }}>
-          {loading ? 'Рассчитываю...' : 'Рассчитать'}
-        </button>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: C.bg, borderRadius: '10px', padding: '4px' }}>
+        {tabs.map(t => (
+          <button key={t} onClick={() => setActiveTab(t)} style={{ ...btnPrimary, flex: 1, padding: '10px', background: activeTab === t ? C.primary : 'transparent', color: activeTab === t ? '#fff' : C.muted, fontSize: '13px' }}>{t}</button>
+        ))}
       </div>
 
-      {loading && (
-        <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '40px', border: '1px solid #e2e8f0', textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '36px', marginBottom: '12px' }}>🧮</div>
-          <p style={{ color: '#1e293b', fontSize: '15px', fontWeight: '600' }}>AI рассчитывает инвестицию...</p>
+      {/* DCF & ROI Tab */}
+      {activeTab === 'DCF & ROI' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={card}>
+            <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: C.text }}>\u041F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u0438\u043D\u0432\u0435\u0441\u0442\u0438\u0446\u0438\u0438</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div><label style={labelStyle}>\u0421\u0443\u043C\u043C\u0430 (USD)</label><input type="number" style={inputStyle} value={investment} onChange={e => setInvestment(e.target.value)} /></div>
+              <div><label style={labelStyle}>\u0421\u0440\u043E\u043A (\u043B\u0435\u0442)</label><input type="number" style={inputStyle} value={years} onChange={e => setYears(e.target.value)} /></div>
+              <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>\u0420\u043E\u0441\u0442 \u0432\u044B\u0440\u0443\u0447\u043A\u0438 (%)</label><input type="number" style={inputStyle} value={growthRate} onChange={e => setGrowthRate(e.target.value)} /></div>
+            </div>
+          </div>
+
+          {/* Discount Rate */}
+          <div style={{ ...card, backgroundColor: C.bg, borderRadius: '8px' }}>
+            <label style={labelStyle}>\u0421\u0442\u0430\u0432\u043A\u0430 \u0434\u0438\u0441\u043A\u043E\u043D\u0442\u0438\u0440\u043E\u0432\u0430\u043D\u0438\u044F</label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <button onClick={() => setDiscountRateMode('manual')} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '12px', backgroundColor: discountRateMode === 'manual' ? C.primary : C.bg, color: discountRateMode === 'manual' ? '#fff' : C.muted, border: `1px solid ${C.border}` }}>\u0412\u0440\u0443\u0447\u043D\u0443\u044E</button>
+              <button onClick={() => setDiscountRateMode('wacc')} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '12px', backgroundColor: discountRateMode === 'wacc' ? C.primary : C.bg, color: discountRateMode === 'wacc' ? '#fff' : C.muted, border: `1px solid ${C.border}` }}>WACC</button>
+            </div>
+            {discountRateMode === 'manual' ? (
+              <input type="number" style={inputStyle} value={manualRate} onChange={e => setManualRate(e.target.value)} placeholder="15" />
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '12px' }}>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>E/D (%)</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={equityDebt} onChange={e => setEquityDebt(e.target.value)} /></div>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>Rf (%)</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={rf} onChange={e => setRf(e.target.value)} /></div>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>ERP (%)</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={erp} onChange={e => setErp(e.target.value)} /></div>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>CRP (%)</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={crp} onChange={e => setCrp(e.target.value)} /></div>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>Beta</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={beta} onChange={e => setBeta(e.target.value)} /></div>
+                <div><label style={{ ...labelStyle, fontSize: '11px' }}>Rd (%)</label><input type="number" style={{ ...inputStyle, fontSize: '12px', padding: '6px' }} value={rd} onChange={e => setRd(e.target.value)} /></div>
+                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4px', backgroundColor: C.primaryLight, borderRadius: '6px', fontWeight: 700 }}>
+                  WACC = {(calcWacc().wacc * 100).toFixed(1)}%
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {result && !loading && (
-        <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      {/* Calculate Button */}
+      <button onClick={runDCF} disabled={loading} style={{ ...btnPrimary, width: '100%', justifyContent: 'center', padding: '12px', marginTop: '16px' }}>
+        {loading ? '\u0420\u0430\u0441\u0447\u0451\u0442...' : '\u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044C DCF'}
+      </button>
+
+      {dcfResult && (
+        <div style={{ marginTop: '20px' }}>
+          {/* KPI Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
             {[
-              { label: 'Банковский депозит', value: `$${result.bankReturn.toLocaleString()}`, sub: `Ставка ${result.bankRate}% годовых`, color: '#3b82f6', bg: '#eff6ff' },
-              { label: 'Доход от депозита', value: `+$${result.bankProfit.toLocaleString()}`, sub: `${result.bankProfitUZS.toLocaleString()} сум`, color: '#22c55e', bg: '#f0fdf4' },
-              { label: 'Потери от инфляции', value: `$${result.inflationImpact.toLocaleString()}`, sub: 'Реальная стоимость без вложений', color: '#ef4444', bg: '#fef2f2' },
-            ].map((card, i) => (
-              <div key={i} style={{ backgroundColor: card.bg, borderRadius: '12px', padding: '20px', border: `1px solid ${card.color}30` }}>
-                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '6px' }}>{card.label}</p>
-                <p style={{ fontSize: '20px', fontWeight: '700', color: card.color }}>{card.value}</p>
-                <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{card.sub}</p>
+              {label: 'NPV', value: `$${(dcfResult.dcf?.npv||0).toLocaleString()}`, color: (dcfResult.dcf?.npv||0) >= 0 ? C.success : C.error},
+              {label: 'IRR', value: `${(dcfResult.dcf?.irr||0).toFixed(1)}%`, color: C.primary},
+              {label: '\u041E\u043A\u0443\u043F\u0430\u0435\u043C\u043E\u0441\u0442\u044C', value: `${dcfResult.dcf?.payback_years||'-'} \u043B\u0435\u0442`, color: C.warning},
+              {label: '\u0421\u043A\u043E\u0440\u0438\u043D\u0433', value: `${dcfResult.overall?.invest_score||0}/100`, color: (dcfResult.overall?.invest_score||0) >= 60 ? C.success : C.warning},
+            ].map((k, i) => (
+              <div key={i} style={{ ...card, textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: C.muted }}>{k.label}</div>
+                <div style={{ fontSize: '20px', fontWeight: 700, color: k.color, marginTop: '4px' }}>{k.value}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0', marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1e293b', marginBottom: '20px' }}>Сравнение за {years} лет</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={result.chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="year" tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }} />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="Банковский депозит" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Обесценивание (инфляция)" fill="#ef4444" radius={[4, 4, 0, 0]} />
+          {/* Cash Flow Chart */}
+          <div style={card}>
+            <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: C.text }}>\u0414\u0435\u043D\u0435\u0436\u043D\u044B\u0435 \u043F\u043E\u0442\u043E\u043A\u0438 \u0438 \u043F\u0440\u0438\u0432\u0435\u0434\u0451\u043D\u043D\u0430\u044F \u0441\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C</h4>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={(dcfResult.dcf?.periods || []).map((p: any) => ({ period: `Y${p.period}`, cf: p.cash_flow, pv: p.present_value }))}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="cf" name="Cash Flow" fill={C.primary} radius={[4,4,0,0]} />
+                <Bar dataKey="pv" name="PV" fill={C.cyan} radius={[4,4,0,0]} />
+                <Legend />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '20px' }}>🤖</span>
-              <div>
-                <p style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>AI анализ</p>
-                <p style={{ color: '#94a3b8', fontSize: '12px' }}>Powered by Groq LLaMA</p>
-              </div>
+          {/* Recommendation */}
+          <div style={{ ...card, backgroundColor: dcfResult.overall?.invest_score >= 60 ? C.successLight : C.warningLight, marginTop: '12px' }}>
+            <div style={{ fontWeight: 700, fontSize: '16px', color: dcfResult.overall?.invest_score >= 60 ? C.success : C.warning }}>
+              {dcfResult.overall?.recommendation}
             </div>
-            <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <p style={{ fontSize: '14px', color: '#1e293b', lineHeight: '1.8', whiteSpace: 'pre-wrap' }}>{result.aiAnalysis}</p>
+            <div style={{ marginTop: '8px', fontSize: '13px', color: C.muted }}>
+              {(dcfResult.overall?.signals || []).map((s: string, i: number) => <div key={i}>{s}</div>)}
             </div>
           </div>
+
+          {/* Action buttons */}
+          {dcfResult && (
+            <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+              <button onClick={runMonteCarlo} disabled={loading} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '11px', backgroundColor: C.primary }}>Monte Carlo</button>
+              <button onClick={runSensitivity} disabled={loading} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '11px', backgroundColor: C.secondary }}>\u0427\u0443\u0432\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C</button>
+              <button onClick={runBenchmarks} disabled={loading} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '11px', backgroundColor: C.success }}>\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0438</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Monte Carlo Tab */}
+      {activeTab === '\u041C\u043E\u043D\u0442\u0435-\u041A\u0430\u0440\u043B\u043E' && (
+        <div>
+          {!mcResult ? (
+            <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
+              <button onClick={runMonteCarlo} disabled={loading} style={{ ...btnPrimary, padding: '12px 32px' }}>
+                {loading ? '\u0421\u0438\u043C\u0443\u043B\u044F\u0446\u0438\u044F...' : '\u0417\u0430\u043F\u0443\u0441\u0442\u0438\u0442\u044C Monte Carlo'}
+              </button>
+              <p style={{ fontSize: '13px', color: C.muted, marginTop: '8px' }}>\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435 DCF</p>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                {[
+                  {label: '\u0421\u0440\u0435\u0434\u043D\u0438\u0439 NPV', value: `$${(mcResult.mean_npv||0).toLocaleString()}`, color: C.primary},
+                  {label: '\u041C\u0435\u0434\u0438\u0430\u043D\u0430', value: `$${(mcResult.median_npv||0).toLocaleString()}`, color: C.cyan},
+                  {label: 'P5 / P95', value: `$${(mcResult.p5||0).toLocaleString()} / $${(mcResult.p95||0).toLocaleString()}`, color: C.warning},
+                  {label: '\u0412\u0435\u0440\u043E\u044F\u0442\u043D\u043E\u0441\u0442\u044C NPV>0', value: `${mcResult.prob_positive||0}%`, color: C.success},
+                ].map((k, i) => (
+                  <div key={i} style={{ ...card, textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: C.muted }}>{k.label}</div>
+                    <div style={{ fontSize: '18px', fontWeight: 700, color: k.color, marginTop: '4px' }}>{k.value}</div>
+                  </div>
+                ))}
+              </div>
+              {mcResult.histogram && (
+                <div style={card}>
+                  <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: C.text }}>\u0420\u0430\u0441\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u0435 NPV</h4>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={mcResult.histogram}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="bin" fontSize={10} />
+                      <YAxis fontSize={12} />
+                      <Tooltip />
+                      <Bar dataKey="count" name="\u0427\u0430\u0441\u0442\u043E\u0442\u0430" fill={C.primary} radius={[4,4,0,0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Benchmarks Tab */}
+      {activeTab === '\u0411\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0438' && (
+        <div>
+          {!benchResult ? (
+            <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
+              <button onClick={runBenchmarks} disabled={loading} style={{ ...btnPrimary, padding: '12px 32px' }}>
+                {loading ? '\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430...' : '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0431\u0435\u043D\u0447\u043C\u0430\u0440\u043A\u0438'}
+              </button>
+              <p style={{ fontSize: '13px', color: C.muted, marginTop: '8px' }}>\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0440\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0439\u0442\u0435 DCF, \u0437\u0430\u0442\u0435\u043C \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u043A\u043D\u043E\u043F\u043A\u0443</p>
+            </div>
+          ) : (
+            <div style={card}>
+              <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: C.text }}>Delta vs IRR</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={(benchResult.comparisons || []).map((c: any) => ({
+                  name: c.benchmark, delta: c.delta, rate: c.benchmark_rate,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={11} angle={-20} textAnchor="end" height={60} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="delta" name="Delta vs IRR">
+                    {(benchResult.comparisons || []).map((c: any, idx: number) => (
+                      <Cell key={idx} fill={c.delta >= 0 ? C.success : C.error} />
+                    ))}
+                  </Bar>
+                  <Legend />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Compare Tab */}
+      {activeTab === '\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435' && (
+        <div style={{ ...card, textAlign: 'center', padding: '60px', color: C.muted }}>
+          <p style={{ fontSize: '16px' }}>\u0421\u0440\u0430\u0432\u043D\u0435\u043D\u0438\u0435 \u0441\u0446\u0435\u043D\u0430\u0440\u0438\u0435\u0432 \u2014 \u0441\u043A\u043E\u0440\u043E</p>
+        </div>
+      )}
+
+      {activeTab === 'DCF & ROI' && !dcfResult && (
+        <div style={{ ...card, textAlign: 'center', padding: '60px', color: C.muted }}>
+          <p style={{ fontSize: '16px' }}>\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u00AB\u0420\u0430\u0441\u0441\u0447\u0438\u0442\u0430\u0442\u044C DCF\u00BB \u0434\u043B\u044F \u043F\u043E\u043B\u0443\u0447\u0435\u043D\u0438\u044F \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442\u043E\u0432</p>
         </div>
       )}
     </div>
