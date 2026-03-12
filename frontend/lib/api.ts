@@ -1260,3 +1260,28 @@ export const ddDocuments = {
   getAnalysis: (docId: string) => apiRequest(`/dd-documents/analysis/${docId}`),
   templates: () => apiRequest('/dd-documents/templates'),
 };
+
+// --- Investment Calculator Pro (CALC-002) ------------------------------------
+
+export const calculatorPro = {
+  dcf: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/dcf', { method: 'POST', body: JSON.stringify(data) }),
+  full: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/full', { method: 'POST', body: JSON.stringify(data) }),
+  wacc: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/wacc', { method: 'POST', body: JSON.stringify(data) }),
+  irr: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/irr', { method: 'POST', body: JSON.stringify(data) }),
+  npv: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/npv', { method: 'POST', body: JSON.stringify(data) }),
+  payback: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/payback', { method: 'POST', body: JSON.stringify(data) }),
+  monteCarlo: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/monte-carlo', { method: 'POST', body: JSON.stringify(data) }),
+  sensitivity: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/sensitivity', { method: 'POST', body: JSON.stringify(data) }),
+  benchmarks: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/benchmarks', { method: 'POST', body: JSON.stringify(data) }),
+  compare: (data: Record<string, unknown>) =>
+    apiRequest('/calculator/compare', { method: 'POST', body: JSON.stringify(data) }),
+};
