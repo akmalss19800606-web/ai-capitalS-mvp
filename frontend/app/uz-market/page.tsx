@@ -15,7 +15,7 @@ async function api(path: string, body?: any) {
   const token = localStorage.getItem('token');
   const opts: any = { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } };
   if (body) { opts.method = 'POST'; opts.body = JSON.stringify(body); }
-  const r = await fetch(`${API}/api/v1/uz-market${path}`, opts);
+  const r = await fetch(`${API}/uz-market${path}`, opts);
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
