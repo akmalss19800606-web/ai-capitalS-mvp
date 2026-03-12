@@ -192,4 +192,266 @@ class UZMarketAnalysisService:
         return None
 
     @staticmethod
-    def
+    def get_regions() -> List[Dict]:
+        return UZ_REGIONS
+
+    @staticmethod
+    def get_region_by_id(region_id: str) -> Optional[Dict]:
+        for r in UZ_REGIONS:
+            if r["id"] == region_id:
+                return r
+        return None
+
+    @staticmethod
+    def get_sez_list() -> List[Dict]:
+        return UZ_SEZ
+
+    @staticmethod
+    def get_sez_by_region(region_id: str) -> List[Dict]:
+        return [s for s in UZ_SEZ if s["region"] == region_id]
+
+    @staticmethod
+    def get_oked_sections() -> List[Dict]:
+        return OKED_SECTIONS
+
+    @staticmethod
+    def get_macro_indicators() -> Dict:
+        return {
+            "gdp_growth_pct": 6.5,
+            "inflation_cpi_pct": 9.8,
+            "policy_rate_pct": 13.5,
+            "usd_uzs_rate": 12750.0,
+            "tsmi_index": 1850.0,
+            "rse_capitalization_bln_uzs": 28500.0,
+            "treasury_3y_pct": 17.5,
+            "treasury_10y_pct": 18.2,
+            "source": "CBU / Stat.uz (2025)",
+            "updated_at": "2025-01-01",
+        }
+
+    # ------------------------------------------------------------------
+    # Original methods (MARKET-001)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def quick_ask(question: str, sector: Optional[str] = None, provider: str = "groq") -> Dict[str, Any]:
+        sector_context = ""
+        if sector:
+            sec = UZMarketAnalysisService.get_sector_by_id(sector)
+            if sec:
+                sector_context = f"\nОтрасль: {sec['name']} (GICS: {sec['gics']})"
+        system = (
+            "Ты — эксперт по рынку Узбекистана. Отвечай на русском языке, "
+            "конкретно и с цифрами. Фокус на инвестиционном анализе."
+            f"{sector_context}"
+        )
+        try:
+            if provider == "perplexity" and PERPLEXITY_API_KEY:
+                answer = await _call_perplexity(system, question)
+            else:
+                answer = await _call_groq(system, question)
+            return {
+                "question": question,
+                "answer": answer,
+                "sector": sector,
+                "provider": provider,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Quick Ask error: {e}")
+            return {"question": question, "answer": f"Ошибка: {str(e)}", "sector": sector, "provider": provider}
+
+    @staticmethod
+    async def deep_analysis(sector_id: str, provider: str = "groq") -> Dict[str, Any]:
+        sector = UZMarketAnalysisService.get_sector_by_id(sector_id)
+        if not sector:
+            return {"error": f"Отрасль '{sector_id}' не найдена"}
+        sections_list = "\n".join(f"{i+1}. {s}" for i, s in enumerate(DEEP_SECTIONS))
+        system = (
+            "Ты — ведущий аналитик инвестиционного рынка Узбекистана. "
+            "Пиши на русском языке. Давай конкретные цифры, факты, анализ. "
+            "Формат ответа: JSON с ключом 'sections' — массив из 12 объектов "
+            "{title, content, key_metrics: [{label, value}]}. "
+            "Также добавь 'summary' и 'risk_score' (1-10) и 'investment_rating' (A/B/C/D)."
+        )
+        user_msg = (
+            f"Составь полный инвестиционный анализ отрасли '{sector['name']}' "
+            f"(GICS: {sector['gics']}) в Узбекистане на 2025-2026 год.\n"
+            f"Структура отчета (12 разделов):\n{sections_list}"
+        )
+        try:
+            if provider == "perplexity" and PERPLEXITY_API_KEY:
+                raw = await _call_perplexity(system, user_msg)
+            else:
+                raw = await _call_groq(system, user_msg)
+            data = _parse_json_from_text(raw)
+            return {
+                "sector": sector,
+                "report": data,
+                "provider": provider,
+                "sections_count": len(data.get("sections", [])),
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Deep Analysis error: {e}")
+            return {"sector": sector, "error": str(e), "provider": provider}
+
+    @staticmethod
+    async def sector_compare(sector_ids: List[str], provider: str = "groq") -> Dict[str, Any]:
+        sectors = []
+        for sid in sector_ids:
+            s = UZMarketAnalysisService.get_sector_by_id(sid)
+            if s:
+                sectors.append(s)
+        if len(sectors) < 2:
+            return {"error": "Нужно минимум 2 отрасли"}
+        names = ", ".join(s["name"] for s in sectors)
+        system = (
+            "Ты — инвестиционный аналитик Узбекистана. Сравни отрасли. "
+            "Ответ в формате JSON: {sectors: [{name, growth, risk, margin, recommendation}], winner, reasoning}"
+        )
+        user_msg = f"Сравни отрасли Узбекистана: {names}. Какая лучше для инвестиций в 2025-2026?"
+        try:
+            if provider == "perplexity" and PERPLEXITY_API_KEY:
+                raw = await _call_perplexity(system, user_msg)
+            else:
+                raw = await _call_groq(system, user_msg)
+            data = _parse_json_from_text(raw)
+            return {"comparison": data, "sectors": sectors, "provider": provider, "timestamp": datetime.utcnow().isoformat()}
+        except Exception as e:
+            logger.error(f"Sector compare error: {e}")
+            return {"error": str(e)}
+
+    # ------------------------------------------------------------------
+    # MARKET-005: Full 25-field analysis -> 12-section report
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def full_market_analysis(request: Any, report_id: str, provider: str = "groq") -> Dict[str, Any]:
+        """
+        Main method: принимает MarketAnalysisRequest (25 полей),
+        возвращает полный 12-секционный отчёт по ТЗ v3.0.
+        """
+        req = request if isinstance(request, dict) else request.dict()
+
+        # Enrich with reference data
+        region_data = UZMarketAnalysisService.get_region_by_id(req.get("region", "")) or {}
+        sez_data = None
+        if req.get("sez_code"):
+            sez_matches = [s for s in UZ_SEZ if s["code"] == req.get("sez_code")]
+            sez_data = sez_matches[0] if sez_matches else None
+        macro = UZMarketAnalysisService.get_macro_indicators()
+
+        # Build context string for AI
+        oked_info = f"ОКЭД {req.get('oked_section', '')}.{req.get('oked_division', '')}"
+        if req.get("activity_description"):
+            oked_info += f" — {req['activity_description']}"
+
+        region_info = region_data.get("name", req.get("region", ""))
+        amount = req.get("investment_amount", 0)
+        currency = req.get("investment_currency", "USD")
+        horizon = req.get("investment_horizon_years", 5)
+        inv_type = req.get("investment_type", "greenfield")
+        stage = req.get("project_stage", "idea")
+        legal = req.get("legal_form", "ooo")
+        tax = req.get("tax_regime", "general")
+        risk_profile = req.get("risk_profile", 5)
+        debt_ratio = req.get("debt_ratio_pct", 30)
+        loan_rate = req.get("expected_loan_rate_pct", 22.8)
+        margin = req.get("expected_margin_pct", 15)
+        employees = req.get("planned_employees", 10)
+        import_dep = req.get("import_dependency_pct", 30)
+        competitors = req.get("competitors_range", "4-10")
+        market_share = req.get("expected_market_share_pct", 5)
+        funding = req.get("funding_sources", ["own"])
+        target_markets = req.get("target_markets", ["domestic"])
+
+        sez_info = ""
+        if sez_data:
+            sez_info = f"\nСЭЗ: {sez_data['name']} — льготы: {', '.join(sez_data['tax_exemptions'])}"
+
+        sections_list = "\n".join(f"{i+1}. {s}" for i, s in enumerate(DEEP_SECTIONS))
+
+        system = (
+            "Ты — ведущий инвестиционный аналитик по рынку Узбекистана. "
+            "Пиши на русском языке. Давай конкретные цифры, расчёты и факты. "
+            "Ответ СТРОГО в формате JSON:\n"
+            "{\n"
+            '  "executive_summary": "краткое резюме 3-5 предложений",\n'
+            '  "recommendation": "invest"|"hold"|"avoid",\n'
+            '  "confidence_score": 0-100,\n'
+            '  "sections": [\n'
+            '    {"number": 1, "title": "...", "content": "подробный текст", "charts": []},\n'
+            "    ... (12 разделов)\n"
+            "  ]\n"
+            "}"
+        )
+
+        user_msg = (
+            f"Проведи полный инвестиционный анализ рынка Узбекистана:\n\n"
+            f"ДЕЯТЕЛЬНОСТЬ: {oked_info}\n"
+            f"РЕГИОН: {region_info} (ВРП: {region_data.get('grp_bln_uzs', 'н/д')} млрд сум, "
+            f"население: {region_data.get('population_mln', 'н/д')} млн, "
+            f"средняя зарплата: {region_data.get('avg_salary_uzs', 'н/д')} сум){sez_info}\n\n"
+            f"ИНВЕСТИЦИИ: {amount:,} {currency} | горизонт: {horizon} лет | тип: {inv_type} | стадия: {stage}\n"
+            f"ФИНАНСЫ: долг {debt_ratio}% | ставка {loan_rate}% | маржа {margin}% | "
+            f"сотрудники: {employees} | импорт-зависимость: {import_dep}%\n"
+            f"ЮРИДИКА: {legal} | налоговый режим: {tax}\n"
+            f"РЫНОК: доля {market_share}% | конкуренты: {competitors} | "
+            f"рынки сбыта: {', '.join(target_markets)} | финансирование: {', '.join(funding)}\n"
+            f"ПРОФИЛЬ РИСКА: {risk_profile}/10\n\n"
+            f"МАКРО (ЦБУ 2025): ВВП +{macro['gdp_growth_pct']}% | "
+            f"инфляция {macro['inflation_cpi_pct']}% | ставка ЦБ {macro['policy_rate_pct']}% | "
+            f"USD/UZS {macro['usd_uzs_rate']}\n\n"
+            f"Структура отчёта (12 разделов):\n{sections_list}"
+        )
+
+        try:
+            if provider == "perplexity" and PERPLEXITY_API_KEY:
+                raw = await _call_perplexity(system, user_msg)
+            else:
+                raw = await _call_groq(system, user_msg)
+
+            data = _parse_json_from_text(raw)
+
+            # Ensure 12 sections exist
+            sections = data.get("sections", [])
+            if len(sections) < 12:
+                for i in range(len(sections), 12):
+                    sections.append({
+                        "number": i + 1,
+                        "title": DEEP_SECTIONS[i],
+                        "content": "Анализ в процессе...",
+                        "charts": []
+                    })
+
+            return {
+                "id": report_id,
+                "request": req,
+                "macro_context": macro,
+                "regional_data": region_data,
+                "sez_benefits": sez_data,
+                "executive_summary": data.get("executive_summary", ""),
+                "recommendation": data.get("recommendation", "hold"),
+                "confidence_score": float(data.get("confidence_score", 50)),
+                "sections": sections,
+                "status": "ready",
+                "created_at": datetime.utcnow().isoformat(),
+                "ai_model_used": GROQ_MODEL if provider == "groq" else PERPLEXITY_MODEL,
+                "provider": provider,
+            }
+
+        except Exception as e:
+            logger.error(f"Full market analysis error: {e}")
+            return {
+                "id": report_id,
+                "request": req,
+                "macro_context": macro,
+                "regional_data": region_data,
+                "sez_benefits": sez_data,
+                "executive_summary": f"Ошибка генерации: {str(e)}",
+                "recommendation": "hold",
+                "confidence_score": 0.0,
+                "sections": [{"number": i+1, "title": s, "content": "", "charts": []} for i, s in enumerate(DEEP_SECTIONS)],
+                "status": "error",
+                "created_at": datetime.ut
