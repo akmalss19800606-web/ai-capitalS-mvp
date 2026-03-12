@@ -48,6 +48,7 @@ from app.api.v1.routers import onboarding
 from app.api.v1.routers import documents
 from app.api.v1.routers import branded_export
 from app.api.v1.routers import admin_panel
+from app.api.v1.routers.uz_market import router as uz_market_router
 
 from contextlib import asynccontextmanager
 
@@ -230,6 +231,7 @@ app.include_router(portfolio_analytics.router, prefix="/api/v1")
 app.include_router(rate_limit.router, prefix="/api/v1")
 app.include_router(dd_documents.router, prefix="/api/v1")
 app.include_router(calculator.router, prefix="/api/v1")
+app.include_router(uz_market_router, prefix="/api/v1")
 app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(excel_export.router, prefix="/api/v1")
 # Phase 4: New routers
