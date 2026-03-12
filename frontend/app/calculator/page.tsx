@@ -1,9 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { calculatorPro } from '@/lib/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const C = {
   bg: '#f8fafc', card: '#ffffff', primary: '#3b82f6', primaryLight: '#eff6ff',
   success: '#22c55e', successLight: '#f0fdf4', warning: '#f59e0b', warningLight: '#fffbeb',
@@ -11,7 +11,27 @@ const C = {
   border: '#e2e8f0', secondary: '#8b5cf6', secondaryLight: '#f5f3ff',
 };
 
-const tabs = ['DCF & ROI', 'Монте-Карло', 'Бенчмарки', 'Сравнение'];
+const tabs = ['DCF & ROI', 'Сравнение', 'Чувствительность', 'Монте-Карло', 'Бенчмарки'];
+
+const UZ_INDUSTRIES = [
+  'Оптовая торговля мукой', 'Розничная торговля продуктами', 'Текстильное производство',
+  'Строительство жилых зданий', 'IT-услуги и разработка ПО', 'Фармацевтика',
+  'Сельское хозяйство', 'Логистика и транспорт', 'Банковские услуги', 'Страхование',
+  'Энергетика', 'Горнодобывающая промышленность', 'Пищевая промышленность',
+  'Химическая промышленность', 'Металлургия', 'Туризм и гостиницы',
+  'Образование', 'Здравоохранение', 'Телекоммуникации', 'Недвижимость',
+  'Автомобильная отрасль', 'Электроника', 'Мебельное производство',
+  'Легкая промышленность', 'Нефть и газ'
+];
+
+async function api(path: string, body?: any) {
+  const token = localStorage.getItem('token');
+  const opts: any = { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) } };
+  if (body) { opts.method = 'POST'; opts.body = JSON.stringify(body); }
+  const r = await fetch(`${API}/api/v1/calculator${path}`, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
 
 export default function CalculatorPage() {
   const router = useRouter();
@@ -29,213 +49,385 @@ export default function CalculatorPage() {
   const [crp, setCrp] = useState('4');
   const [beta, setBeta] = useState('1.2');
   const [rd, setRd] = useState('18');
+  const [taxRegime, setTaxRegime] = useState('general');
+  const [currency, setCurrency] = useState('UZS');
+  const [terminalGrowth, setTerminalGrowth] = useState('3');
   const [dcfResult, setDcfResult] = useState<any>(null);
   const [mcResult, setMcResult] = useState<any>(null);
-  const [benchResult, setBenchResult] = useState<any>(null);
+  const [sensResult, setSensResult] = useState<any>(null);
+  const [benchmarks, setBenchmarks] = useState<any>(null);
+  const [compareScenarios, setCompareScenarios] = useState<any[]>([]);
+  const [waccDefaults, setWaccDefaults] = useState<any>(null);
+  const [taxRates, setTaxRates] = useState<any>(null);
+  const [error, setError] = useState('');
 
-  useEffect(() => { const t = localStorage.getItem('token'); if (!t) router.push('/login'); }, []);
+  useEffect(() => {
+    api('/benchmarks').then(setBenchmarks).catch(() => {});
+    api('/wacc-defaults').then(setWaccDefaults).catch(() => {});
+    api('/tax-rates').then(setTaxRates).catch(() => {});
+  }, []);
 
-  const calcWacc = () => {
-    const e = parseFloat(equityDebt) / 100;
-    const d = 1 - e;
-    const ke = parseFloat(rf)/100 + parseFloat(beta) * (parseFloat(erp)/100 + parseFloat(crp)/100);
-    const kd = parseFloat(rd) / 100;
-    return { wacc: e * ke + d * kd * 0.85 };
+  const buildCashFlows = () => {
+    const inv = parseFloat(investment) || 100000;
+    const g = (parseFloat(growthRate) || 15) / 100;
+    const n = parseInt(years) || 5;
+    const base = inv * 0.3;
+    return Array.from({length: n}, (_, i) => Math.round(base * Math.pow(1 + g, i + 1)));
   };
-  const getDiscount = () => discountRateMode === 'manual' ? parseFloat(manualRate)/100 : calcWacc().wacc;
+
+  const getDiscountRate = () => {
+    if (discountRateMode === 'manual') return (parseFloat(manualRate) || 15) / 100;
+    const rfV = (parseFloat(rf) || 14) / 100;
+    const erpV = (parseFloat(erp) || 8) / 100;
+    const crpV = (parseFloat(crp) || 4) / 100;
+    const betaV = parseFloat(beta) || 1.2;
+    const rdV = (parseFloat(rd) || 18) / 100;
+    const eW = (parseFloat(equityDebt) || 60) / 100;
+    const dW = 1 - eW;
+    const taxR = taxRegime === 'general' ? 0.15 : taxRegime === 'simplified' ? 0.04 : 0;
+    const ke = rfV + betaV * erpV + crpV;
+    return eW * ke + dW * rdV * (1 - taxR);
+  };
 
   const runDCF = async () => {
-    setLoading(true);
+    setLoading(true); setError('');
     try {
-      const inv = parseFloat(investment), yrs = parseInt(years), gr = parseFloat(growthRate)/100, dr = getDiscount();
-      const cashFlows = Array.from({length: yrs}, (_, i) => inv * 0.2 * Math.pow(1 + gr, i + 1));
-      const res = await calculatorPro.dcf({ cash_flows: cashFlows, discount_rate: dr, terminal_growth: 0.03, initial_investment: inv, industry, years: yrs });
+      const res = await api('/dcf', {
+        cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
+        terminal_growth: (parseFloat(terminalGrowth) || 3) / 100,
+        initial_investment: parseFloat(investment) || 100000,
+        tax_regime: taxRegime, currency, industry,
+        years: parseInt(years) || 5
+      });
       setDcfResult(res);
-    } catch {
-      const inv = parseFloat(investment), yrs = parseInt(years), gr = parseFloat(growthRate)/100, dr = getDiscount();
-      const cfs = Array.from({length: yrs}, (_, i) => Math.round(inv * 0.2 * Math.pow(1 + gr, i + 1)));
-      const pvs = cfs.map((cf, i) => Math.round(cf / Math.pow(1 + dr, i + 1)));
-      const npv = pvs.reduce((s, v) => s + v, 0) - inv;
-      const periods = cfs.map((cf, i) => ({period: i+1, cash_flow: cf, present_value: pvs[i]}));
-      setDcfResult({ dcf: {npv, irr: gr * 100, payback_years: Math.ceil(inv / cfs[0]), periods}, overall: { invest_score: npv > 0 ? 75 : 35, recommendation: npv > 0 ? 'Инвестиция рекомендуется' : 'Риски высокие', signals: npv > 0 ? ['NPV > 0', 'Проект окупается'] : ['NPV < 0', 'Пересмотрите параметры'] } });
-    }
+    } catch (e: any) { setError(e.message); }
     setLoading(false);
   };
 
-  const runMonteCarlo = async () => {
-    setLoading(true);
+  const runMC = async () => {
+    setLoading(true); setError('');
     try {
-      const res = await calculatorPro.monteCarlo({ initial_investment: parseFloat(investment), annual_cash_flow: parseFloat(investment) * 0.2, discount_rate: getDiscount(), years: parseInt(years), iterations: 5000, volatility: parseFloat(growthRate) / 100 });
+      const res = await api('/monte-carlo', {
+        cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
+        initial_investment: parseFloat(investment) || 100000,
+        simulations: 5000, volatility: 0.2, currency
+      });
       setMcResult(res);
-    } catch {
-      const inv = parseFloat(investment), cf = inv * 0.2, dr = getDiscount();
-      const sims = Array.from({length: 100}, () => { let npv = -inv; for (let y = 1; y <= parseInt(years); y++) { npv += cf * (1 + (Math.random() - 0.5) * 0.4) / Math.pow(1 + dr, y); } return npv; }).sort((a,b) => a - b);
-      setMcResult({ mean_npv: Math.round(sims.reduce((a,b)=>a+b,0)/sims.length), median_npv: Math.round(sims[50]), p5: Math.round(sims[5]), p95: Math.round(sims[94]), prob_positive: Math.round(sims.filter(x=>x>0).length), histogram: Array.from({length: 10}, (_, i) => ({ bin: `${Math.round(sims[0] + i*(sims[99]-sims[0])/10)}`, count: sims.filter(x => x >= sims[0]+i*(sims[99]-sims[0])/10 && x < sims[0]+(i+1)*(sims[99]-sims[0])/10).length })) });
-    }
+    } catch (e: any) { setError(e.message); }
     setLoading(false);
   };
 
-  const runBenchmarks = async () => {
-    setLoading(true);
+  const runSens = async () => {
+    setLoading(true); setError('');
     try {
-      const res = await calculatorPro.benchmarks({ industry, irr: dcfResult?.dcf?.irr || 15, npv: dcfResult?.dcf?.npv || 0, payback_years: dcfResult?.dcf?.payback_years || 3 });
-      setBenchResult(res);
-    } catch {
-      setBenchResult({ comparisons: [
-        {benchmark: 'Средняя IRR по отрасли', benchmark_rate: 12, delta: (dcfResult?.dcf?.irr||15)-12},
-        {benchmark: 'Ставка ЦБ', benchmark_rate: 14, delta: (dcfResult?.dcf?.irr||15)-14},
-        {benchmark: 'Инфляция', benchmark_rate: 10, delta: (dcfResult?.dcf?.irr||15)-10},
-      ] });
-    }
+      const res = await api('/sensitivity', {
+        cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
+        initial_investment: parseFloat(investment) || 100000,
+        parameter: 'discount_rate', range_pct: 50, steps: 10, currency
+      });
+      setSensResult(res);
+    } catch (e: any) { setError(e.message); }
     setLoading(false);
   };
 
-  const card = { background: C.card, borderRadius: '12px', border: `1px solid ${C.border}`, padding: '16px' };
-  const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: `1px solid ${C.border}`, fontSize: '14px', fontWeight: 600 as const, backgroundColor: C.bg, color: C.text };
-  const labelStyle = { fontSize: '11px', color: C.muted, fontWeight: 500 as const, display: 'block' as const, marginBottom: '4px' };
-  const btnPrimary = { background: C.primary, color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 as const, fontSize: '14px' };
+  const runCompare = async () => {
+    setLoading(true); setError('');
+    try {
+      const base = buildCashFlows();
+      const dr = getDiscountRate();
+      const inv = parseFloat(investment) || 100000;
+      const res = await api('/compare', {
+        scenarios: [
+          { name: 'Оптимистичный', cash_flows: base.map(x => Math.round(x * 1.3)), discount_rate: dr * 0.9, initial_investment: inv, currency },
+          { name: 'Базовый', cash_flows: base, discount_rate: dr, initial_investment: inv, currency },
+          { name: 'Пессимистичный', cash_flows: base.map(x => Math.round(x * 0.7)), discount_rate: dr * 1.15, initial_investment: inv, currency }
+        ]
+      });
+      setCompareScenarios(res.scenarios || []);
+    } catch (e: any) { setError(e.message); }
+    setLoading(false);
+  };
+
+  const fmt = (n: number) => new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0}).format(n);
+  const fmtPct = (n: number) => (n * 100).toFixed(1) + '%';
+
+  const cardStyle = { background: C.card, borderRadius: 12, padding: 24, border: `1px solid ${C.border}`, marginBottom: 16 };
+  const btnStyle = (active?: boolean) => ({
+    padding: '10px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 14,
+    background: active ? C.primary : C.primaryLight, color: active ? '#fff' : C.primary,
+    transition: 'all .2s'
+  });
+  const inputStyle = { width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 14, outline: 'none' };
+  const labelStyle = { fontSize: 13, color: C.muted, marginBottom: 4, display: 'block', fontWeight: 500 };
+  const metricCard = (label: string, value: string, color: string) => (
+    <div key={label} style={{background: color + '11', borderRadius: 10, padding: 16, textAlign: 'center' as const, flex: '1 1 180px', minWidth: 150}}>
+      <div style={{fontSize: 12, color: C.muted, marginBottom: 4}}>{label}</div>
+      <div style={{fontSize: 20, fontWeight: 700, color}}>{value}</div>
+    </div>
+  );
 
   return (
-    <div style={{ padding: '24px', maxWidth: '960px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: '22px', color: C.text }}>Инвестиционный Калькулятор Pro</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: C.muted }}>DCF, NPV, IRR, WACC, Monte Carlo, Бенчмарки</p>
-        </div>
-        <button onClick={() => router.push('/')} style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: '8px', padding: '8px 14px', color: C.muted, cursor: 'pointer', fontSize: '13px' }}>Назад</button>
-      </div>
-
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '20px', background: C.bg, borderRadius: '10px', padding: '4px' }}>
-        {tabs.map(t => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{ ...btnPrimary, flex: 1, padding: '10px', background: activeTab === t ? C.primary : 'transparent', color: activeTab === t ? '#fff' : C.muted, fontSize: '13px' }}>{t}</button>
-        ))}
-      </div>
-
-      {activeTab === 'DCF & ROI' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          <div style={card}>
-            <h4 style={{ margin: '0 0 12px', fontSize: '14px', color: C.text }}>Параметры инвестиции</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div><label style={labelStyle}>Сумма (USD)</label><input type="number" style={inputStyle} value={investment} onChange={e => setInvestment(e.target.value)} /></div>
-              <div><label style={labelStyle}>Срок (лет)</label><input type="number" style={inputStyle} value={years} onChange={e => setYears(e.target.value)} /></div>
-              <div style={{ gridColumn: 'span 2' }}><label style={labelStyle}>Рост выручки (%)</label><input type="number" style={inputStyle} value={growthRate} onChange={e => setGrowthRate(e.target.value)} /></div>
-            </div>
+    <div style={{minHeight: '100vh', background: C.bg, padding: '24px'}}>
+      <div style={{maxWidth: 1200, margin: '0 auto'}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24}}>
+          <div>
+            <h1 style={{fontSize: 28, fontWeight: 800, color: C.text, margin: 0}}>📊 Investment Calculator Pro</h1>
+            <p style={{color: C.muted, margin: '4px 0 0', fontSize: 14}}>DCF · WACC CAPM · Monte-Carlo · Бенчмарки Узбекистан 2026</p>
           </div>
-          <div style={{ ...card, backgroundColor: C.bg }}>
-            <label style={labelStyle}>Ставка дисконтирования</label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              <button onClick={() => setDiscountRateMode('manual')} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '12px', backgroundColor: discountRateMode === 'manual' ? C.primary : C.bg, color: discountRateMode === 'manual' ? '#fff' : C.muted, border: `1px solid ${C.border}` }}>Вручную</button>
-              <button onClick={() => setDiscountRateMode('wacc')} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '12px', backgroundColor: discountRateMode === 'wacc' ? C.primary : C.bg, color: discountRateMode === 'wacc' ? '#fff' : C.muted, border: `1px solid ${C.border}` }}>WACC</button>
+        </div>
+
+        {/* Tabs */}
+        <div style={{display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap'}}>
+          {tabs.map(t => (
+            <button key={t} onClick={() => setActiveTab(t)} style={btnStyle(activeTab === t)}>{t}</button>
+          ))}
+        </div>
+
+        {error && <div style={{background: C.errorLight, color: C.error, padding: 12, borderRadius: 8, marginBottom: 16}}>{error}</div>}
+
+        {/* Input Panel */}
+        <div style={cardStyle}>
+          <h3 style={{margin: '0 0 16px', fontSize: 16, color: C.text}}>⚡ Параметры инвестиции</h3>
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16}}>
+            <div><label style={labelStyle}>Сумма инвестиции</label><input style={inputStyle} value={investment} onChange={e => setInvestment(e.target.value)} /></div>
+            <div><label style={labelStyle}>Срок (лет)</label><input style={inputStyle} value={years} onChange={e => setYears(e.target.value)} /></div>
+            <div><label style={labelStyle}>Отрасль</label>
+              <select style={inputStyle} value={industry} onChange={e => setIndustry(e.target.value)}>
+                {UZ_INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+              </select>
+            </div>
+            <div><label style={labelStyle}>Рост выручки (%)</label><input style={inputStyle} value={growthRate} onChange={e => setGrowthRate(e.target.value)} /></div>
+            <div><label style={labelStyle}>Терминальный рост (%)</label><input style={inputStyle} value={terminalGrowth} onChange={e => setTerminalGrowth(e.target.value)} /></div>
+            <div><label style={labelStyle}>Валюта</label>
+              <select style={inputStyle} value={currency} onChange={e => setCurrency(e.target.value)}>
+                <option>UZS</option><option>USD</option>
+              </select>
+            </div>
+            <div><label style={labelStyle}>Налоговый режим</label>
+              <select style={inputStyle} value={taxRegime} onChange={e => setTaxRegime(e.target.value)}>
+                <option value="general">Общий (15%)</option><option value="simplified">Упрощенный (4%)</option><option value="free_zone">СЭЗ (0%)</option>
+              </select>
+            </div>
+            <div><label style={labelStyle}>Ставка дисконтирования</label>
+              <select style={inputStyle} value={discountRateMode} onChange={e => setDiscountRateMode(e.target.value as any)}>
+                <option value="manual">Вручную</option><option value="wacc">WACC CAPM</option>
+              </select>
             </div>
             {discountRateMode === 'manual' ? (
-              <input type="number" style={inputStyle} value={manualRate} onChange={e => setManualRate(e.target.value)} />
+              <div><label style={labelStyle}>Ставка (%)</label><input style={inputStyle} value={manualRate} onChange={e => setManualRate(e.target.value)} /></div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <div><label style={{...labelStyle, fontSize:'10px'}}>E/D %</label><input type="number" style={{...inputStyle,fontSize:'12px',padding:'6px'}} value={equityDebt} onChange={e=>setEquityDebt(e.target.value)} /></div>
-                <div><label style={{...labelStyle, fontSize:'10px'}}>Rf %</label><input type="number" style={{...inputStyle,fontSize:'12px',padding:'6px'}} value={rf} onChange={e=>setRf(e.target.value)} /></div>
-                <div><label style={{...labelStyle, fontSize:'10px'}}>ERP %</label><input type="number" style={{...inputStyle,fontSize:'12px',padding:'6px'}} value={erp} onChange={e=>setErp(e.target.value)} /></div>
-                <div><label style={{...labelStyle, fontSize:'10px'}}>Beta</label><input type="number" style={{...inputStyle,fontSize:'12px',padding:'6px'}} value={beta} onChange={e=>setBeta(e.target.value)} /></div>
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '4px', backgroundColor: C.primaryLight, borderRadius: '6px', fontWeight: 700 }}>WACC = {(calcWacc().wacc * 100).toFixed(1)}%</div>
+              <>
+                <div><label style={labelStyle}>Equity Weight (%)</label><input style={inputStyle} value={equityDebt} onChange={e => setEquityDebt(e.target.value)} /></div>
+                <div><label style={labelStyle}>Rf (%)</label><input style={inputStyle} value={rf} onChange={e => setRf(e.target.value)} /></div>
+                <div><label style={labelStyle}>ERP (%)</label><input style={inputStyle} value={erp} onChange={e => setErp(e.target.value)} /></div>
+                <div><label style={labelStyle}>CRP (%)</label><input style={inputStyle} value={crp} onChange={e => setCrp(e.target.value)} /></div>
+                <div><label style={labelStyle}>Beta</label><input style={inputStyle} value={beta} onChange={e => setBeta(e.target.value)} /></div>
+                <div><label style={labelStyle}>Rd (%)</label><input style={inputStyle} value={rd} onChange={e => setRd(e.target.value)} /></div>
+              </>
+            )}
+          </div>
+          <div style={{marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap'}}>
+            <button onClick={runDCF} disabled={loading} style={btnStyle(true)}>{loading ? 'Загрузка...' : 'Рассчитать DCF'}</button>
+            <button onClick={runMC} disabled={loading} style={btnStyle()}>Monte-Carlo</button>
+            <button onClick={runSens} disabled={loading} style={btnStyle()}>Чувствительность</button>
+            <button onClick={runCompare} disabled={loading} style={btnStyle()}>Сравнить</button>
+          </div>
+        </div>
+
+        {/* DCF & ROI Tab */}
+        {activeTab === 'DCF & ROI' && dcfResult && (
+          <div style={cardStyle}>
+            <h3 style={{margin: '0 0 16px', color: C.text}}>📈 Результаты DCF-анализа</h3>
+            <div style={{display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20}}>
+              {metricCard('NPV', fmt(dcfResult.npv), dcfResult.npv > 0 ? C.success : C.error)}
+              {metricCard('IRR', dcfResult.irr ? fmtPct(dcfResult.irr) : 'N/A', C.primary)}
+              {metricCard('XIRR', dcfResult.xirr ? fmtPct(dcfResult.xirr) : 'N/A', C.cyan)}
+              {metricCard('MIRR', dcfResult.mirr ? fmtPct(dcfResult.mirr) : 'N/A', C.secondary)}
+              {metricCard('PI', dcfResult.profitability_index?.toFixed(2) || 'N/A', C.warning)}
+              {metricCard('ROI', dcfResult.roi ? fmtPct(dcfResult.roi) : 'N/A', C.success)}
+              {metricCard('Payback', dcfResult.payback_period ? dcfResult.payback_period.toFixed(1) + ' лет' : 'N/A', C.muted)}
+              {metricCard('WACC', dcfResult.wacc ? fmtPct(dcfResult.wacc) : fmtPct(getDiscountRate()), C.primary)}
+            </div>
+            {dcfResult.yearly_cash_flows && (
+              <div style={{height: 300}}>
+                <ResponsiveContainer>
+                  <BarChart data={dcfResult.yearly_cash_flows.map((cf: number, i: number) => ({year: `Год ${i+1}`, cf, dcf: dcfResult.discounted_cash_flows?.[i] || cf / Math.pow(1 + getDiscountRate(), i+1)}))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="year" />
+                    <YAxis />
+                    <Tooltip formatter={(v: number) => fmt(v)} />
+                    <Legend />
+                    <Bar dataKey="cf" name="Денежный поток" fill={C.primary} />
+                    <Bar dataKey="dcf" name="Дисконтированный" fill={C.cyan} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            {dcfResult.recommendation && (
+              <div style={{marginTop: 16, padding: 16, background: dcfResult.npv > 0 ? C.successLight : C.errorLight, borderRadius: 8}}>
+                <strong>Рекомендация:</strong> {dcfResult.recommendation}
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      <button onClick={runDCF} disabled={loading} style={{ ...btnPrimary, width: '100%', padding: '12px', marginTop: '16px' }}>
-        {loading ? 'Расчёт...' : 'Рассчитать DCF'}
-      </button>
-
-      {dcfResult && (
-        <div style={{ marginTop: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-            {[
-              {label: 'NPV', value: `$${(dcfResult.dcf?.npv||0).toLocaleString()}`, color: (dcfResult.dcf?.npv||0) >= 0 ? C.success : C.error},
-              {label: 'IRR', value: `${(dcfResult.dcf?.irr||0).toFixed(1)}%`, color: C.primary},
-              {label: 'Окупаемость', value: `${dcfResult.dcf?.payback_years||'-'} лет`, color: C.warning},
-              {label: 'Скоринг', value: `${dcfResult.overall?.invest_score||0}/100`, color: (dcfResult.overall?.invest_score||0) >= 60 ? C.success : C.warning},
-            ].map((k, i) => (
-              <div key={i} style={{ ...card, textAlign: 'center' }}>
-                <div style={{ fontSize: '11px', color: C.muted }}>{k.label}</div>
-                <div style={{ fontSize: '20px', fontWeight: 700, color: k.color, marginTop: '4px' }}>{k.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={card}>
-            <h4 style={{ margin: '0 0 12px', fontSize: '14px' }}>Денежные потоки</h4>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={(dcfResult.dcf?.periods||[]).map((p:any)=>({period:`Y${p.period}`,cf:p.cash_flow,pv:p.present_value}))}>
-                <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="period" fontSize={12} /><YAxis fontSize={12} /><Tooltip />
-                <Bar dataKey="cf" name="Cash Flow" fill={C.primary} radius={[4,4,0,0]} />
-                <Bar dataKey="pv" name="PV" fill={C.cyan} radius={[4,4,0,0]} /><Legend />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={{ ...card, backgroundColor: dcfResult.overall?.invest_score >= 60 ? C.successLight : C.warningLight, marginTop: '12px' }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', color: dcfResult.overall?.invest_score >= 60 ? C.success : C.warning }}>{dcfResult.overall?.recommendation}</div>
-            <div style={{ marginTop: '8px', fontSize: '13px', color: C.muted }}>{(dcfResult.overall?.signals||[]).map((s:string,i:number)=><div key={i}>{s}</div>)}</div>
-          </div>
-          <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
-            <button onClick={runMonteCarlo} disabled={loading} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '11px' }}>Monte Carlo</button>
-            <button onClick={runBenchmarks} disabled={loading} style={{ ...btnPrimary, flex: 1, padding: '6px', fontSize: '11px', backgroundColor: C.success }}>Бенчмарки</button>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'Монте-Карло' && (
-        <div>
-          {!mcResult ? (
-            <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
-              <button onClick={runMonteCarlo} disabled={loading} style={{ ...btnPrimary, padding: '12px 32px' }}>{loading ? 'Симуляция...' : 'Запустить Monte Carlo'}</button>
-              <p style={{ fontSize: '13px', color: C.muted, marginTop: '8px' }}>Сначала рассчитайте DCF</p>
+        {/* Сравнение Tab */}
+        {activeTab === 'Сравнение' && compareScenarios.length > 0 && (
+          <div style={cardStyle}>
+            <h3 style={{margin: '0 0 16px', color: C.text}}>⚖️ Сравнение сценариев</h3>
+            <div style={{overflowX: 'auto'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse'}}>
+                <thead><tr style={{background: C.primaryLight}}>
+                  {['Сценарий','NPV','IRR','MIRR','PI','ROI','Payback'].map(h => (
+                    <th key={h} style={{padding: '10px 12px', textAlign: 'left', fontSize: 13, color: C.text, borderBottom: `2px solid ${C.border}`}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>{compareScenarios.map((s: any, i: number) => (
+                  <tr key={i} style={{borderBottom: `1px solid ${C.border}`}}>
+                    <td style={{padding: '10px 12px', fontWeight: 600}}>{s.name}</td>
+                    <td style={{padding: '10px 12px', color: s.npv > 0 ? C.success : C.error}}>{fmt(s.npv)}</td>
+                    <td style={{padding: '10px 12px'}}>{s.irr ? fmtPct(s.irr) : 'N/A'}</td>
+                    <td style={{padding: '10px 12px'}}>{s.mirr ? fmtPct(s.mirr) : 'N/A'}</td>
+                    <td style={{padding: '10px 12px'}}>{s.profitability_index?.toFixed(2) || 'N/A'}</td>
+                    <td style={{padding: '10px 12px'}}>{s.roi ? fmtPct(s.roi) : 'N/A'}</td>
+                    <td style={{padding: '10px 12px'}}>{s.payback_period?.toFixed(1) || 'N/A'} лет</td>
+                  </tr>
+                ))}</tbody>
+              </table>
             </div>
-          ) : (
-            <div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-                {[
-                  {label: 'Средний NPV', value: `$${(mcResult.mean_npv||0).toLocaleString()}`, color: C.primary},
-                  {label: 'Медиана', value: `$${(mcResult.median_npv||0).toLocaleString()}`, color: C.cyan},
-                  {label: 'P5 / P95', value: `$${(mcResult.p5||0).toLocaleString()} / $${(mcResult.p95||0).toLocaleString()}`, color: C.warning},
-                  {label: 'NPV > 0', value: `${mcResult.prob_positive||0}%`, color: C.success},
-                ].map((k,i) => (<div key={i} style={{...card, textAlign:'center'}}><div style={{fontSize:'11px',color:C.muted}}>{k.label}</div><div style={{fontSize:'18px',fontWeight:700,color:k.color,marginTop:'4px'}}>{k.value}</div></div>))}
-              </div>
-              {mcResult.histogram && (<div style={card}>
-                <h4 style={{margin:'0 0 12px',fontSize:'14px'}}>Распределение NPV</h4>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={mcResult.histogram}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="bin" fontSize={10} /><YAxis fontSize={12} /><Tooltip /><Bar dataKey="count" name="Частота" fill={C.primary} radius={[4,4,0,0]} /></BarChart>
-                </ResponsiveContainer>
-              </div>)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'Бенчмарки' && (
-        <div>
-          {!benchResult ? (
-            <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
-              <button onClick={runBenchmarks} disabled={loading} style={{ ...btnPrimary, padding: '12px 32px' }}>{loading ? 'Загрузка...' : 'Загрузить бенчмарки'}</button>
-              <p style={{ fontSize: '13px', color: C.muted, marginTop: '8px' }}>Сначала рассчитайте DCF</p>
-            </div>
-          ) : (
-            <div style={card}>
-              <h4 style={{ margin: '0 0 12px', fontSize: '14px' }}>Delta vs IRR</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={(benchResult.comparisons||[]).map((c:any)=>({name:c.benchmark,delta:c.delta,rate:c.benchmark_rate}))}>
-                  <CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" fontSize={11} angle={-20} textAnchor="end" height={60} /><YAxis fontSize={12} /><Tooltip />
-                  <Bar dataKey="delta" name="Delta vs IRR">{(benchResult.comparisons||[]).map((c:any,idx:number)=>(<Cell key={idx} fill={c.delta>=0?C.success:C.error} />))}</Bar><Legend />
+            <div style={{height: 300, marginTop: 20}}>
+              <ResponsiveContainer>
+                <BarChart data={compareScenarios.map((s: any) => ({name: s.name, NPV: s.npv}))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" /><YAxis />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Bar dataKey="NPV" fill={C.primary}>
+                    {compareScenarios.map((_: any, i: number) => <Cell key={i} fill={[C.success, C.primary, C.error][i] || C.primary} />)}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
 
-      {activeTab === 'Сравнение' && (
-        <div style={{ ...card, textAlign: 'center', padding: '60px', color: C.muted }}>
-          <p style={{ fontSize: '16px' }}>Сравнение сценариев — скоро</p>
-        </div>
-      )}
+        {/* Чувствительность Tab */}
+        {activeTab === 'Чувствительность' && sensResult && (
+          <div style={cardStyle}>
+            <h3 style={{margin: '0 0 16px', color: C.text}}>🎯 Tornado-анализ чувствительности</h3>
+            <div style={{height: 400}}>
+              <ResponsiveContainer>
+                <LineChart data={(sensResult.results || sensResult.sensitivity_data || []).map((p: any) => ({rate: fmtPct(p.discount_rate || p.parameter_value), NPV: p.npv}))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="rate" label={{value: 'Ставка дисконтирования', position: 'insideBottom', offset: -5}} />
+                  <YAxis label={{value: 'NPV', angle: -90, position: 'insideLeft'}} />
+                  <Tooltip formatter={(v: number) => fmt(v)} />
+                  <Line type="monotone" dataKey="NPV" stroke={C.primary} strokeWidth={3} dot={{fill: C.primary, r: 5}} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            {sensResult.break_even_rate && (
+              <div style={{marginTop: 12, padding: 12, background: C.warningLight, borderRadius: 8}}>
+                <strong>Точка безубыточности:</strong> ставка {fmtPct(sensResult.break_even_rate)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Монте-Карло Tab */}
+        {activeTab === 'Монте-Карло' && mcResult && (
+          <div style={cardStyle}>
+            <h3 style={{margin: '0 0 16px', color: C.text}}>🎲 Монте-Карло симуляция (5000 итераций)</h3>
+            <div style={{display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20}}>
+              {metricCard('P10 (NPV)', fmt(mcResult.percentiles?.p10 || 0), C.error)}
+              {metricCard('P50 (NPV)', fmt(mcResult.percentiles?.p50 || mcResult.mean_npv || 0), C.warning)}
+              {metricCard('P90 (NPV)', fmt(mcResult.percentiles?.p90 || 0), C.success)}
+              {metricCard('Среднее NPV', fmt(mcResult.mean_npv || 0), C.primary)}
+              {metricCard('Std Dev', fmt(mcResult.std_npv || 0), C.muted)}
+              {metricCard('VaR 95%', fmt(mcResult.var_95 || 0), C.error)}
+              {metricCard('CVaR 95%', fmt(mcResult.cvar_95 || 0), C.error)}
+              {metricCard('Вероятность NPV>0', mcResult.probability_positive ? (mcResult.probability_positive * 100).toFixed(1) + '%' : 'N/A', C.success)}
+            </div>
+            {mcResult.histogram && (
+              <div style={{height: 350}}>
+                <ResponsiveContainer>
+                  <BarChart data={mcResult.histogram.map((h: any) => ({bin: fmt(h.bin_start), count: h.count}))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="bin" angle={-45} textAnchor="end" height={80} />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Частота">
+                      {mcResult.histogram.map((h: any, i: number) => <Cell key={i} fill={h.bin_start >= 0 ? C.success : C.error} />)}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Бенчмарки Tab */}
+        {activeTab === 'Бенчмарки' && (
+          <div style={cardStyle}>
+            <h3 style={{margin: '0 0 16px', color: C.text}}>🏆 Бенчмарки Узбекистан 2026</h3>
+            {benchmarks ? (
+              <>
+                <div style={{display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20}}>
+                  {metricCard('Ставка ЦБ', benchmarks.cb_rate || '14%', C.primary)}
+                  {metricCard('Инфляция', benchmarks.inflation || '10%', C.warning)}
+                  {metricCard('Рост ВВП', benchmarks.gdp_growth || '5.5%', C.success)}
+                  {metricCard('Курс USD/UZS', benchmarks.usd_uzs || '12 800', C.cyan)}
+                </div>
+                {benchmarks.sectors && (
+                  <div style={{overflowX: 'auto'}}>
+                    <table style={{width: '100%', borderCollapse: 'collapse', fontSize: 13}}>
+                      <thead><tr style={{background: C.primaryLight}}>
+                        {['Отрасль','Рост','Маржа','Риск'].map(h => (
+                          <th key={h} style={{padding: '8px 12px', textAlign: 'left', borderBottom: `2px solid ${C.border}`}}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>{benchmarks.sectors.map((s: any, i: number) => (
+                        <tr key={i} style={{borderBottom: `1px solid ${C.border}`}}>
+                          <td style={{padding: '8px 12px', fontWeight: 500}}>{s.name}</td>
+                          <td style={{padding: '8px 12px'}}>{s.growth || 'N/A'}</td>
+                          <td style={{padding: '8px 12px'}}>{s.margin || 'N/A'}</td>
+                          <td style={{padding: '8px 12px'}}>{s.risk || 'N/A'}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            ) : <p style={{color: C.muted}}>Загрузка бенчмарков...</p>}
+
+            {/* WACC Defaults */}
+            {waccDefaults && (
+              <div style={{marginTop: 20, padding: 16, background: C.primaryLight, borderRadius: 8}}>
+                <h4 style={{margin: '0 0 8px'}}>📊 WACC CAPM параметры по умолчанию (UZ 2026)</h4>
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8, fontSize: 13}}>
+                  <div><strong>Rf:</strong> {waccDefaults.risk_free_rate}</div>
+                  <div><strong>ERP:</strong> {waccDefaults.equity_risk_premium}</div>
+                  <div><strong>CRP:</strong> {waccDefaults.country_risk_premium}</div>
+                  <div><strong>Beta:</strong> {waccDefaults.default_beta}</div>
+                  <div><strong>Rd:</strong> {waccDefaults.cost_of_debt}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Tax Rates */}
+            {taxRates && (
+              <div style={{marginTop: 16, padding: 16, background: C.successLight, borderRadius: 8}}>
+                <h4 style={{margin: '0 0 8px'}}>📝 Налоговые ставки Узбекистан</h4>
+                <div style={{fontSize: 13}}>
+                  {Object.entries(taxRates).map(([k, v]: any) => (
+                    <div key={k} style={{marginBottom: 4}}><strong>{k}:</strong> {typeof v === 'object' ? JSON.stringify(v) : String(v)}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }
