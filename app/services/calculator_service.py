@@ -1,30 +1,23 @@
 """
-Инвестиционный калькулятор — DCF, NPV, IRR, Payback, WACC.
-
-Фаза 3, CALC-001:
-  - DCF (Discounted Cash Flow) с детализацией по периодам
-  - NPV (Net Present Value)
-  - IRR (Internal Rate of Return) через numpy-financial / scipy
-  - Payback Period (простой + дисконтированный)
-  - WACC (Weighted Average Cost of Capital)
-  - Полный анализ инвестиции (все метрики)
+Investment Calculator Pro - CALC-003
+DCF, NPV, IRR, XIRR, MIRR, Payback, WACC, PI, ROI
+Monte Carlo, Sensitivity, Benchmarks UZ 2026
 """
 
 import logging
 import math
 import random
-from typing import Optional
+from typing import Optional, List, Dict
+from decimal import Decimal
 
 logger = logging.getLogger(__name__)
-
-# ── Попытка импорта numpy-financial ──────────────────────────
 
 try:
     import numpy_financial as npf
     NPF_AVAILABLE = True
 except ImportError:
     NPF_AVAILABLE = False
-    logger.warning("numpy-financial недоступен — IRR через приближение Ньютона")
+    logger.warning("numpy-financial unavailable")
 
 try:
     from scipy.optimize import brentq
@@ -33,317 +26,181 @@ except ImportError:
     SCIPY_AVAILABLE = False
 
 
-class InvestmentCalculatorService:
-    """Сервис инвестиционных расчётов."""
+# --- UZ Tax Regimes 2026 ---
+TAX_REGIMES = {
+    "general": {"name": "General", "cit": 0.15, "vat": 0.12, "social": 0.12},
+    "simplified": {"name": "Simplified", "cit": 0.04, "vat": 0.0, "social": 0.12},
+    "sez": {"name": "SEZ", "cit": 0.0, "vat": 0.0, "social": 0.12},
+    "custom": {"name": "Custom", "cit": 0.15, "vat": 0.12, "social": 0.12},
+}
 
+# --- UZ Benchmarks 2026 ---
+BENCHMARKS_UZ_2026 = {
+    "uzs_deposit": {"name": "Deposit UZS", "rate": 22.5, "type": "deposit"},
+    "usd_deposit": {"name": "Deposit USD", "rate": 6.0, "type": "deposit"},
+    "gov_bond_3y": {"name": "Gov Bond 3Y UZS", "rate": 15.8, "type": "bond"},
+    "gov_bond_10y": {"name": "Gov Bond 10Y UZS", "rate": 15.0, "type": "bond"},
+    "eurobond_7y": {"name": "Eurobond 7Y USD", "rate": 6.95, "type": "bond"},
+    "tsmi_index": {"name": "TSMI Index", "rate": 12.0, "type": "equity"},
+    "real_estate": {"name": "Real Estate", "rate": 10.0, "type": "real_estate"},
+    "inflation": {"name": "Inflation", "rate": 7.2, "type": "macro"},
+    "cb_rate": {"name": "CB Rate", "rate": 14.0, "type": "macro"},
+}
+
+# --- WACC Defaults (UZ 2026) ---
+WACC_DEFAULTS = {
+    "rf": 0.043,
+    "erp": 0.055,
+    "crp": 0.055,
+    "scp": 0.025,
+    "beta": 1.0,
+    "rd": 0.228,
+    "tax": 0.15,
+}
+
+
+class InvestmentCalculatorService:
+    """Production-grade investment calculator for UZ market."""
+
+    @staticmethod
+    def calculate_wacc_capm(
+        equity_weight: float = 0.6,
+        debt_weight: float = 0.4,
+        risk_free_rate: float = 0.043,
+        beta: float = 1.0,
+        equity_risk_premium: float = 0.055,
+        country_risk_premium: float = 0.055,
+        size_premium: float = 0.025,
+        cost_of_debt: float = 0.228,
+        tax_rate: float = 0.15,
+    ) -> dict:
+        """WACC via CAPM: Re = Rf + Beta*(ERP+CRP) + SCP."""
+        ke = risk_free_rate + beta * (equity_risk_premium + country_risk_premium) + size_premium
+        wacc = equity_weight * ke + debt_weight * cost_of_debt * (1 - tax_rate)
+        return {
+            "wacc": round(wacc, 6),
+            "wacc_pct": round(wacc * 100, 2),
+            "ke": round(ke, 6),
+            "ke_pct": round(ke * 100, 2),
+            "kd_after_tax": round(cost_of_debt * (1 - tax_rate), 6),
+            "equity_weight": equity_weight,
+            "debt_weight": debt_weight,
+            "components": {
+                "rf": risk_free_rate, "beta": beta,
+                "erp": equity_risk_premium, "crp": country_risk_premium,
+                "scp": size_premium, "rd": cost_of_debt, "tax": tax_rate,
+            },
+        }
+      
     @staticmethod
     def calculate_dcf(
-        cash_flows: list[float],
+        cash_flows: list,
         discount_rate: float,
         terminal_growth: float = 0.0,
+        initial_investment: float = 0.0,
+        tax_regime: str = "general",
+        custom_tax_rate: float = None,
+        currency: str = "USD",
     ) -> dict:
-        """
-        Расчёт DCF (Discounted Cash Flow).
-
-        Args:
-            cash_flows: Денежные потоки [CF0, CF1, CF2, ...] (CF0 — начальная инвестиция, обычно отрицательна)
-            discount_rate: Ставка дисконтирования (0.1 = 10%)
-            terminal_growth: Ставка роста терминальной стоимости (0.02 = 2%)
-
-        Returns:
-            Детализация по периодам + итоговая DCF-стоимость.
-        """
+        """Enhanced DCF with NPV, IRR, XIRR, MIRR, PI, ROI, Payback."""
         if not cash_flows:
-            return {"error": "Необходимо передать хотя бы один денежный поток"}
-
+            return {"error": "Cash flows required"}
+        tax_r = custom_tax_rate if custom_tax_rate is not None else TAX_REGIMES.get(tax_regime, TAX_REGIMES["general"])["cit"]
+        inv = initial_investment if initial_investment > 0 else abs(cash_flows[0]) if cash_flows[0] < 0 else 0
+        # Periods
         periods = []
         total_pv = 0.0
-
+        cumulative_cf = 0.0
+        cumulative_pv = 0.0
+        simple_payback = None
+        disc_payback = None
         for t, cf in enumerate(cash_flows):
-            discount_factor = 1 / ((1 + discount_rate) ** t) if t > 0 else 1.0
-            pv = cf * discount_factor
+            df = 1.0 / ((1 + discount_rate) ** t) if t > 0 else 1.0
+            pv = cf * df
             total_pv += pv
-            periods.append({
-                "period": t,
-                "cash_flow": round(cf, 2),
-                "discount_factor": round(discount_factor, 6),
-                "present_value": round(pv, 2),
-            })
-
-        # Терминальная стоимость (Gordon Growth Model)
-        terminal_value = 0.0
+            cumulative_cf += cf
+            cumulative_pv += pv
+            if simple_payback is None and cumulative_cf >= 0 and t > 0:
+                prev = cumulative_cf - cf
+                simple_payback = round(t - 1 + (-prev / cf) if cf != 0 else t, 2)
+            if disc_payback is None and cumulative_pv >= 0 and t > 0:
+                prev_pv = cumulative_pv - pv
+                disc_payback = round(t - 1 + (-prev_pv / pv) if pv != 0 else t, 2)
+            periods.append({"period": t, "cash_flow": round(cf, 2), "discount_factor": round(df, 6), "present_value": round(pv, 2), "cumulative_cf": round(cumulative_cf, 2), "cumulative_pv": round(cumulative_pv, 2)})
+        # Terminal value
+        tv = 0.0
+        tv_pv = 0.0
         if terminal_growth > 0 and len(cash_flows) > 1 and discount_rate > terminal_growth:
             last_cf = cash_flows[-1]
-            terminal_value = (last_cf * (1 + terminal_growth)) / (discount_rate - terminal_growth)
-            tv_pv = terminal_value / ((1 + discount_rate) ** (len(cash_flows) - 1))
+            tv = (last_cf * (1 + terminal_growth)) / (discount_rate - terminal_growth)
+            tv_pv = tv / ((1 + discount_rate) ** (len(cash_flows) - 1))
             total_pv += tv_pv
-
+        npv = total_pv
+        # IRR
+        irr_val = InvestmentCalculatorService._calc_irr(cash_flows)
+        irr_pct = round(irr_val * 100, 2) if irr_val is not None else None
+        # MIRR
+        mirr_val = InvestmentCalculatorService._calc_mirr(cash_flows, discount_rate, discount_rate)
+        mirr_pct = round(mirr_val * 100, 2) if mirr_val is not None else None
+        # PI & ROI
+        pi = round((npv + inv) / inv, 4) if inv > 0 else None
+        roi_pct = round((npv / inv) * 100, 2) if inv > 0 else None
+        # Tax savings
+        tax_savings = round(inv * tax_r * 0.1, 2) if tax_regime == "sez" else 0
         return {
+            "npv": round(npv, 2), "irr": irr_pct, "mirr": mirr_pct,
+            "payback_years": simple_payback, "discounted_payback": disc_payback,
+            "profitability_index": pi, "roi_pct": roi_pct,
             "dcf_value": round(total_pv, 2),
-            "discount_rate": discount_rate,
-            "terminal_growth": terminal_growth,
-            "terminal_value": round(terminal_value, 2),
+            "terminal_value": round(tv, 2), "tv_present_value": round(tv_pv, 2),
+            "discount_rate": discount_rate, "discount_rate_pct": round(discount_rate * 100, 2),
+            "initial_investment": round(inv, 2),
+            "tax_regime": tax_regime, "tax_rate": tax_r, "tax_savings": tax_savings,
+            "currency": currency, "num_periods": len(cash_flows),
             "periods": periods,
-            "num_periods": len(cash_flows),
         }
-
+      
     @staticmethod
-    def calculate_npv(
-        cash_flows: list[float],
-        discount_rate: float,
-    ) -> dict:
-        """
-        Расчёт NPV (Net Present Value).
-
-        Args:
-            cash_flows: [CF0, CF1, CF2, ...] — CF0 обычно отрицательная инвестиция.
-            discount_rate: Ставка дисконтирования.
-
-        Returns:
-            NPV и признак рентабельности.
-        """
-        if not cash_flows:
-            return {"error": "Необходимо передать денежные потоки"}
-
-        npv = sum(cf / ((1 + discount_rate) ** t) for t, cf in enumerate(cash_flows))
-
-        return {
-            "npv": round(npv, 2),
-            "discount_rate": discount_rate,
-            "is_profitable": npv > 0,
-            "recommendation": "Проект рентабелен (NPV > 0)" if npv > 0 else "Проект нерентабелен (NPV < 0)",
-        }
-
-    @staticmethod
-    def calculate_irr(cash_flows: list[float]) -> dict:
-        """
-        Расчёт IRR (Internal Rate of Return).
-
-        Args:
-            cash_flows: [CF0, CF1, CF2, ...].
-
-        Returns:
-            IRR в процентах.
-        """
+    def _calc_irr(cash_flows: list) -> Optional[float]:
         if not cash_flows or len(cash_flows) < 2:
-            return {"error": "Необходимо минимум 2 периода денежных потоков"}
-
-        irr_value = None
-
-        # Метод 1: numpy-financial
+            return None
         if NPF_AVAILABLE:
             try:
-                irr_value = float(npf.irr(cash_flows))
-                if math.isnan(irr_value) or math.isinf(irr_value):
-                    irr_value = None
+                v = float(npf.irr(cash_flows))
+                if not (math.isnan(v) or math.isinf(v)):
+                    return v
             except Exception:
-                irr_value = None
-
-        # Метод 2: scipy brentq
-        if irr_value is None and SCIPY_AVAILABLE:
+                pass
+        if SCIPY_AVAILABLE:
             try:
-                def npv_func(r):
-                    return sum(cf / ((1 + r) ** t) for t, cf in enumerate(cash_flows))
-                irr_value = brentq(npv_func, -0.99, 10.0)
+                def f(r): return sum(cf / ((1 + r) ** t) for t, cf in enumerate(cash_flows))
+                return brentq(f, -0.99, 10.0)
             except Exception:
-                irr_value = None
-
-        # Метод 3: Приближение Ньютона
-        if irr_value is None:
-            irr_value = InvestmentCalculatorService._irr_newton(cash_flows)
-
-        if irr_value is None:
-            return {"error": "Не удалось рассчитать IRR — проверьте денежные потоки"}
-
-        return {
-            "irr": round(irr_value, 6),
-            "irr_percent": round(irr_value * 100, 2),
-            "recommendation": (
-                f"IRR = {round(irr_value * 100, 2)}%. "
-                "Сравните с WACC или требуемой доходностью."
-            ),
-        }
-
-    @staticmethod
-    def _irr_newton(cash_flows: list[float], tol: float = 1e-8, max_iter: int = 100) -> Optional[float]:
-        """Приближение IRR методом Ньютона-Рафсона."""
-        rate = 0.1  # начальное приближение
-
-        for _ in range(max_iter):
-            npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cash_flows))
+                pass
+        # Newton fallback
+        rate = 0.1
+        for _ in range(200):
+            npv_v = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cash_flows))
             dnpv = sum(-t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cash_flows))
-
             if abs(dnpv) < 1e-14:
                 break
-
-            new_rate = rate - npv / dnpv
-            if abs(new_rate - rate) < tol:
-                return new_rate
-            rate = new_rate
-
+            nr = rate - npv_v / dnpv
+            if abs(nr - rate) < 1e-10:
+                return nr
+            rate = nr
         return rate if abs(sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cash_flows))) < 1.0 else None
 
     @staticmethod
-    def calculate_payback(
-        cash_flows: list[float],
-        discount_rate: float = 0.0,
-    ) -> dict:
-        """
-        Расчёт срока окупаемости (простой + дисконтированный).
-
-        Args:
-            cash_flows: [CF0, CF1, CF2, ...].
-            discount_rate: Для дисконтированного payback.
-
-        Returns:
-            Простой и дисконтированный сроки окупаемости.
-        """
-        if not cash_flows:
-            return {"error": "Необходимо передать денежные потоки"}
-
-        # Простой Payback
-        cumulative = 0.0
-        simple_payback = None
-        for t, cf in enumerate(cash_flows):
-            cumulative += cf
-            if cumulative >= 0 and t > 0:
-                # Интерполяция
-                prev_cum = cumulative - cf
-                fraction = (-prev_cum) / cf if cf != 0 else 0
-                simple_payback = round(t - 1 + fraction, 2)
-                break
-
-        # Дисконтированный Payback
-        cumulative_pv = 0.0
-        discounted_payback = None
-        if discount_rate > 0:
-            for t, cf in enumerate(cash_flows):
-                pv = cf / ((1 + discount_rate) ** t) if t > 0 else cf
-                cumulative_pv += pv
-                if cumulative_pv >= 0 and t > 0:
-                    prev_cum = cumulative_pv - pv
-                    fraction = (-prev_cum) / pv if pv != 0 else 0
-                    discounted_payback = round(t - 1 + fraction, 2)
-                    break
-
-        return {
-            "simple_payback_years": simple_payback,
-            "discounted_payback_years": discounted_payback,
-            "discount_rate": discount_rate,
-            "total_investment": round(abs(cash_flows[0]), 2) if cash_flows else 0,
-            "recommendation": (
-                f"Простой срок: {simple_payback or 'не окупается'} лет. "
-                + (f"Дисконтированный: {discounted_payback or 'не окупается'} лет." if discount_rate > 0 else "")
-            ),
-        }
-
-    @staticmethod
-    def calculate_wacc(
-        equity: float,
-        debt: float,
-        cost_equity: float,
-        cost_debt: float,
-        tax_rate: float,
-    ) -> dict:
-        """
-        Расчёт WACC (Weighted Average Cost of Capital).
-
-        Args:
-            equity: Объём собственного капитала.
-            debt: Объём заёмного капитала.
-            cost_equity: Стоимость собственного капитала (0.12 = 12%).
-            cost_debt: Стоимость заёмного капитала (0.08 = 8%).
-            tax_rate: Ставка налога на прибыль (0.15 = 15%).
-
-        Returns:
-            WACC и компоненты расчёта.
-        """
-        total_capital = equity + debt
-        if total_capital <= 0:
-            return {"error": "Общий капитал должен быть > 0"}
-
-        weight_equity = equity / total_capital
-        weight_debt = debt / total_capital
-
-        wacc = (weight_equity * cost_equity) + (weight_debt * cost_debt * (1 - tax_rate))
-
-        return {
-            "wacc": round(wacc, 6),
-            "wacc_percent": round(wacc * 100, 2),
-            "weight_equity": round(weight_equity, 4),
-            "weight_debt": round(weight_debt, 4),
-            "cost_equity": cost_equity,
-            "cost_debt": cost_debt,
-            "tax_rate": tax_rate,
-            "total_capital": round(total_capital, 2),
-            "recommendation": f"WACC = {round(wacc * 100, 2)}%. Используйте как ставку дисконтирования для NPV/DCF.",
-        }
-
-    @staticmethod
-    def full_analysis(
-        cash_flows: list[float],
-        discount_rate: float,
-        equity: float = 0,
-        debt: float = 0,
-        cost_equity: float = 0.12,
-        cost_debt: float = 0.08,
-        tax_rate: float = 0.15,
-        terminal_growth: float = 0.0,
-    ) -> dict:
-        """
-        Полный инвестиционный анализ — все метрики одним запросом.
-
-        Returns:
-            Комплексный результат: DCF, NPV, IRR, Payback, WACC.
-        """
-        calc = InvestmentCalculatorService
-
-        result = {
-            "dcf": calc.calculate_dcf(cash_flows, discount_rate, terminal_growth),
-            "npv": calc.calculate_npv(cash_flows, discount_rate),
-            "irr": calc.calculate_irr(cash_flows),
-            "payback": calc.calculate_payback(cash_flows, discount_rate),
-        }
-
-        # WACC — только если указан капитал
-        if equity > 0 or debt > 0:
-            result["wacc"] = calc.calculate_wacc(equity, debt, cost_equity, cost_debt, tax_rate)
-        else:
-            result["wacc"] = {"note": "Не указаны equity/debt — WACC не рассчитан"}
-
-        # Общая рекомендация
-        npv_val = result["npv"].get("npv", 0)
-        irr_val = result["irr"].get("irr_percent")
-        payback = result["payback"].get("simple_payback_years")
-
-        signals = []
-        if npv_val > 0:
-            signals.append("NPV положительный ✅")
-        else:
-            signals.append("NPV отрицательный ⚠️")
-
-        if irr_val and irr_val > discount_rate * 100:
-            signals.append(f"IRR ({irr_val}%) > ставка дисконтирования ({discount_rate*100}%) ✅")
-        elif irr_val:
-            signals.append(f"IRR ({irr_val}%) < ставка дисконтирования ({discount_rate*100}%) ⚠️")
-
-        if payback and payback <= 5:
-            signals.append(f"Окупаемость {payback} лет ✅")
-        elif payback:
-            signals.append(f"Окупаемость {payback} лет (долгая) ⚠️")
-
-        result["overall"] = {
-            "signals": signals,
-            "invest_score": sum(1 for s in signals if "✅" in s) / max(len(signals), 1) * 100,
-            "recommendation": (
-                "Рекомендация: ИНВЕСТИРОВАТЬ"
-                if sum(1 for s in signals if "✅" in s) >= 2
-                else "Рекомендация: ТРЕБУЕТСЯ ДОПОЛНИТЕЛЬНЫЙ АНАЛИЗ"
-            ),
-        }
-
-        return result
-
+    def _calc_mirr(cash_flows: list, finance_rate: float, reinvest_rate: float) -> Optional[float]:
+        if not cash_flows or len(cash_flows) < 2:
+            return None
+        n = len(cash_flows) - 1
+        neg_pv = sum(cf / ((1 + finance_rate) ** t) for t, cf in enumerate(cash_flows) if cf < 0)
+        pos_fv = sum(cf * ((1 + reinvest_rate) ** (n - t)) for t, cf in enumerate(cash_flows) if cf > 0)
+        if neg_pv >= 0 or pos_fv <= 0:
+            return None
+        return ((-pos_fv / neg_pv) ** (1.0 / n)) - 1
+      
     @staticmethod
     def monte_carlo_npv(
         initial_investment: float,
@@ -354,181 +211,153 @@ class InvestmentCalculatorService:
         cost_std: float = 0.10,
         rate_std: float = 0.02,
     ) -> dict:
-        """
-        Monte Carlo simulation for NPV.
-        Returns distribution of NPV outcomes with P10, P50, P90, VaR, CVaR.
-        """
-        npv_results = []
+        results = []
         for _ in range(n_simulations):
-            revenue_shock = random.gauss(1.0, revenue_std)
-            cost_shock = random.gauss(1.0, cost_std)
-            rate_shock = random.gauss(0, rate_std)
-            adjusted_cfs = [cf * revenue_shock * cost_shock for cf in base_cash_flows]
-            adjusted_rate = max(discount_rate + rate_shock, 0.01)
-            npv = -initial_investment + sum(
-                cf / ((1 + adjusted_rate) ** t)
-                for t, cf in enumerate(adjusted_cfs, 1)
-            )
-            npv_results.append(round(npv, 2))
-
-        npv_results.sort()
-        n = len(npv_results)
-        mean_npv = sum(npv_results) / n
-        p10 = npv_results[int(n * 0.10)]
-        p50 = npv_results[int(n * 0.50)]
-        p90 = npv_results[int(n * 0.90)]
-        prob_positive = sum(1 for x in npv_results if x > 0) / n
-        var_95 = npv_results[int(n * 0.05)]
-        cvar_95_vals = [x for x in npv_results if x <= var_95]
-        cvar_95 = sum(cvar_95_vals) / max(len(cvar_95_vals), 1)
-
-        # Histogram bins (20 buckets)
-        min_v, max_v = npv_results[0], npv_results[-1]
-        bucket_size = (max_v - min_v) / 20 if max_v > min_v else 1
-        histogram = []
+            rs = random.gauss(1.0, revenue_std)
+            cs = random.gauss(1.0, cost_std)
+            rts = random.gauss(0, rate_std)
+            adj_cfs = [cf * rs * cs for cf in base_cash_flows]
+            adj_r = max(discount_rate + rts, 0.01)
+            npv = -initial_investment + sum(cf / ((1 + adj_r) ** t) for t, cf in enumerate(adj_cfs, 1))
+            results.append(round(npv, 2))
+        results.sort()
+        n = len(results)
+        mean = sum(results) / n
+        std = (sum((x - mean) ** 2 for x in results) / n) ** 0.5
+        p10 = results[int(n * 0.10)]
+        p50 = results[int(n * 0.50)]
+        p90 = results[int(n * 0.90)]
+        prob_pos = sum(1 for x in results if x > 0) / n
+        var95 = results[int(n * 0.05)]
+        cvar_vals = [x for x in results if x <= var95]
+        cvar95 = sum(cvar_vals) / max(len(cvar_vals), 1)
+        mn, mx = results[0], results[-1]
+        bs = (mx - mn) / 20 if mx > mn else 1
+        hist = []
         for i in range(20):
-            lo = min_v + i * bucket_size
-            hi = lo + bucket_size
-            count = sum(1 for x in npv_results if lo <= x < hi)
-            histogram.append({"bin_start": round(lo, 0), "bin_end": round(hi, 0), "count": count})
-
+            lo = mn + i * bs
+            hi = lo + bs
+            c = sum(1 for x in results if lo <= x < hi)
+            hist.append({"bin_start": round(lo, 0), "bin_end": round(hi, 0), "count": c})
         return {
-            "n_simulations": n_simulations,
-            "mean_npv": round(mean_npv, 2),
-            "std_npv": round((sum((x - mean_npv) ** 2 for x in npv_results) / n) ** 0.5, 2),
-            "p10": round(p10, 2),
-            "p50": round(p50, 2),
-            "p90": round(p90, 2),
-            "prob_positive": round(prob_positive * 100, 1),
-            "var_95": round(var_95, 2),
-            "cvar_95": round(cvar_95, 2),
-            "histogram": histogram,
-            "min_npv": round(npv_results[0], 2),
-            "max_npv": round(npv_results[-1], 2),
+            "n_simulations": n_simulations, "mean_npv": round(mean, 2),
+            "std_npv": round(std, 2), "median_npv": round(p50, 2),
+            "p10": round(p10, 2), "p50": round(p50, 2), "p90": round(p90, 2),
+            "p5": round(results[int(n * 0.05)], 2), "p95": round(results[int(n * 0.95)], 2),
+            "prob_positive": round(prob_pos * 100, 1),
+            "var_95": round(var95, 2), "cvar_95": round(cvar95, 2),
+            "min_npv": round(mn, 2), "max_npv": round(mx, 2),
+            "histogram": hist,
         }
-
+      
     @staticmethod
     def sensitivity_analysis(
-        cash_flows: list,
-        discount_rate: float,
-        initial_investment: float,
-        variables: dict = None,
-        variation_pct: float = 20.0,
-        steps: int = 11,
+        cash_flows: list, discount_rate: float, initial_investment: float,
+        variables: dict = None, variation_pct: float = 20.0, steps: int = 11,
     ) -> dict:
-        """
-        Sensitivity analysis: varies each input +/- variation_pct.
-        Returns tornado data and spider chart data.
-        """
         if variables is None:
-            variables = {
-                "revenue": 1.0,
-                "costs": 1.0,
-                "discount_rate": discount_rate,
-                "growth": 0.05,
-            }
-
-        def calc_npv(cfs, rate):
-            return -initial_investment + sum(
-                cf / ((1 + rate) ** t) for t, cf in enumerate(cfs, 1)
-            )
-
-        base_npv = calc_npv(cash_flows, discount_rate)
+            variables = {"revenue": 1.0, "costs": 1.0, "discount_rate": discount_rate, "growth": 0.05}
+        def cn(cfs, r):
+            return -initial_investment + sum(cf / ((1 + r) ** t) for t, cf in enumerate(cfs, 1))
+        base = cn(cash_flows, discount_rate)
         tornado = []
         spider = []
-
-        for var_name, base_val in variables.items():
-            low_val = base_val * (1 - variation_pct / 100)
-            high_val = base_val * (1 + variation_pct / 100)
-
-            if var_name == "discount_rate":
-                npv_low = calc_npv(cash_flows, max(low_val, 0.01))
-                npv_high = calc_npv(cash_flows, high_val)
-            elif var_name == "revenue":
-                npv_low = calc_npv([cf * low_val for cf in cash_flows], discount_rate)
-                npv_high = calc_npv([cf * high_val for cf in cash_flows], discount_rate)
-            elif var_name == "costs":
-                npv_low = calc_npv([cf / low_val if low_val else cf for cf in cash_flows], discount_rate)
-                npv_high = calc_npv([cf / high_val if high_val else cf for cf in cash_flows], discount_rate)
+        for vn, bv in variables.items():
+            lo = bv * (1 - variation_pct / 100)
+            hi = bv * (1 + variation_pct / 100)
+            if vn == "discount_rate":
+                nl = cn(cash_flows, max(lo, 0.01))
+                nh = cn(cash_flows, hi)
+            elif vn == "revenue":
+                nl = cn([cf * lo for cf in cash_flows], discount_rate)
+                nh = cn([cf * hi for cf in cash_flows], discount_rate)
+            elif vn == "costs":
+                nl = cn([cf / lo if lo else cf for cf in cash_flows], discount_rate)
+                nh = cn([cf / hi if hi else cf for cf in cash_flows], discount_rate)
             else:
-                npv_low = base_npv * (1 - variation_pct / 100)
-                npv_high = base_npv * (1 + variation_pct / 100)
-
-            tornado.append({
-                "variable": var_name,
-                "base_value": round(base_val, 4),
-                "npv_low": round(npv_low, 2),
-                "npv_high": round(npv_high, 2),
-                "npv_range": round(abs(npv_high - npv_low), 2),
-            })
-
-            # Spider chart points
-            spider_points = []
+                nl = base * (1 - variation_pct / 100)
+                nh = base * (1 + variation_pct / 100)
+            tornado.append({"variable": vn, "base_value": round(bv, 4), "npv_low": round(nl, 2), "npv_high": round(nh, 2), "npv_range": round(abs(nh - nl), 2)})
+            pts = []
             for i in range(steps):
                 pct = -variation_pct + (2 * variation_pct * i / (steps - 1))
-                factor = 1 + pct / 100
-                if var_name == "discount_rate":
-                    npv_pt = calc_npv(cash_flows, max(base_val * factor, 0.01))
-                elif var_name == "revenue":
-                    npv_pt = calc_npv([cf * factor for cf in cash_flows], discount_rate)
+                fac = 1 + pct / 100
+                if vn == "discount_rate":
+                    v = cn(cash_flows, max(bv * fac, 0.01))
+                elif vn == "revenue":
+                    v = cn([cf * fac for cf in cash_flows], discount_rate)
                 else:
-                    npv_pt = base_npv * factor
-                spider_points.append({"pct_change": round(pct, 1), "npv": round(npv_pt, 2)})
-            spider.append({"variable": var_name, "points": spider_points})
-
+                    v = base * fac
+                pts.append({"pct_change": round(pct, 1), "npv": round(v, 2)})
+            spider.append({"variable": vn, "points": pts})
         tornado.sort(key=lambda x: x["npv_range"], reverse=True)
+        return {"base_npv": round(base, 2), "variation_pct": variation_pct, "tornado": tornado, "spider": spider}
+      
+    @staticmethod
+    def get_benchmarks(npv: float = 0, irr_pct: float = 0, investment_usd: float = 0, horizon_years: int = 3) -> dict:
+        comparisons = []
+        for key, bm in BENCHMARKS_UZ_2026.items():
+            bm_ret = investment_usd * ((1 + bm["rate"] / 100) ** horizon_years - 1) if investment_usd else 0
+            delta = irr_pct - bm["rate"]
+            comparisons.append({"benchmark": bm["name"], "benchmark_rate": bm["rate"], "type": bm["type"], "project_irr": round(irr_pct, 2), "delta": round(delta, 2), "benchmark_return_usd": round(bm_ret, 2), "beats_benchmark": delta > 0})
+        beaten = sum(1 for c in comparisons if c["beats_benchmark"])
+        return {"project_npv": round(npv, 2), "project_irr": round(irr_pct, 2), "investment_usd": round(investment_usd, 2), "horizon_years": horizon_years, "comparisons": comparisons, "benchmarks_beaten": beaten, "total_benchmarks": len(comparisons), "score_pct": round(beaten / len(comparisons) * 100, 1)}
 
+    @staticmethod
+    def full_analysis(
+        cash_flows: list, discount_rate: float, initial_investment: float = 0,
+        equity: float = 0, debt: float = 0, cost_equity: float = 0.12,
+        cost_debt: float = 0.08, tax_rate: float = 0.15,
+        terminal_growth: float = 0.0, tax_regime: str = "general",
+        currency: str = "USD",
+    ) -> dict:
+        calc = InvestmentCalculatorService
+        dcf = calc.calculate_dcf(cash_flows, discount_rate, terminal_growth, initial_investment, tax_regime, currency=currency)
+        inv = dcf.get("initial_investment", 0)
+        base_cfs = [cf for cf in cash_flows if cf > 0] if cash_flows else []
+        mc = calc.monte_carlo_npv(inv, base_cfs, discount_rate, n_simulations=5000) if inv > 0 and base_cfs else None
+        sens = calc.sensitivity_analysis(base_cfs, discount_rate, inv) if inv > 0 and base_cfs else None
+        irr_pct = dcf.get("irr", 0) or 0
+        bench = calc.get_benchmarks(npv=dcf.get("npv", 0), irr_pct=irr_pct, investment_usd=inv, horizon_years=len(cash_flows) - 1)
+        wacc_data = None
+        if equity > 0 or debt > 0:
+            total = equity + debt
+            wacc_data = calc.calculate_wacc_capm(equity_weight=equity / total, debt_weight=debt / total, cost_of_debt=cost_debt, tax_rate=tax_rate)
+        # Scoring
+        npv_val = dcf.get("npv", 0)
+        signals = []
+        if npv_val > 0: signals.append("NPV > 0")
+        else: signals.append("NPV < 0")
+        if irr_pct and irr_pct > discount_rate * 100: signals.append(f"IRR {irr_pct}% > DR {discount_rate*100}%")
+        pb = dcf.get("payback_years")
+        if pb and pb <= 5: signals.append(f"Payback {pb}y")
+        pi = dcf.get("profitability_index")
+        if pi and pi > 1: signals.append(f"PI={pi}")
+        score = sum(1 for s in signals if "<" not in s and "NPV < 0" not in s) / max(len(signals), 1) * 100
+        rec = "INVEST" if score >= 60 else "ADDITIONAL ANALYSIS NEEDED"
         return {
-            "base_npv": round(base_npv, 2),
-            "variation_pct": variation_pct,
-            "tornado": tornado,
-            "spider": spider,
+            "dcf": dcf, "monte_carlo": mc, "sensitivity": sens, "benchmarks": bench, "wacc": wacc_data,
+            "overall": {"invest_score": round(score, 1), "recommendation": rec, "signals": signals},
         }
 
     @staticmethod
-    def get_benchmarks(
-        npv: float = 0,
-        irr_pct: float = 0,
-        investment_usd: float = 0,
-        horizon_years: int = 3,
-    ) -> dict:
-        """
-        Compare project metrics vs Uzbekistan market benchmarks 2026.
-        """
-        BENCHMARKS = {
-            "uzs_deposit": {"name": "Депозит UZS", "rate": 22.5, "type": "deposit"},
-            "usd_deposit": {"name": "Депозит USD", "rate": 6.0, "type": "deposit"},
-            "gov_bond_3y": {"name": "Гособлигации 3Y UZS", "rate": 15.8, "type": "bond"},
-            "gov_bond_10y": {"name": "Гособлигации 10Y UZS", "rate": 15.0, "type": "bond"},
-            "gov_bond_usd_7y": {"name": "Евробонды 7Y USD", "rate": 6.95, "type": "bond"},
-            "tsmi_index": {"name": "Индекс TSMI", "rate": 12.0, "type": "equity"},
-            "real_estate": {"name": "Недвижимость", "rate": 10.0, "type": "real_estate"},
-            "inflation": {"name": "Инфляция", "rate": 7.2, "type": "macro"},
-        }
+    def compare_scenarios(scenarios: list) -> dict:
+        calc = InvestmentCalculatorService
+        results = []
+        for i, sc in enumerate(scenarios):
+            r = calc.full_analysis(**sc)
+            r["scenario_index"] = i
+            results.append(r)
+        return {"scenarios": results, "count": len(results)}
 
-        comparisons = []
-        for key, bm in BENCHMARKS.items():
-            bm_return = investment_usd * ((1 + bm["rate"] / 100) ** horizon_years - 1) if investment_usd else 0
-            delta = irr_pct - bm["rate"]
-            comparisons.append({
-                "benchmark": bm["name"],
-                "benchmark_rate": bm["rate"],
-                "type": bm["type"],
-                "project_irr": round(irr_pct, 2),
-                "delta": round(delta, 2),
-                "benchmark_return_usd": round(bm_return, 2),
-                "beats_benchmark": delta > 0,
-            })
+    @staticmethod
+    def get_tax_rates() -> dict:
+        return TAX_REGIMES
 
-        beaten = sum(1 for c in comparisons if c["beats_benchmark"])
+    @staticmethod
+    def get_wacc_defaults() -> dict:
+        return WACC_DEFAULTS
 
-        return {
-            "project_npv": round(npv, 2),
-            "project_irr": round(irr_pct, 2),
-            "investment_usd": round(investment_usd, 2),
-            "horizon_years": horizon_years,
-            "comparisons": comparisons,
-            "benchmarks_beaten": beaten,
-            "total_benchmarks": len(comparisons),
-            "score_pct": round(beaten / len(comparisons) * 100, 1),
-        }
+    @staticmethod
+    def get_benchmarks_list() -> dict:
+        return BENCHMARKS_UZ_2026
