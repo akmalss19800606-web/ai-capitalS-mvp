@@ -1,206 +1,59 @@
 """
-Роутер инвестиционного калькулятора — Фаза 3, CALC-001.
-
-Эндпоинты:
-  - POST /calculator/dcf — DCF расчёт
-  - POST /calculator/npv — NPV расчёт
-  - POST /calculator/irr — IRR расчёт
-  - POST /calculator/payback — Payback Period
-  - POST /calculator/wacc — WACC расчёт
-  - POST /calculator/full — полный анализ
+Investment Calculator Pro Router - CALC-003
+Endpoints: dcf, wacc, monte-carlo, sensitivity, benchmarks, compare, full, tax-rates
 """
-
 import logging
-
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
-
 from app.api.v1.deps import get_current_user
 from app.services.calculator_service import InvestmentCalculatorService
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter(prefix="/calculator", tags=["Investment Calculator"])
-
 calc = InvestmentCalculatorService
 
 
-# ── Схемы запросов ─────────────────────────────────────────────
-
-
-class CashFlowRequest(BaseModel):
-    """Базовый запрос с денежными потоками."""
-    cash_flows: list[float] = Field(
-        ...,
-        description="Денежные потоки [CF0, CF1, CF2, ...]. CF0 — начальная инвестиция (отрицательная).",
-        min_length=1,
-    )
-    discount_rate: float = Field(
-        0.10,
-        description="Ставка дисконтирования (0.10 = 10%)",
-        ge=0,
-        le=1,
-    )
-
-
-class DCFRequest(CashFlowRequest):
-    terminal_growth: float = Field(0.0, description="Ставка роста терминальной стоимости", ge=0, le=0.2)
-
-
-class PaybackRequest(CashFlowRequest):
-    pass
-
-
-class IRRRequest(BaseModel):
-    cash_flows: list[float] = Field(..., min_length=2)
+class DCFRequest(BaseModel):
+    cash_flows: List[float] = Field(..., min_length=1)
+    discount_rate: float = Field(0.10, ge=0, le=1)
+    terminal_growth: float = Field(0.0, ge=0, le=0.2)
+    initial_investment: float = Field(0, ge=0)
+    tax_regime: str = Field("general")
+    custom_tax_rate: Optional[float] = None
+    currency: str = Field("USD")
+    industry: Optional[str] = None
+    years: Optional[int] = None
 
 
 class WACCRequest(BaseModel):
-    equity: float = Field(..., description="Собственный капитал", ge=0)
-    debt: float = Field(..., description="Заёмный капитал", ge=0)
-    cost_equity: float = Field(0.12, description="Стоимость собственного капитала", ge=0, le=1)
-    cost_debt: float = Field(0.08, description="Стоимость заёмного капитала", ge=0, le=1)
-    tax_rate: float = Field(0.15, description="Ставка налога на прибыль", ge=0, le=1)
-
-
-class FullAnalysisRequest(BaseModel):
-    cash_flows: list[float] = Field(..., min_length=2)
-    discount_rate: float = Field(0.10, ge=0, le=1)
-    equity: float = Field(0, ge=0)
-    debt: float = Field(0, ge=0)
-    cost_equity: float = Field(0.12, ge=0, le=1)
-    cost_debt: float = Field(0.08, ge=0, le=1)
+    equity_weight: float = Field(0.6, ge=0, le=1)
+    debt_weight: float = Field(0.4, ge=0, le=1)
+    risk_free_rate: float = Field(0.043, ge=0, le=1)
+    beta: float = Field(1.0, ge=0, le=5)
+    equity_risk_premium: float = Field(0.055, ge=0, le=1)
+    country_risk_premium: float = Field(0.055, ge=0, le=1)
+    size_premium: float = Field(0.025, ge=0, le=1)
+    cost_of_debt: float = Field(0.228, ge=0, le=1)
     tax_rate: float = Field(0.15, ge=0, le=1)
-    terminal_growth: float = Field(0.0, ge=0, le=0.2)
 
-
-# ── Эндпоинты ─────────────────────────────────────────────────
-
-
-@router.post("/dcf", summary="DCF — Discounted Cash Flow")
-async def calculate_dcf(
-    body: DCFRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Расчёт DCF с детализацией по периодам.
-
-    Включает терминальную стоимость (Gordon Growth Model) если указана terminal_growth.
-    """
-    try:
-        return calc.calculate_dcf(body.cash_flows, body.discount_rate, body.terminal_growth)
-    except Exception as e:
-        logger.error("Ошибка DCF: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта DCF")
-
-
-@router.post("/npv", summary="NPV — Net Present Value")
-async def calculate_npv(
-    body: CashFlowRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Расчёт NPV (чистая приведённая стоимость).
-
-    NPV > 0 — проект рентабелен.
-    """
-    try:
-        return calc.calculate_npv(body.cash_flows, body.discount_rate)
-    except Exception as e:
-        logger.error("Ошибка NPV: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта NPV")
-
-
-@router.post("/irr", summary="IRR — Internal Rate of Return")
-async def calculate_irr(
-    body: IRRRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Расчёт IRR (внутренняя ставка доходности).
-
-    Использует numpy-financial, scipy или метод Ньютона.
-    """
-    try:
-        return calc.calculate_irr(body.cash_flows)
-    except Exception as e:
-        logger.error("Ошибка IRR: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта IRR")
-
-
-@router.post("/payback", summary="Payback Period")
-async def calculate_payback(
-    body: PaybackRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Расчёт срока окупаемости: простой + дисконтированный.
-    """
-    try:
-        return calc.calculate_payback(body.cash_flows, body.discount_rate)
-    except Exception as e:
-        logger.error("Ошибка Payback: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта Payback")
-
-
-@router.post("/wacc", summary="WACC — Weighted Average Cost of Capital")
-async def calculate_wacc(
-    body: WACCRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Расчёт WACC (средневзвешенная стоимость капитала).
-
-    WACC = We × Re + Wd × Rd × (1 - T)
-    """
-    try:
-        return calc.calculate_wacc(
-            body.equity, body.debt, body.cost_equity, body.cost_debt, body.tax_rate
-        )
-    except Exception as e:
-        logger.error("Ошибка WACC: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта WACC")
-
-
-@router.post("/full", summary="Полный инвестиционный анализ")
-async def full_analysis(
-    body: FullAnalysisRequest,
-    _current_user=Depends(get_current_user),
-):
-    """
-    Полный анализ: DCF + NPV + IRR + Payback + WACC + рекомендация.
-
-    Возвращает все метрики одним запросом с общей инвестиционной оценкой.
-    """
-    try:
-        return calc.full_analysis(
-            cash_flows=body.cash_flows,
-            discount_rate=body.discount_rate,
-            equity=body.equity,
-            debt=body.debt,
-            cost_equity=body.cost_equity,
-            cost_debt=body.cost_debt,
-            tax_rate=body.tax_rate,
-            terminal_growth=body.terminal_growth,
-        )
-    except Exception as e:
-        logger.error("Ошибка полного анализа: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка расчёта")
-
-# ── Новые схемы запросов (CALC-002) ──────────────────────────
 
 class MonteCarloRequest(BaseModel):
-    initial_investment: float = Field(..., description="Начальная инвестиция", gt=0)
-    base_cash_flows: list[float] = Field(..., min_length=1)
+    initial_investment: float = Field(..., gt=0)
+    base_cash_flows: List[float] = Field(..., min_length=1)
     discount_rate: float = Field(0.10, ge=0, le=1)
     n_simulations: int = Field(10000, ge=100, le=50000)
     revenue_std: float = Field(0.15, ge=0, le=1)
     cost_std: float = Field(0.10, ge=0, le=1)
     rate_std: float = Field(0.02, ge=0, le=0.5)
+    annual_cash_flow: Optional[float] = None
+    years: Optional[int] = None
+    iterations: Optional[int] = None
+    volatility: Optional[float] = None
 
 
 class SensitivityRequest(BaseModel):
-    cash_flows: list[float] = Field(..., min_length=1)
+    cash_flows: List[float] = Field(..., min_length=1)
     discount_rate: float = Field(0.10, ge=0, le=1)
     initial_investment: float = Field(..., gt=0)
     variation_pct: float = Field(20.0, ge=1, le=50)
@@ -209,95 +62,128 @@ class SensitivityRequest(BaseModel):
 class BenchmarkRequest(BaseModel):
     npv: float = Field(0)
     irr_pct: float = Field(0)
+    irr: Optional[float] = None
     investment_usd: float = Field(0, ge=0)
     horizon_years: int = Field(3, ge=1, le=30)
+    industry: Optional[str] = None
+    payback_years: Optional[float] = None
+
+
+class FullAnalysisRequest(BaseModel):
+    cash_flows: List[float] = Field(..., min_length=2)
+    discount_rate: float = Field(0.10, ge=0, le=1)
+    initial_investment: float = Field(0, ge=0)
+    equity: float = Field(0, ge=0)
+    debt: float = Field(0, ge=0)
+    cost_equity: float = Field(0.12, ge=0, le=1)
+    cost_debt: float = Field(0.08, ge=0, le=1)
+    tax_rate: float = Field(0.15, ge=0, le=1)
+    terminal_growth: float = Field(0.0, ge=0, le=0.2)
+    tax_regime: str = Field("general")
+    currency: str = Field("USD")
 
 
 class CompareRequest(BaseModel):
-    scenarios: list[FullAnalysisRequest] = Field(..., min_length=2, max_length=5)
+    scenarios: List[FullAnalysisRequest] = Field(..., min_length=2, max_length=5)
 
 
-# ── Новые эндпоинты (CALC-002) ──────────────────────────────
-
-@router.post("/monte-carlo", summary="Monte Carlo симуляция NPV")
-async def monte_carlo(
-    body: MonteCarloRequest,
-    _current_user=Depends(get_current_user),
-):
-    """Monte Carlo: распределение NPV, P10/P50/P90, VaR, CVaR."""
+@router.post("/dcf", summary="DCF & ROI Analysis")
+async def calculate_dcf(body: DCFRequest, _u=Depends(get_current_user)):
     try:
+        return calc.calculate_dcf(
+            cash_flows=body.cash_flows, discount_rate=body.discount_rate,
+            terminal_growth=body.terminal_growth, initial_investment=body.initial_investment,
+            tax_regime=body.tax_regime, custom_tax_rate=body.custom_tax_rate, currency=body.currency,
+        )
+    except Exception as e:
+        logger.error("DCF error: %s", e)
+        raise HTTPException(status_code=500, detail="DCF calculation error")
+
+
+@router.post("/wacc", summary="WACC via CAPM")
+async def calculate_wacc(body: WACCRequest, _u=Depends(get_current_user)):
+    try:
+        return calc.calculate_wacc_capm(**body.dict())
+    except Exception as e:
+        logger.error("WACC error: %s", e)
+        raise HTTPException(status_code=500, detail="WACC calculation error")
+
+
+@router.post("/monte-carlo", summary="Monte Carlo NPV Simulation")
+async def monte_carlo(body: MonteCarloRequest, _u=Depends(get_current_user)):
+    try:
+        inv = body.initial_investment
+        cfs = body.base_cash_flows
+        if body.annual_cash_flow and body.years and not cfs:
+            cfs = [body.annual_cash_flow] * body.years
+        n = body.iterations or body.n_simulations
         return calc.monte_carlo_npv(
-            initial_investment=body.initial_investment,
-            base_cash_flows=body.base_cash_flows,
-            discount_rate=body.discount_rate,
-            n_simulations=body.n_simulations,
-            revenue_std=body.revenue_std,
-            cost_std=body.cost_std,
-            rate_std=body.rate_std,
+            initial_investment=inv, base_cash_flows=cfs,
+            discount_rate=body.discount_rate, n_simulations=min(n, 50000),
+            revenue_std=body.volatility or body.revenue_std,
+            cost_std=body.cost_std, rate_std=body.rate_std,
         )
     except Exception as e:
         logger.error("Monte Carlo error: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка Monte Carlo")
+        raise HTTPException(status_code=500, detail="Monte Carlo error")
 
 
-@router.post("/sensitivity", summary="Sensitivity анализ")
-async def sensitivity(
-    body: SensitivityRequest,
-    _current_user=Depends(get_current_user),
-):
-    """Tornado + Spider chart данные."""
+@router.post("/sensitivity", summary="Sensitivity Analysis (Tornado + Spider)")
+async def sensitivity(body: SensitivityRequest, _u=Depends(get_current_user)):
     try:
         return calc.sensitivity_analysis(
-            cash_flows=body.cash_flows,
-            discount_rate=body.discount_rate,
-            initial_investment=body.initial_investment,
-            variation_pct=body.variation_pct,
+            cash_flows=body.cash_flows, discount_rate=body.discount_rate,
+            initial_investment=body.initial_investment, variation_pct=body.variation_pct,
         )
     except Exception as e:
         logger.error("Sensitivity error: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка Sensitivity")
+        raise HTTPException(status_code=500, detail="Sensitivity error")
 
 
-@router.post("/benchmarks", summary="Сравнение с бенчмарками УЗ")
-async def benchmarks(
-    body: BenchmarkRequest,
-    _current_user=Depends(get_current_user),
-):
-    """Сравнение IRR проекта с депозитами, облигациями, TSMI."""
+@router.post("/benchmarks", summary="UZ Market Benchmarks 2026")
+async def benchmarks(body: BenchmarkRequest, _u=Depends(get_current_user)):
     try:
-        return calc.get_benchmarks(
-            npv=body.npv,
-            irr_pct=body.irr_pct,
-            investment_usd=body.investment_usd,
-            horizon_years=body.horizon_years,
-        )
+        irr = body.irr or body.irr_pct
+        return calc.get_benchmarks(npv=body.npv, irr_pct=irr, investment_usd=body.investment_usd, horizon_years=body.horizon_years)
     except Exception as e:
         logger.error("Benchmarks error: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка бенчмарков")
+        raise HTTPException(status_code=500, detail="Benchmarks error")
 
 
-@router.post("/compare", summary="Сравнение до 5 сценариев")
-async def compare_scenarios(
-    body: CompareRequest,
-    _current_user=Depends(get_current_user),
-):
-    """Side-by-side сравнение нескольких инвестиционных сценариев."""
+@router.post("/full", summary="Full Investment Analysis")
+async def full_analysis(body: FullAnalysisRequest, _u=Depends(get_current_user)):
     try:
-        results = []
-        for i, sc in enumerate(body.scenarios):
-            r = calc.full_analysis(
-                cash_flows=sc.cash_flows,
-                discount_rate=sc.discount_rate,
-                equity=sc.equity,
-                debt=sc.debt,
-                cost_equity=sc.cost_equity,
-                cost_debt=sc.cost_debt,
-                tax_rate=sc.tax_rate,
-                terminal_growth=sc.terminal_growth,
-            )
-            r["scenario_index"] = i
-            results.append(r)
-        return {"scenarios": results, "count": len(results)}
+        return calc.full_analysis(
+            cash_flows=body.cash_flows, discount_rate=body.discount_rate,
+            initial_investment=body.initial_investment, equity=body.equity, debt=body.debt,
+            cost_equity=body.cost_equity, cost_debt=body.cost_debt, tax_rate=body.tax_rate,
+            terminal_growth=body.terminal_growth, tax_regime=body.tax_regime, currency=body.currency,
+        )
+    except Exception as e:
+        logger.error("Full analysis error: %s", e)
+        raise HTTPException(status_code=500, detail="Full analysis error")
+
+
+@router.post("/compare", summary="Compare up to 5 Scenarios")
+async def compare_scenarios(body: CompareRequest, _u=Depends(get_current_user)):
+    try:
+        scenarios = [sc.dict() for sc in body.scenarios]
+        return calc.compare_scenarios(scenarios)
     except Exception as e:
         logger.error("Compare error: %s", e)
-        raise HTTPException(status_code=500, detail="Ошибка сравнения")
+        raise HTTPException(status_code=500, detail="Compare error")
+
+
+@router.get("/tax-rates", summary="UZ Tax Regimes 2026")
+async def get_tax_rates(_u=Depends(get_current_user)):
+    return calc.get_tax_rates()
+
+
+@router.get("/benchmarks", summary="UZ Benchmarks List 2026")
+async def get_benchmarks_list(_u=Depends(get_current_user)):
+    return calc.get_benchmarks_list()
+
+
+@router.get("/wacc-defaults", summary="WACC Default Parameters (UZ 2026)")
+async def get_wacc_defaults(_u=Depends(get_current_user)):
+    return calc.get_wacc_defaults()
