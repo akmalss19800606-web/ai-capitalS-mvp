@@ -108,9 +108,9 @@ export default function CalculatorPage() {
     setLoading(true); setError('');
     try {
       const res = await api('/monte-carlo', {
-        cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
+        base_cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
         initial_investment: parseFloat(investment) || 100000,
-        simulations: 5000, volatility: 0.2, currency
+        n_simulations: 5000, revenue_std: 0.15, cost_std: 0.10, rate_std: 0.02
       });
       setMcResult(res);
     } catch (e: any) { setError(e.message); }
@@ -123,7 +123,7 @@ export default function CalculatorPage() {
       const res = await api('/sensitivity', {
         cash_flows: buildCashFlows(), discount_rate: getDiscountRate(),
         initial_investment: parseFloat(investment) || 100000,
-        parameter: 'discount_rate', range_pct: 50, steps: 10, currency
+        variation_pct: 20
       });
       setSensResult(res);
     } catch (e: any) { setError(e.message); }
