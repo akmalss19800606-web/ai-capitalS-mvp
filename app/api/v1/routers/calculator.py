@@ -187,3 +187,79 @@ async def get_benchmarks_list(_u=Depends(get_current_user)):
 @router.get("/wacc-defaults", summary="WACC Default Parameters (UZ 2026)")
 async def get_wacc_defaults(_u=Depends(get_current_user)):
     return calc.get_wacc_defaults()
+
+
+# ---- CALC-004: Data Table endpoint ----
+
+class DataTableRequest(BaseModel):
+    initial_investment: float = Field(..., gt=0, description="Начальные инвестиции")
+    annual_revenue: float = Field(..., gt=0, description="Годовая выручка")
+    annual_costs: float = Field(..., ge=0, description="Годовые затраты")
+    years: int = Field(5, ge=1, le=30, description="Горизон	прогноза")
+    discount_rate: float = Field(0.10, ge=0, le=1)
+    revenue_growth: float = Field(0.05, ge=-0.5, le=2.0, description="Рост выручки в год")
+    cost_growth: float = Field(0.03, ge=-0.5, le=2.0, description="Рост затрат в год")
+    tax_rate: float = Field(0.15, ge=0, le=1)
+    currency: str = Field("USD")
+
+
+@router.post("/data-table", summary="Таблица расчётов по периодам (NPV, CF, IRR)")
+async def data_table(
+    body: DataTableRequest,
+    _u=Depends(get_current_user),
+):
+    """Генерирует таблицу денежных потоков и накопленного NPV по годам для фронтенд."""
+    try:
+        rows = []
+        cumulative_npv = -body.initial_investment
+        cumulative_cf = -body.initial_investment
+        revenue = body.annual_revenue
+        costs = body.annual_costs
+        payback_year = None
+
+        for yr in range(1, body.years + 1):
+            revenue *= (1 + body.revenue_growth) if yr > 1 else 1
+            costs *= (1 + body.cost_growth) if yr > 1 else 1
+            ebit = revenue - costs
+            tax = max(0, ebit * body.tax_rate)
+            net_cf = ebit - tax
+            discount_factor = 1 / ((1 + body.discount_rate) ** yr)
+            pv = net_cf * discount_factor
+            cumulative_npv += pv
+            cumulative_cf += net_cf
+            if payback_year is None and cumulative_cf >= 0:
+                payback_year = yr
+            rows.append({
+                "year": yr,
+                "revenue": round(revenue, 2),
+                "costs": round(costs, 2),
+                "ebit": round(ebit, 2),
+                "tax": round(tax, 2),
+                "net_cash_flow": round(net_cf, 2),
+                "discount_factor": round(discount_factor, 6),
+                "present_value": round(pv, 2),
+                "cumulative_npv": round(cumulative_npv, 2),
+                "cumulative_cf": round(cumulative_cf, 2),
+            })
+
+        total_pv = sum(r["present_value"] for r in rows)
+        total_cf = sum(r["net_cash_flow"] for r in rows)
+        npv = total_pv - body.initial_investment
+
+        return {
+            "currency": body.currency,
+            "initial_investment": body.initial_investment,
+            "years": body.years,
+            "discount_rate": body.discount_rate,
+            "rows": rows,
+            "summary": {
+                "total_net_cf": round(total_cf, 2),
+                "total_pv": round(total_pv, 2),
+                "npv": round(npv, 2),
+                "payback_year": payback_year,
+                "roi_pct": round((total_cf / body.initial_investment - 1) * 100, 2) if body.initial_investment else 0,
+            },
+        }
+    except Exception as e:
+        logger.error("Data table error: %s", e)
+        raise HTTPException(status_code=500, detail="Data table calculation error")
