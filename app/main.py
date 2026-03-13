@@ -4,7 +4,9 @@ Phase 0-1: Cleaned up routers, removed stubs and duplicates.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.api.v1.routers.market_analysis_export import router as market_export_router
+from app.api.v1.routers.calculator_export import router as calc_export_router
+from app.api.v1.routers.organizations_router import router as org_router
 from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.users import router as users_router
 from app.api.v1.routers.auth import router as auth_router
@@ -15,6 +17,7 @@ from app.api.v1.routers.roles import router as roles_router
 from app.api.v1.routers.dashboard import router as dashboard_router, builder_router as dashboard_builder_router
 from app.api.v1.routers.audit import router as audit_router
 from app.api.v1.routers.relationships import router as relationships_router
+from app.api.v1.routers.consolidation_router import router as consolidation_router
 from app.api.v1.routers.workflows import router as workflows_router
 # CLN-003: etl_router and olap_router REMOVED
 from app.api.v1.routers.olap import router as olap_router
@@ -190,7 +193,11 @@ app.include_router(dashboard_router, prefix='/api/v1')
 app.include_router(dashboard_builder_router, prefix='/api/v1')  # REF-001: merged from dashboards.py
 app.include_router(audit_router, prefix='/api/v1')
 app.include_router(relationships_router, prefix='/api/v1')
+app.include_router(consolidation_router, prefix="/api/v1")
 app.include_router(workflows_router, prefix='/api/v1')
+app.include_router(market_export_router, prefix="/api/v1")
+app.include_router(org_router, prefix="/api/v1")
+app.include_router(calc_export_router, prefix="/api/v1")
 # CLN-003: etl and olap REMOVED
 app.include_router(olap_router, prefix='/api/v1')
 app.include_router(etl_router, prefix='/api/v1')

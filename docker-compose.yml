@@ -1,32 +1,24 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres:16
-    container_name: ai_capital_db
-    restart: unless-stopped
+    image: postgres:15-alpine
     environment:
-      POSTGRES_USER: ai_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai_password}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: ai_capital
-    ports:
-      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_capital"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: ai_capital_redis
-    restart: unless-stopped
     ports:
       - "6379:6379"
-    volumes:
-      - redisdata:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -34,35 +26,35 @@ services:
       retries: 5
 
   backend:
-    build: .
-    container_name: ai_capital_backend
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://ai_user:${POSTGRES_PASSWORD:-ai_password}@db:5432/ai_capital
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_capital
       REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: ai_capital_frontend
-    restart: unless-stopped
+    ports:
+      - "3000:10000"
+    environment:
+      BACKEND_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
-    ports:
-      - "10000:10000"
-    environment:
-      BACKEND_URL: "http://ai_capital_backend:8000"
+    restart: unless-stopped
 
 volumes:
   pgdata:
-  redisdata:

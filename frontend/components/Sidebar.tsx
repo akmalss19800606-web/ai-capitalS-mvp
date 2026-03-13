@@ -56,7 +56,7 @@ const NAV_GROUPS: NavGroup[] = [
         icon: <Icon paths={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12 2 4-4"/></>} /> },
       { labelKey: 'islamicFinance', path: '/islamic-finance',
         icon: <Icon paths={<><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><path d="M12 12v10"/><path d="M7 9.5v7"/><path d="M17 9.5v7"/></>} /> },
-      { labelKey: 'marketUz', path: '/market-uz',
+      { labelKey: 'marketUz', path: '/uz-market',
         icon: <Icon paths={<><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>} /> },
       { labelKey: 'calculator', path: '/calculator',
         icon: <Icon paths={<><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h8"/><path d="M8 14h4"/><path d="M8 18h4"/></>} /> },
