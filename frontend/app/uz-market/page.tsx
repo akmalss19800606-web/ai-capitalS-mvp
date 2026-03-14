@@ -79,7 +79,7 @@ export default function MarketAnalysisPage(){
   const s=(k:string,v:any)=>setF(prev=>({...prev,[k]:v}));
   const toggle=(key:string,val:string)=>{const arr=(f as any)[key] as string[];s(key,arr.includes(val)?arr.filter((x:string)=>x!==val):[...arr,val]);};
 
-  useEffect(()=>{apiCall("/reference/macro-context").then(setMacro).catch(()=>setMacro({policy_rate_pct:14,inflation_cpi_pct:7.2,usd_uzs_rate:12850,gdp_growth_pct:6.5,tsmi_index:843.5}));},[]);
+  useEffect(()=>{apiCall("/uz-market/macro-context").then(setMacro).catch(()=>setMacro({policy_rate_pct:14,inflation_cpi_pct:7.2,usd_uzs_rate:12850,gdp_growth_pct:6.5,tsmi_index:843.5}));},[]);
 
   async function submit(){
     setLoading(true);setError("");setResult(null);setProgress(10);
