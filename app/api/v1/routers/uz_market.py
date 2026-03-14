@@ -1,7 +1,8 @@
 """
-UZ Market Analysis Router — MARKET-001 (fixed)
+UZ Market Analysis Router — MARKET-001 (fixed v2)
 Endpoints: sectors, quick-ask, deep-analysis, compare,
            generate-report (25-field), macro-context, history
+Auth made optional for generate-report and macro-context (MVP).
 """
 import logging
 import uuid
@@ -9,7 +10,7 @@ import time
 from typing import Optional, List, Literal
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from pydantic import BaseModel, Field
 
 from app.api.v1.deps import get_current_user
@@ -23,24 +24,46 @@ svc = UZMarketAnalysisService()
 _reports_store: dict = {}
 
 
-# ---- Request schemas ----
+# ---- Optional auth helper ----
+async def get_optional_user(authorization: Optional[str] = Header(None)):
+    """Returns user or None — does not block unauthenticated requests."""
+    if not authorization:
+        return None
+    try:
+        from app.core.security import decode_token
+        from app.db.session import SessionLocal
+        from app.db.models.user import User
+        token = authorization.replace("Bearer ", "")
+        payload = decode_token(token)
+        if payload is None:
+            return None
+        user_id = payload.get("sub")
+        if user_id is None:
+            return None
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.id == int(user_id)).first()
+            return user
+        finally:
+            db.close()
+    except Exception:
+        return None
 
+
+# ---- Request schemas ----
 
 class QuickAskRequest(BaseModel):
     question: str = Field(..., min_length=3, description="Вопрос о рынке Узбекистана")
     sector: Optional[str] = Field(None, description="ID отрасли для контекста")
     provider: str = Field("groq", description="AI provider: groq or perplexity")
 
-
 class DeepAnalysisRequest(BaseModel):
     sector_id: str = Field(..., description="ID отрасли")
     provider: str = Field("groq", description="AI provider: groq or perplexity")
 
-
 class SectorCompareRequest(BaseModel):
     sector_ids: List[str] = Field(..., min_length=2, description="Список ID отраслей")
     provider: str = Field("groq", description="AI provider")
-
 
 class FullReportRequest(BaseModel):
     """25-field request matching frontend wizard — 7 blocks."""
@@ -82,41 +105,35 @@ class FullReportRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Reference / Macro
+# Reference / Macro  (NO auth required for MVP)
 # ---------------------------------------------------------------------------
 
-
 @router.get("/sectors", summary="Список 25 отраслей Узбекистана")
-async def get_sectors(_u=Depends(get_current_user)):
+async def get_sectors():
     return svc.get_sectors()
 
-
 @router.get("/sectors/{sector_id}", summary="Инфо об отрасли")
-async def get_sector(sector_id: str, _u=Depends(get_current_user)):
+async def get_sector(sector_id: str):
     sector = svc.get_sector_by_id(sector_id)
     if not sector:
         raise HTTPException(404, f"Отрасль '{sector_id}' не найдена")
     return sector
 
-
 @router.get("/macro-context", summary="Текущие макропоказатели Узбекистана")
-async def get_macro_context(_u=Depends(get_current_user)):
+async def get_macro_context():
     """ВВП, инфляция, ставка ЦБ, курс USD/UZS, TSMI."""
     return svc.get_macro_indicators()
 
-
 @router.get("/reference/regions", summary="14 регионов Узбекистана")
-async def get_regions(_u=Depends(get_current_user)):
+async def get_regions():
     return svc.get_regions()
 
-
 @router.get("/reference/sez", summary="СЭЗ Узбекистана")
-async def get_sez_list(_u=Depends(get_current_user)):
+async def get_sez_list():
     return svc.get_sez_list()
 
-
 @router.get("/reference/oked", summary="Секции ОКЭД (A-U)")
-async def get_oked_sections(_u=Depends(get_current_user)):
+async def get_oked_sections():
     return svc.get_oked_sections()
 
 
@@ -124,9 +141,8 @@ async def get_oked_sections(_u=Depends(get_current_user)):
 # Quick Ask
 # ---------------------------------------------------------------------------
 
-
 @router.post("/quick-ask", summary="Быстрый вопрос по рынку УЗ")
-async def quick_ask(body: QuickAskRequest, _u=Depends(get_current_user)):
+async def quick_ask(body: QuickAskRequest, _u=Depends(get_optional_user)):
     try:
         return await svc.quick_ask(body.question, body.sector, body.provider)
     except Exception as e:
@@ -138,9 +154,8 @@ async def quick_ask(body: QuickAskRequest, _u=Depends(get_current_user)):
 # Deep Analysis (by sector)
 # ---------------------------------------------------------------------------
 
-
 @router.post("/deep-analysis", summary="Глубокий анализ отрасли (12 разделов)")
-async def deep_analysis(body: DeepAnalysisRequest, _u=Depends(get_current_user)):
+async def deep_analysis(body: DeepAnalysisRequest, _u=Depends(get_optional_user)):
     try:
         result = await svc.deep_analysis(body.sector_id, body.provider)
         if "error" in result and "sector" not in result:
@@ -157,9 +172,8 @@ async def deep_analysis(body: DeepAnalysisRequest, _u=Depends(get_current_user))
 # Sector Compare
 # ---------------------------------------------------------------------------
 
-
 @router.post("/compare", summary="Сравнение отраслей")
-async def compare_sectors(body: SectorCompareRequest, _u=Depends(get_current_user)):
+async def compare_sectors(body: SectorCompareRequest, _u=Depends(get_optional_user)):
     try:
         result = await svc.sector_compare(body.sector_ids, body.provider)
         if "error" in result:
@@ -173,12 +187,11 @@ async def compare_sectors(body: SectorCompareRequest, _u=Depends(get_current_use
 
 
 # ---------------------------------------------------------------------------
-# MAIN: Full 25-field generate-report -> 12-section AI report
+# MAIN: Full 25-field generate-report -> 12-section AI report (NO auth for MVP)
 # ---------------------------------------------------------------------------
 
-
 @router.post("/generate-report", summary="Полный AI-отчёт (25 полей → 12 разделов)")
-async def generate_full_report(body: FullReportRequest, _u=Depends(get_current_user)):
+async def generate_full_report(body: FullReportRequest, _u=Depends(get_optional_user)):
     """
     Принимает все 25 полей из фронтенд-визарда,
     вызывает full_market_analysis и возвращает 12-секционный отчёт.
@@ -206,12 +219,11 @@ async def generate_full_report(body: FullReportRequest, _u=Depends(get_current_u
 # History / Reports
 # ---------------------------------------------------------------------------
 
-
 @router.get("/reports", summary="История отчётов")
 async def list_reports(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    _u=Depends(get_current_user),
+    _u=Depends(get_optional_user),
 ):
     all_reports = list(_reports_store.values())
     total = len(all_reports)
@@ -236,17 +248,15 @@ async def list_reports(
             pass
     return {"items": summaries, "total": total, "limit": limit, "offset": offset}
 
-
 @router.get("/reports/{report_id}", summary="Получить отчёт по ID")
-async def get_report(report_id: str, _u=Depends(get_current_user)):
+async def get_report(report_id: str, _u=Depends(get_optional_user)):
     report = _reports_store.get(report_id)
     if not report:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
     return report
 
-
 @router.delete("/reports/{report_id}", summary="Удалить отчёт")
-async def delete_report(report_id: str, _u=Depends(get_current_user)):
+async def delete_report(report_id: str, _u=Depends(get_optional_user)):
     if report_id not in _reports_store:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
     del _reports_store[report_id]
