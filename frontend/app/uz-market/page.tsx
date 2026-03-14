@@ -62,7 +62,7 @@ export default function MarketAnalysisPage(){
   const [result,setResult]=useState<any>(null);
   const [error,setError]=useState("");
   const [macro,setMacro]=useState<any>(null);
-  const [provider,setProvider]=useState("groq");
+  const [provider,setProvider]=useState("groq"); const [qaQuestion,setQaQuestion]=useState(""); const [qaAnswer,setQaAnswer]=useState<any>(null); const [qaLoading,setQaLoading]=useState(false); const [qaError,setQaError]=useState("");
   const [f,setF]=useState({
     oked_section:"J",oked_division:"62",oked_class:"",activity_description:"",
     investment_amount:"50000",investment_currency:"USD" as "USD"|"UZS",
@@ -91,7 +91,7 @@ export default function MarketAnalysisPage(){
     }catch(e:any){setError(e.message||"Ошибка генерации");}
     finally{clearInterval(iv);setLoading(false);}
   }
-  async function exportFmt(fmt:string){
+  async function quickAsk(){if(!qaQuestion.trim())return;setQaLoading(true);setQaError("");setQaAnswer(null);try{const data=await apiCall("/uz-market/quick-ask",{question:qaQuestion,provider});setQaAnswer(data);}catch(e:any){setQaError(e.message||"Ошибка Quick Ask");}finally{setQaLoading(false);}} async function exportFmt(fmt:string){
     if(!result)return;
     try{const token=localStorage.getItem("token");
       const r=await fetch(`${API}/api/v1/uz-market/reports/${result.id||"latest"}/${fmt}`,{headers:{...(token?{Authorization:`Bearer ${token}`}:{})}});
@@ -172,7 +172,7 @@ export default function MarketAnalysisPage(){
   }
 
   return <div style={{minHeight:"100vh",background:C.bg,padding:"2rem 1rem"}}><div style={{maxWidth:960,margin:"0 auto"}}>
-    <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>🇺🇿 Анализ рынка Узбекистана</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>Детальный AI-анализ отрасли по 7 блокам (25 полей) → 12-секционный инвестиционный отчёт</p></div>
+    <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>🇺🇿 Анализ рынка Узбекистана</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>Детальный AI-анализ отрасли по 7 блокам (25 полей) → 12-секционный инвестиционный отчёт</p></div> {/* Quick Ask */} <div style={{marginBottom:20,padding:20,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}> <h3 style={{margin:"0 0 12px",fontSize:16,color:C.text}}>💬 Quick Ask — быстрый вопрос по рынку</h3> <p style={{margin:"0 0 12px",fontSize:13,color:C.muted}}>Задайте любой вопрос о рынке Узбекистана — AI ответит с цифрами и фактами</p> <div style={{display:"flex",gap:8}}> <input value={qaQuestion} onChange={(e:any)=>setQaQuestion(e.target.value)} onKeyDown={(e:any)=>{if(e.key==="Enter"&&!qaLoading)quickAsk()}} placeholder="Напр.: Какова средняя рентабельность IT-компаний в Узбекистане?" style={{flex:1,padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14}}/> <button onClick={quickAsk} disabled={qaLoading||!qaQuestion.trim()} style={{padding:"10px 20px",borderRadius:8,border:"none",background:qaLoading?C.muted:C.primary,color:"#fff",cursor:qaLoading?"not-allowed":"pointer",fontSize:14,fontWeight:600,whiteSpace:"nowrap"}}>{qaLoading?"AI думает...":"🔍 Спросить"}</button> </div> {qaError&&<div style={{marginTop:8,padding:8,background:C.errorBg,borderRadius:6,color:C.error,fontSize:13}}>{qaError}</div>} {qaAnswer&&<div style={{marginTop:12,padding:16,background:C.infoBg,borderRadius:8,border:"1px solid #bae6fd"}}><div style={{fontSize:14,color:C.text,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{qaAnswer.answer}</div><div style={{marginTop:8,fontSize:12,color:C.muted}}>Провайдер: {qaAnswer.provider} · {new Date(qaAnswer.timestamp).toLocaleTimeString()}</div></div>} </div>
     {macro&&<div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap"}}>{[{label:"ЦБ ставка",value:`${macro.policy_rate_pct}%`,icon:"🏦"},{label:"Инфляция (CPI)",value:`${macro.inflation_cpi_pct}%`,icon:"📈"},{label:"USD/UZS",value:macro.usd_uzs_rate?.toLocaleString(),icon:"💱"},{label:"ВВП рост",value:`${macro.gdp_growth_pct}%`,icon:"📊"},{label:"TSMI",value:macro.tsmi_index,icon:"🔢"}].map((m,i)=><div key={i} style={{flex:1,minWidth:140,padding:12,background:C.card,borderRadius:10,border:`1px solid ${C.border}`,textAlign:"center"}}><div style={{fontSize:20}}>{m.icon}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>{m.label}</div><div style={{fontSize:18,fontWeight:700,color:C.text}}>{m.value}</div></div>)}</div>}
     <div style={{display:"flex",gap:4,marginBottom:20}}>{STEPS.map((_,i)=><div key={i} style={{flex:1,height:6,borderRadius:3,background:i<=step?C.primary:C.border,transition:"background 0.3s"}}/>)}</div>
     <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><div style={{fontSize:15,fontWeight:700,color:C.text}}>{STEPS[step]}</div><div style={{fontSize:13,color:C.muted}}>Шаг {step+1} из 7</div></div>
