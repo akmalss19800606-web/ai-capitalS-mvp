@@ -1,15 +1,15 @@
 """
-Market Analysis Router - MARKET-004
+Market Analysis Router - MARKET-004 (fixed)
 Full TZ v3.0 Section A implementation.
 Endpoints:
-  POST /market-analysis/analyze        - full 25-field analysis -> 12-section report
-  POST /market-analysis/quick          - quick analysis (min fields)
-  GET  /market-analysis/reports        - history list
-  GET  /market-analysis/reports/{id}   - get report by id
-  GET  /market-analysis/reference/regions    - 14 regions
-  GET  /market-analysis/reference/sez        - 49 SEZs
-  GET  /market-analysis/reference/oked       - OKED sections
-  GET  /market-analysis/reference/macro      - current macro indicators
+    POST /market-analysis/analyze      - full 25-field analysis -> 12-section report
+    POST /market-analysis/quick        - quick analysis (min fields)
+    GET  /market-analysis/reports       - history list
+    GET  /market-analysis/reports/{id}  - get report by id
+    GET  /market-analysis/reference/regions - 14 regions
+    GET  /market-analysis/reference/sez    - 49 SEZs
+    GET  /market-analysis/reference/oked   - OKED sections
+    GET  /market-analysis/reference/macro  - current macro indicators
 """
 import logging
 import time
@@ -20,8 +20,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
 from app.api.v1.deps import get_current_user
 from app.schemas.market_analysis import (
-    MarketAnalysisReport,
-    MarketAnalysisReportSummary,
     MarketAnalysisRequest,
 )
 from app.services.uz_market_analysis_service import UZMarketAnalysisService
@@ -41,35 +39,30 @@ _reports_store: dict = {}
 
 @router.get("/reference/regions", summary="14 регионов Узбекистана")
 async def get_regions(_u=Depends(get_current_user)):
-    """Список 14 регионов с GRP, населением, средней зарплатой."""
     return svc.get_regions()
 
 
 @router.get("/reference/sez", summary="49 СЭЗ Узбекистана")
 async def get_sez_list(_u=Depends(get_current_user)):
-    """Список 49 свободных экономических зон с льготами."""
     return svc.get_sez_list()
 
 
 @router.get("/reference/oked", summary="Секции ОКЭД (A-U)")
 async def get_oked_sections(_u=Depends(get_current_user)):
-    """Классификатор ОКЭД - секции уровня 1."""
     return svc.get_oked_sections()
 
 
 @router.get("/reference/macro", summary="Текущие макропоказатели Узбекистана")
 async def get_macro_indicators(_u=Depends(get_current_user)):
-    """ВВП, инфляция, ставка ЦБ, курс USD/UZS, TSMI."""
     return svc.get_macro_indicators()
 
 
 # ---------------------------------------------------------------------------
-# Analysis endpoints
+# Analysis endpoints (returns dict, no strict Pydantic response_model)
 # ---------------------------------------------------------------------------
 
 @router.post(
     "/analyze",
-    response_model=MarketAnalysisReport,
     summary="Полный анализ рынка УЗ — 25 полей → 12-секционный отчёт",
 )
 async def analyze_market(
@@ -79,7 +72,7 @@ async def analyze_market(
 ):
     """
     Принимает 25-полевой запрос (7 блоков Wizard), возвращает полный
-    AI-отчёт из 12 разделов с макроконтекстом, региональными данными и СЭЗ.
+    AI-отчёт из 12 разделов с макроконтекстом.
     """
     report_id = str(uuid.uuid4())
     start_time = time.time()
@@ -92,7 +85,6 @@ async def analyze_market(
 
         # Store in memory for GET /reports/{id}
         _reports_store[report_id] = result
-
         return result
 
     except Exception as e:
@@ -112,9 +104,6 @@ async def quick_market_analysis(
     provider: str = Query("groq", description="AI провайдер: groq / perplexity"),
     _u=Depends(get_current_user),
 ):
-    """
-    Быстрый вариант анализа — минимальные поля, ответ за 10-20 сек.
-    """
     try:
         result = await svc.quick_market_analysis(
             oked_section=oked_section,
@@ -135,7 +124,6 @@ async def quick_market_analysis(
 
 @router.get(
     "/reports",
-    response_model=dict,
     summary="История отчётов рынка текущего пользователя",
 )
 async def list_reports(
@@ -143,11 +131,9 @@ async def list_reports(
     offset: int = Query(0, ge=0),
     _u=Depends(get_current_user),
 ):
-    """Возвращает список отчётов анализа рынка (MVP: in-memory)."""
     all_reports = list(_reports_store.values())
     total = len(all_reports)
     items = all_reports[offset: offset + limit]
-
     summaries = []
     for r in items:
         try:
@@ -166,7 +152,6 @@ async def list_reports(
             })
         except Exception:
             pass
-
     return {"items": summaries, "total": total, "limit": limit, "offset": offset}
 
 
@@ -175,7 +160,6 @@ async def list_reports(
     summary="Получить отчёт по ID",
 )
 async def get_report(report_id: str, _u=Depends(get_current_user)):
-    """Возвращает полный отчёт по UUID."""
     report = _reports_store.get(report_id)
     if not report:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
