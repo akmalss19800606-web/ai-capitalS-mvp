@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = "";
 
 const OKED_SECTIONS = [
   {code:"A",name:"Сельское, лесное и рыбное хозяйство"},{code:"B",name:"Горнодобывающая промышленность"},
