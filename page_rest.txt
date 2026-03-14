@@ -1,0 +1,147 @@
+﻿ 45| function Label({text,tip}:{text:string;tip?:string}){
+ 46|   return <label style={{display:"block",fontWeight:600,marginBottom:6,color:C.text,fontSize:14}}>{text}{tip&&<span title={tip} style={{cursor:"help",marginLeft:4,color:C.muted}}>тУШ</span>}</label>;
+ 47| }
+ 48| function Sel({children,...p}:any){return <select {...p} style={{width:"100%",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,background:"#fff",...(p.style||{})}}>{children}</select>;}
+ 49| function Inp(p:any){return <input {...p} style={{width:"100%",padding:"10px 12px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,boxSizing:"border-box",...(p.style||{})}}/>;}
+ 50| function Slider({value,onChange,min,max,step,label}:any){
+ 51|   return <div><div style={{display:"flex",justifyContent:"space-between",fontSize:13,color:C.muted,marginBottom:4}}><span>{label}</span><span style={{fontWeight:600,color:C.text}}>{value}</span></div>
+ 52|     <input type="range" min={min} max={max} step={step||1} value={value} onChange={onChange} style={{width:"100%",accentColor:C.primary}}/></div>;
+ 53| }
+ 54| function Chip({active,onClick,children}:{active:boolean;onClick:()=>void;children:any}){
+ 55|   return <button type="button" onClick={onClick} style={{padding:"8px 14px",borderRadius:20,fontSize:13,fontWeight:600,cursor:"pointer",border:active?`2px solid ${C.primary}`:`1px solid ${C.border}`,background:active?C.infoBg:"#fff",color:active?C.primary:C.text}}>{children}</button>;
+ 56| }
+ 57| 
+ 58| export default function MarketAnalysisPage(){
+ 59|   const [step,setStep]=useState(0);
+ 60|   const [loading,setLoading]=useState(false);
+ 61|   const [progress,setProgress]=useState(0);
+ 62|   const [result,setResult]=useState<any>(null);
+ 63|   const [error,setError]=useState("");
+ 64|   const [macro,setMacro]=useState<any>(null);
+ 65|   const [provider,setProvider]=useState("groq");
+ 66|   const [f,setF]=useState({
+ 67|     oked_section:"J",oked_division:"62",oked_class:"",activity_description:"",
+ 68|     investment_amount:"50000",investment_currency:"USD" as "USD"|"UZS",
+ 69|     investment_horizon_years:5,investment_type:"greenfield",
+ 70|     project_stage:"idea",funding_sources:["own"] as string[],
+ 71|     debt_ratio_pct:30,expected_loan_rate_pct:22.8,
+ 72|     expected_revenue_year1:"",expected_margin_pct:15,
+ 73|     region:"tashkent_city",city_district:"",sez_code:"",industrial_zone:"",
+ 74|     target_markets:["domestic"] as string[],expected_market_share_pct:5,
+ 75|     competitors_range:"4-10",
+ 76|     legal_form:"ooo",tax_regime:"general",planned_employees:10,
+ 77|     risk_profile:5,import_dependency_pct:30,
+ 78|   });
+ 79|   const s=(k:string,v:any)=>setF(prev=>({...prev,[k]:v}));
+ 80|   const toggle=(key:string,val:string)=>{const arr=(f as any)[key] as string[];s(key,arr.includes(val)?arr.filter((x:string)=>x!==val):[...arr,val]);};
+ 81| 
+ 82|   useEffect(()=>{apiCall("/reference/macro-context").then(setMacro).catch(()=>setMacro({policy_rate_pct:14,inflation_cpi_pct:7.2,usd_uzs_rate:12850,gdp_growth_pct:6.5,tsmi_index:843.5}));},[]);
+ 83| 
+ 84|   async function submit(){
+ 85|     setLoading(true);setError("");setResult(null);setProgress(10);
+ 86|     const iv=setInterval(()=>setProgress(p=>Math.min(p+Math.random()*8,90)),800);
+ 87|     try{
+ 88|       const body={...f,investment_amount:parseFloat(f.investment_amount)||50000,expected_revenue_year1:f.expected_revenue_year1?parseFloat(f.expected_revenue_year1):null,provider};
+ 89|       const data=await apiCall("/uz-market/generate-report",body);
+ 90|       setProgress(100);setResult(data);
+ 91|     }catch(e:any){setError(e.message||"╨Ю╤И╨╕╨▒╨║╨░ ╨│╨╡╨╜╨╡╤А╨░╤Ж╨╕╨╕");}
+ 92|     finally{clearInterval(iv);setLoading(false);}
+ 93|   }
+ 94|   async function exportFmt(fmt:string){
+ 95|     if(!result)return;
+ 96|     try{const token=localStorage.getItem("token");
+ 97|       const r=await fetch(`${API}/uz-market/reports/${result.id||"latest"}/${fmt}`,{headers:{...(token?{Authorization:`Bearer ${token}`}:{})}});
+ 98|       if(!r.ok)throw new Error("╨н╨║╤Б╨┐╨╛╤А╤В ╨╜╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╡╨╜");
+ 99|       const blob=await r.blob();const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`market-report.${fmt}`;a.click();URL.revokeObjectURL(url);
+100|     }catch{alert(`╨н╨║╤Б╨┐╨╛╤А╤В ╨▓ ${fmt.toUpperCase()} ╨┐╨╛╨║╨░ ╨╜╨╡╨┤╨╛╤Б╤В╤Г╨┐╨╡╨╜ ╨╜╨░ ╤Б╨╡╤А╨▓╨╡╤А╨╡`);}
+101|   }
+102|   const recColor=(r:string)=>r==="invest"?C.success:r==="hold"?C.warning:C.error;
+103|   const recLabel=(r:string)=>r==="invest"?"тЬЕ Invest":r==="hold"?"тЪая╕П Hold":"тЭМ Avoid";
+104|   const g2={display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem"} as const;
+105| 
+106|   function renderStep(){switch(step){
+107|     case 0:return <div><div style={g2}>
+108|       <div><Label text="╨б╨╡╨║╤Ж╨╕╤П ╨Ю╨Ъ╨Т╨н╨Ф (Level 1) *" tip="21 ╤Б╨╡╨║╤Ж╨╕╤П A-U"/><Sel value={f.oked_section} onChange={(e:any)=>s("oked_section",e.target.value)}>{OKED_SECTIONS.map(o=><option key={o.code} value={o.code}>{o.code} тАФ {o.name}</option>)}</Sel></div>
+109|       <div><Label text="╨Я╨╛╨┤╤А╨░╨╖╨┤╨╡╨╗ (Level 2) *" tip="╨Ф╨▓╤Г╨╖╨╜╨░╤З╨╜╤Л╨╣ ╨║╨╛╨┤ 01-99"/><Inp type="text" value={f.oked_division} onChange={(e:any)=>s("oked_division",e.target.value)} placeholder="62"/></div>
+110|       <div><Label text="╨Ъ╨╗╨░╤Б╤Б (Level 3)" tip="╨Э╨╡╨╛╨▒╤П╨╖╨░╤В╨╡╨╗╤М╨╜╨╛"/><Inp type="text" value={f.oked_class} onChange={(e:any)=>s("oked_class",e.target.value)} placeholder="62.01"/></div>
+111|     </div><div style={{marginTop:16}}><Label text="╨Ю╨┐╨╕╤Б╨░╨╜╨╕╨╡ ╨┤╨╡╤П╤В╨╡╨╗╤М╨╜╨╛╤Б╤В╨╕" tip="╨Ь╨░╨║╤Б. 500 ╤Б╨╕╨╝╨▓╨╛╨╗╨╛╨▓"/><textarea value={f.activity_description} onChange={(e:any)=>s("activity_description",e.target.value)} maxLength={500} rows={3} placeholder="╨Ю╨┐╨╕╤И╨╕╤В╨╡ ╨▓╨░╤И╤Г ╨┤╨╡╤П╤В╨╡╨╗╤М╨╜╨╛╤Б╤В╤М..." style={{width:"100%",padding:10,border:`1px solid ${C.border}`,borderRadius:8,fontSize:14,resize:"vertical"}}/></div></div>;
+112|     case 1:return <div><div style={g2}>
+113|       <div><Label text="╨Ю╨▒╤К╤С╨╝ ╨╕╨╜╨▓╨╡╤Б╤В╨╕╤Ж╨╕╨╣ *" tip="1,000 тАФ 1,000,000,000"/><Inp type="number" value={f.investment_amount} onChange={(e:any)=>s("investment_amount",e.target.value)} min={1000} max={1000000000}/></div>
+114|       <div><Label text="╨Т╨░╨╗╤О╤В╨░"/><Sel value={f.investment_currency} onChange={(e:any)=>s("investment_currency",e.target.value)}><option value="USD">USD</option><option value="UZS">UZS</option></Sel></div>
+115|       <div><Label text="╨У╨╛╤А╨╕╨╖╨╛╨╜╤В (╨╗╨╡╤В)" tip="1-30 ╨╗╨╡╤В"/><Slider value={f.investment_horizon_years} min={1} max={30} label="╨У╨╛╤А╨╕╨╖╨╛╨╜╤В" onChange={(e:any)=>s("investment_horizon_years",parseInt(e.target.value))}/></div>
+116|       <div><Label text="╨в╨╕╨┐ ╨╕╨╜╨▓╨╡╤Б╤В╨╕╤Ж╨╕╨╕"/><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{[["greenfield","Greenfield"],["expansion","╨а╨░╤Б╤И╨╕╤А╨╡╨╜╨╕╨╡"],["ma","M&A"],["franchise","╨д╤А╨░╨╜╤И╨╕╨╖╨░"]].map(([v,l])=><Chip key={v} active={f.investment_type===v} onClick={()=>s("investment_type",v)}>{l}</Chip>)}</div></div>
+117|       <div><Label text="╨б╤В╨░╨┤╨╕╤П ╨┐╤А╨╛╨╡╨║╤В╨░"/><Sel value={f.project_stage} onChange={(e:any)=>s("project_stage",e.target.value)}><option value="idea">╨Ш╨┤╨╡╤П</option><option value="business_plan">╨С╨╕╨╖╨╜╨╡╤Б-╨┐╨╗╨░╨╜</option><option value="launch">╨Ч╨░╨┐╤Г╤Б╨║</option><option value="operating">╨а╨░╨▒╨╛╤В╨░╨╡╤В</option></Sel></div>
+118|       <div><Label text="╨Ш╤Б╤В╨╛╤З╨╜╨╕╨║╨╕ ╤Д╨╕╨╜╨░╨╜╤Б╨╕╤А╨╛╨▓╨░╨╜╨╕╤П" tip="╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╨╛╨┤╨╕╨╜ ╨╕╨╗╨╕ ╨╜╨╡╤Б╨║╨╛╨╗╤М╨║╨╛"/><div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{[["own","╨б╨╛╨▒╤Б╤В╨▓╨╡╨╜╨╜╤Л╨╡"],["bank_loan","╨С╨░╨╜╨║. ╨║╤А╨╡╨┤╨╕╤В"],["leasing","╨Ы╨╕╨╖╨╕╨╜╨│"],["investor","╨Ш╨╜╨▓╨╡╤Б╤В╨╛╤А"],["grant","╨У╤А╨░╨╜╤В"]].map(([v,l])=><Chip key={v} active={f.funding_sources.includes(v)} onClick={()=>toggle("funding_sources",v)}>{l}</Chip>)}</div></div>
+119|     </div>{macro&&<div style={{marginTop:16,padding:12,background:C.infoBg,borderRadius:8,border:"1px solid #bae6fd"}}><p style={{margin:0,fontSize:13,color:"#0369a1"}}>ЁЯУК ╨Ь╨░╨║╤А╨╛: ╨ж╨С ╤Б╤В╨░╨▓╨║╨░ {macro.policy_rate_pct}% ┬╖ ╨Ш╨╜╤Д╨╗╤П╤Ж╨╕╤П {macro.inflation_cpi_pct}% ┬╖ USD/UZS {macro.usd_uzs_rate?.toLocaleString()} ┬╖ ╨Т╨Т╨Я ╤А╨╛╤Б╤В {macro.gdp_growth_pct}%</p></div>}</div>;
+120|     case 2:return <div style={g2}>
+121|       <div><Label text="╨Ф╨╛╨╗╤П ╨┤╨╛╨╗╨│╨░ (%)" tip="0-90%"/><Slider value={f.debt_ratio_pct} min={0} max={90} label="╨Ф╨╛╨╗╤П ╨┤╨╛╨╗╨│╨░" onChange={(e:any)=>s("debt_ratio_pct",parseFloat(e.target.value))}/></div>
+122|       <div><Label text="╨б╤В╨░╨▓╨║╨░ ╨║╤А╨╡╨┤╨╕╤В╨░ (%)" tip="╨в╨╡╨║╤Г╤Й╨░╤П ╤Б╤А╨╡╨┤╨╜╤П╤П 22.8%"/><Inp type="number" value={f.expected_loan_rate_pct} onChange={(e:any)=>s("expected_loan_rate_pct",parseFloat(e.target.value)||0)} min={5} max={40} step={0.1}/></div>
+123|       <div><Label text="╨Т╤Л╤А╤Г╤З╨║╨░ 1-╨╣ ╨│╨╛╨┤" tip="╨Э╨╡╨╛╨▒╤П╨╖╨░╤В╨╡╨╗╤М╨╜╨╛"/><Inp type="number" value={f.expected_revenue_year1} onChange={(e:any)=>s("expected_revenue_year1",e.target.value)} placeholder="0"/></div>
+124|       <div><Label text="╨Ь╨░╤А╨╢╨╕╨╜╨░╨╗╤М╨╜╨╛╤Б╤В╤М (%)" tip="-50% тАФ 100%"/><Slider value={f.expected_margin_pct} min={-50} max={100} label="╨Ь╨░╤А╨╢╨░" onChange={(e:any)=>s("expected_margin_pct",parseFloat(e.target.value))}/></div>
+125|     </div>;
+126|     case 3:return <div style={g2}>
+127|       <div><Label text="╨а╨╡╨│╨╕╨╛╨╜ ╨г╨╖╨▒╨╡╨║╨╕╤Б╤В╨░╨╜╨░ *" tip="14 ╤А╨╡╨│╨╕╨╛╨╜╨╛╨▓"/><Sel value={f.region} onChange={(e:any)=>s("region",e.target.value)}>{REGIONS.map(r=><option key={r.id} value={r.id}>{r.name}</option>)}</Sel></div>
+128|       <div><Label text="╨У╨╛╤А╨╛╨┤ / ╤А╨░╨╣╨╛╨╜"/><Inp value={f.city_district} onChange={(e:any)=>s("city_district",e.target.value)} placeholder="╨Э╨╡╨╛╨▒╤П╨╖╨░╤В╨╡╨╗╤М╨╜╨╛"/></div>
+129|       <div><Label text="╨б╨н╨Ч (╤Б╨▓╨╛╨▒╨╛╨┤╨╜╨░╤П ╤Н╨║╨╛╨╜. ╨╖╨╛╨╜╨░)" tip="╨Ш╨╖ 49 ╨б╨н╨Ч ╨г╨╖╨▒╨╡╨║╨╕╤Б╤В╨░╨╜╨░"/><Sel value={f.sez_code} onChange={(e:any)=>s("sez_code",e.target.value)}><option value="">тАФ ╨С╨╡╨╖ ╨б╨н╨Ч тАФ</option>{SEZ_LIST.map(z=><option key={z.code} value={z.code}>{z.name}</option>)}</Sel></div>
+130|       <div><Label text="╨Ш╨╜╨┤╤Г╤Б╤В╤А╨╕╨░╨╗╤М╨╜╨░╤П ╨╖╨╛╨╜╨░"/><Inp value={f.industrial_zone} onChange={(e:any)=>s("industrial_zone",e.target.value)} placeholder="╨Э╨╡╨╛╨▒╤П╨╖╨░╤В╨╡╨╗╤М╨╜╨╛"/></div>
+131|     </div>;
+132|     case 4:return <div>
+133|       <div style={{marginBottom:16}}><Label text="╨ж╨╡╨╗╨╡╨▓╤Л╨╡ ╤А╤Л╨╜╨║╨╕ *" tip="╨Т╤Л╨▒╨╡╤А╨╕╤В╨╡ ╨╛╨┤╨╕╨╜ ╨╕╨╗╨╕ ╨╜╨╡╤Б╨║╨╛╨╗╤М╨║╨╛"/><div style={{display:"flex",gap:8}}>{[["domestic","ЁЯЗ║ЁЯЗ┐ ╨Т╨╜╤Г╤В╤А╨╡╨╜╨╜╨╕╨╣"],["cis_export","ЁЯМР ╨н╨║╤Б╨┐╨╛╤А╤В ╨б╨Э╨У"],["global_export","ЁЯМН ╨У╨╗╨╛╨▒╨░╨╗╤М╨╜╤Л╨╣ ╤Н╨║╤Б╨┐╨╛╤А╤В"]].map(([v,l])=><button key={v} type="button" onClick={()=>toggle("target_markets",v)} style={{padding:"10px 18px",borderRadius:8,fontSize:13,fontWeight:600,cursor:"pointer",flex:1,border:f.target_markets.includes(v)?`2px solid ${C.primary}`:`1px solid ${C.border}`,background:f.target_markets.includes(v)?C.infoBg:"#fff",color:f.target_markets.includes(v)?C.primary:C.text}}>{l}</button>)}</div></div>
+134|       <div style={g2}>
+135|         <div><Label text="╨Ю╨╢╨╕╨┤╨░╨╡╨╝╨░╤П ╨┤╨╛╨╗╤П ╤А╤Л╨╜╨║╨░ (%)" tip="0.1-50%"/><Slider value={f.expected_market_share_pct} min={0.1} max={50} step={0.1} label="╨Ф╨╛╨╗╤П ╤А╤Л╨╜╨║╨░" onChange={(e:any)=>s("expected_market_share_pct",parseFloat(e.target.value))}/></div>
+136|         <div><Label text="╨Ъ╨╛╨╗-╨▓╨╛ ╨║╨╛╨╜╨║╤Г╤А╨╡╨╜╤В╨╛╨▓"/><div style={{display:"flex",gap:8}}>
+137|           {["0-3","4-10","11-50","50+"].map(v=><Chip key={v} active={f.competitors_range===v} onClick={()=>s("competitors_range",v)}>{v}</Chip>)}</div></div>
+138|       </div></div>;
+139|     case 5:return <div style={g2}>
+140|       <div><Label text="╨Я╤А╨░╨▓╨╛╨▓╨░╤П ╤Д╨╛╤А╨╝╨░ *"/><Sel value={f.legal_form} onChange={(e:any)=>s("legal_form",e.target.value)}><option value="ip">╨Ш╨Я</option><option value="ooo">╨Ю╨Ю╨Ю</option><option value="ao">╨Р╨Ю</option><option value="farmer">╨д╨╡╤А╨╝╨╡╤А╤Б╨║╨╛╨╡ ╤Е╨╛╨╖╤П╨╣╤Б╤В╨▓╨╛</option><option value="family">╨б╨╡╨╝╨╡╨╣╨╜╨╛╨╡ ╨┐╤А╨╡╨┤╨┐╤А╨╕╤П╤В╨╕╨╡</option></Sel></div>
+141|       <div><Label text="╨Э╨░╨╗╨╛╨│╨╛╨▓╤Л╨╣ ╤А╨╡╨╢╨╕╨╝" tip="╨Ю╨▒╤Й╨╕╨╣ 15%, ╨г╨┐╤А╨╛╤Й╤С╨╜╨╜╤Л╨╣ 4%, ╨б╨н╨Ч 0%"/><div style={{display:"flex",gap:8}}>{[["general","╨Ю╨▒╤Й╨╕╨╣ (15%)"],["simplified","╨г╨┐╤А╨╛╤Й╤С╨╜╨╜╤Л╨╣ (4%)"],["sez","╨б╨н╨Ч (0%)"]].map(([v,l])=><Chip key={v} active={f.tax_regime===v} onClick={()=>s("tax_regime",v)}>{l}</Chip>)}</div></div>
+142|       <div><Label text="╨Ъ╨╛╨╗-╨▓╨╛ ╤Б╨╛╤В╤А╤Г╨┤╨╜╨╕╨║╨╛╨▓" tip="1-10,000"/><Inp type="number" value={f.planned_employees} onChange={(e:any)=>s("planned_employees",parseInt(e.target.value)||1)} min={1} max={10000}/></div>
+143|     </div>;
+144|     case 6:return <div style={g2}>
+145|       <div><Label text="╨а╨╕╤Б╨║-╨┐╤А╨╛╤Д╨╕╨╗╤М" tip="1=╨║╨╛╨╜╤Б╨╡╤А╨▓╨░╤В╨╕╨▓╨╜╤Л╨╣, 10=╨░╨│╤А╨╡╤Б╤Б╨╕╨▓╨╜╤Л╨╣"/><Slider value={f.risk_profile} min={1} max={10} label="╨а╨╕╤Б╨║-╨┐╤А╨╛╤Д╨╕╨╗╤М" onChange={(e:any)=>s("risk_profile",parseInt(e.target.value))}/></div>
+146|       <div><Label text="╨Ч╨░╨▓╨╕╤Б╨╕╨╝╨╛╤Б╤В╤М ╨╛╤В ╨╕╨╝╨┐╨╛╤А╤В╨░ (%)" tip="0-100%"/><Slider value={f.import_dependency_pct} min={0} max={100} label="╨Ш╨╝╨┐╨╛╤А╤В╨╛╨╖╨░╨▓╨╕╤Б╨╕╨╝╨╛╤Б╤В╤М" onChange={(e:any)=>s("import_dependency_pct",parseFloat(e.target.value))}/></div>
+147|     </div>;
+148|   }}
+149| 
+150|   function renderReport(){
+151|     if(!result)return null;
+152|     const rec=result.recommendation||result.report?.recommendation||"";
+153|     const score=result.confidence_score??result.report?.confidence_score??0;
+154|     const sections=result.sections||result.report?.sections||result.blocks||[];
+155|     const summary=result.executive_summary||result.report?.executive_summary||"";
+156|     const sez=result.sez_benefits||result.report?.sez_benefits;
+157|     const macroCtx=result.macro_context||result.report?.macro_context;
+158|     return <div style={{marginTop:24}}>
+159|       <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:20,padding:16,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
+160|         <div style={{padding:"12px 24px",borderRadius:12,background:rec==="invest"?C.successBg:rec==="hold"?C.warningBg:C.errorBg,border:`2px solid ${recColor(rec)}`,fontWeight:700,fontSize:18,color:recColor(rec)}}>{recLabel(rec)}</div>
+161|         <div><div style={{fontSize:14,color:C.muted}}>Confidence Score</div><div style={{fontSize:28,fontWeight:700,color:C.text}}>{score.toFixed?score.toFixed(1):score}%</div></div>
+162|         <div style={{flex:1}}/>
+163|         <div style={{display:"flex",gap:8}}>{["pdf","docx","xlsx","md"].map(fmt=><button key={fmt} onClick={()=>exportFmt(fmt)} style={{padding:"8px 16px",borderRadius:8,border:`1px solid ${C.border}`,background:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>ЁЯУД {fmt.toUpperCase()}</button>)}</div>
+164|       </div>
+165|       {macroCtx&&<div style={{padding:12,background:C.infoBg,borderRadius:8,border:"1px solid #bae6fd",marginBottom:16}}><p style={{margin:0,fontSize:13,color:"#0369a1"}}>ЁЯУК ╨Т╨Т╨Я: {macroCtx.gdp_growth_pct}% ┬╖ ╨ж╨С: {macroCtx.policy_rate_pct}% ┬╖ CPI: {macroCtx.inflation_cpi_pct}% ┬╖ USD/UZS: {macroCtx.usd_uzs_rate?.toLocaleString()}</p></div>}
+166|       {summary&&<div style={{padding:16,background:"#faf5ff",borderRadius:12,border:"1px solid #d8b4fe",marginBottom:16}}><h3 style={{margin:"0 0 8px",fontSize:16,color:"#7c3aed"}}>Executive Summary</h3><p style={{margin:0,fontSize:14,color:C.text,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{summary}</p></div>}
+167|       {sez&&<div style={{padding:12,background:C.successBg,borderRadius:8,border:"1px solid #86efac",marginBottom:16}}><strong style={{color:"#15803d"}}>╨б╨н╨Ч: {sez.sez_name}</strong><p style={{margin:"4px 0 0",fontSize:13,color:C.text}}>{sez.tax_exemptions?.join(" ┬╖ ")}</p></div>}
+168|       {Array.isArray(sections)&&sections.map((sec:any,i:number)=><div key={i} style={{marginBottom:12,padding:16,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}><h3 style={{margin:"0 0 8px",fontSize:15,color:C.primary}}>{sec.number||i+1}. {sec.title}</h3><div style={{fontSize:14,color:C.text,lineHeight:1.7,whiteSpace:"pre-wrap"}}>{sec.content}</div></div>)}
+169|       <div style={{padding:12,background:"#fef9c3",borderRadius:8,border:"1px solid #fde047",marginTop:16}}><p style={{margin:0,fontSize:12,color:"#854d0e"}}>тЪая╕П ╨Ф╨░╨╜╨╜╤Л╨╣ ╨╛╤В╤З╤С╤В ╤Б╨│╨╡╨╜╨╡╤А╨╕╤А╨╛╨▓╨░╨╜ AI ╨╕ ╨╜╨╛╤Б╨╕╤В ╨╕╨╜╤Д╨╛╤А╨╝╨░╤Ж╨╕╨╛╨╜╨╜╤Л╨╣ ╤Е╨░╤А╨░╨║╤В╨╡╤А. ╨Я╨╡╤А╨╡╨┤ ╨┐╤А╨╕╨╜╤П╤В╨╕╨╡╨╝ ╨╕╨╜╨▓╨╡╤Б╤В╨╕╤Ж╨╕╨╛╨╜╨╜╤Л╤Е ╤А╨╡╤И╨╡╨╜╨╕╨╣ ╤А╨╡╨║╨╛╨╝╨╡╨╜╨┤╤Г╨╡╤В╤Б╤П ╨║╨╛╨╜╤Б╤Г╨╗╤М╤В╨░╤Ж╨╕╤П ╤Б ╨┐╤А╨╛╤Д╨╡╤Б╤Б╨╕╨╛╨╜╨░╨╗╤М╨╜╤Л╨╝╨╕ ╤Д╨╕╨╜╨░╨╜╤Б╨╛╨▓╤Л╨╝╨╕ ╤Б╨╛╨▓╨╡╤В╨╜╨╕╨║╨░╨╝╨╕.</p></div>
+170|       <details style={{marginTop:12}}><summary style={{cursor:"pointer",color:C.muted,fontSize:13}}>╨Я╨╛╨║╨░╨╖╨░╤В╤М JSON</summary><pre style={{background:"#1e293b",color:"#e2e8f0",borderRadius:8,padding:12,overflow:"auto",fontSize:12,marginTop:8}}>{JSON.stringify(result,null,2)}</pre></details>
+171|     </div>;
+172|   }
+173| 
+174|   return <div style={{minHeight:"100vh",background:C.bg,padding:"2rem 1rem"}}><div style={{maxWidth:960,margin:"0 auto"}}>
+175|     <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>ЁЯЗ║ЁЯЗ┐ ╨Р╨╜╨░╨╗╨╕╨╖ ╤А╤Л╨╜╨║╨░ ╨г╨╖╨▒╨╡╨║╨╕╤Б╤В╨░╨╜╨░</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>╨Ф╨╡╤В╨░╨╗╤М╨╜╤Л╨╣ AI-╨░╨╜╨░╨╗╨╕╨╖ ╨╛╤В╤А╨░╤Б╨╗╨╕ ╨┐╨╛ 7 ╨▒╨╗╨╛╨║╨░╨╝ (25 ╨┐╨╛╨╗╨╡╨╣) тЖТ 12-╤Б╨╡╨║╤Ж╨╕╨╛╨╜╨╜╤Л╨╣ ╨╕╨╜╨▓╨╡╤Б╤В╨╕╤Ж╨╕╨╛╨╜╨╜╤Л╨╣ ╨╛╤В╤З╤С╤В</p></div>
+176|     {macro&&<div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap"}}>{[{label:"╨ж╨С ╤Б╤В╨░╨▓╨║╨░",value:`${macro.policy_rate_pct}%`,icon:"ЁЯПж"},{label:"╨Ш╨╜╤Д╨╗╤П╤Ж╨╕╤П (CPI)",value:`${macro.inflation_cpi_pct}%`,icon:"ЁЯУИ"},{label:"USD/UZS",value:macro.usd_uzs_rate?.toLocaleString(),icon:"ЁЯТ▒"},{label:"╨Т╨Т╨Я ╤А╨╛╤Б╤В",value:`${macro.gdp_growth_pct}%`,icon:"ЁЯУК"},{label:"TSMI",value:macro.tsmi_index,icon:"ЁЯФв"}].map((m,i)=><div key={i} style={{flex:1,minWidth:140,padding:12,background:C.card,borderRadius:10,border:`1px solid ${C.border}`,textAlign:"center"}}><div style={{fontSize:20}}>{m.icon}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>{m.label}</div><div style={{fontSize:18,fontWeight:700,color:C.text}}>{m.value}</div></div>)}</div>}
+177|     <div style={{display:"flex",gap:4,marginBottom:20}}>{STEPS.map((_,i)=><div key={i} style={{flex:1,height:6,borderRadius:3,background:i<=step?C.primary:C.border,transition:"background 0.3s"}}/>)}</div>
+178|     <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}><div style={{fontSize:15,fontWeight:700,color:C.text}}>{STEPS[step]}</div><div style={{fontSize:13,color:C.muted}}>╨и╨░╨│ {step+1} ╨╕╨╖ 7</div></div>
+179|     <div style={{padding:10,background:C.infoBg,borderRadius:8,border:"1px solid #bae6fd",marginBottom:16}}><p style={{margin:0,fontSize:13,color:"#0369a1"}}>ЁЯТб {TIPS[step]}</p></div>
+180|     <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.border}`,padding:"1.5rem",marginBottom:16}}>{renderStep()}</div>
+181|     <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+182|       {step>0&&<button onClick={()=>setStep(step-1)} disabled={loading} style={{padding:"12px 24px",borderRadius:8,border:`1px solid ${C.border}`,background:"#fff",cursor:"pointer",fontSize:14,fontWeight:600}}>тЖР ╨Э╨░╨╖╨░╨┤</button>}
+183|       {step<6&&<button onClick={()=>setStep(step+1)} style={{padding:"12px 24px",borderRadius:8,border:"none",background:C.primary,color:"#fff",cursor:"pointer",fontSize:14,fontWeight:600}}>╨Ф╨░╨╗╨╡╨╡ тЖТ</button>}
+184|       {step===6&&<button onClick={submit} disabled={loading} style={{padding:"12px 32px",borderRadius:8,border:"none",background:loading?C.muted:"#10b981",color:"#fff",cursor:loading?"not-allowed":"pointer",fontSize:14,fontWeight:700}}>{loading?"╨У╨╡╨╜╨╡╤А╨░╤Ж╨╕╤П AI-╨╛╤В╤З╤С╤В╨░...":"ЁЯЪА ╨б╨╛╨╖╨┤╨░╤В╤М AI-╨╛╤В╤З╤С╤В"}</button>}
+185|       <div style={{flex:1}}/><Sel value={provider} onChange={(e:any)=>setProvider(e.target.value)} style={{width:180}}><option value="groq">Groq (╨▒╤Л╤Б╤В╤А╨╛)</option><option value="perplexity">Perplexity (╨│╨╗╤Г╨▒╨╢╨╡)</option></Sel>
+186|     </div>
+187|     {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>AI ╨░╨╜╨░╨╗╨╕╨╖╨╕╤А╤Г╨╡╤В ╨┤╨░╨╜╨╜╤Л╨╡... {progress.toFixed(0)}%</p></div>}
+188|     {error&&<div style={{marginTop:16,padding:12,background:C.errorBg,borderRadius:8,border:`1px solid ${C.error}`,color:C.error}}>{error}</div>}
+189|     {result&&renderReport()}
+190|   </div></div>;
+191| }

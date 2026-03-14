@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -121,7 +121,7 @@ export default function UzMarketPage() {
   // Загружаем разделы ОКЭД при выборе секции
   useEffect(() => {
     if (!form.oked_section) return
-    fetch(`/api/v1/reference/oked/\${form.oked_section}`)
+    fetch(\`/api/v1/reference/oked/\${form.oked_section}\`)
       .then(r => r.json())
       .then(data => setOkedDivisions(data.divisions || []))
       .catch(console.error)
@@ -132,8 +132,8 @@ export default function UzMarketPage() {
     if (!reportId) return
     const timer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/market-analysis/reports/\${reportId}`, {
-          headers: { 'Authorization': `Bearer \${localStorage.getItem('token')}` }
+        const res = await fetch(\`/api/v1/market-analysis/reports/\${reportId}\`, {
+          headers: { 'Authorization': \`Bearer \${localStorage.getItem('token')}\` }
         })
         const data = await res.json()
         if (data.status === 'ready' || data.status === 'error') {
@@ -172,7 +172,7 @@ export default function UzMarketPage() {
       const token = localStorage.getItem('token')
       const res = await fetch('/api/v1/market-analysis/quick', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer \${token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${token}\` },
         body: JSON.stringify({ question: quickQuestion, provider: 'groq' }),
       })
       const data = await res.json()
@@ -194,7 +194,7 @@ export default function UzMarketPage() {
       const token = localStorage.getItem('token')
       const res = await fetch('/api/v1/market-analysis/detailed', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer \${token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': \`Bearer \${token}\` },
         body: JSON.stringify({
           ...form,
           investment_amount: Number(form.investment_amount),
@@ -215,7 +215,7 @@ export default function UzMarketPage() {
 
   const downloadPdf = (rid: string) => {
     const token = localStorage.getItem('token')
-    window.open(`/api/v1/market-analysis/reports/\${rid}/pdf?token=\${token}`, '_blank')
+    window.open(\`/api/v1/market-analysis/reports/\${rid}/pdf?token=\${token}\`, '_blank')
   }
 
   const QUICK_SUGGESTIONS = [
@@ -252,12 +252,12 @@ export default function UzMarketPage() {
           <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 mb-6 overflow-hidden">
             <div className="flex gap-6 text-sm overflow-x-auto">
               {[
-                { label: 'ВВП', value: `$\${macro.gdp_usd_bln} млрд`, sub: `+\${macro.gdp_growth_pct}%` },
-                { label: 'Инфляция', value: `\${macro.inflation_cpi_pct}%`, sub: 'CPI янв 2026' },
-                { label: 'Ставка ЦБ', value: `\${macro.refinancing_rate_pct}%`, sub: 'рефин.' },
+                { label: 'ВВП', value: \`$\${macro.gdp_usd_bln} млрд\`, sub: \`+\${macro.gdp_growth_pct}%\` },
+                { label: 'Инфляция', value: \`\${macro.inflation_cpi_pct}%\`, sub: 'CPI янв 2026' },
+                { label: 'Ставка ЦБ', value: \`\${macro.refinancing_rate_pct}%\`, sub: 'рефин.' },
                 { label: 'USD/UZS', value: macro.usd_uzs_rate.toLocaleString(), sub: 'текущий курс' },
-                { label: 'Кредит (ср.)', value: `\${macro.avg_lending_rate_pct}%`, sub: 'банки' },
-                { label: 'Гособл. 3Y', value: `\${macro.gov_bond_3y_pct}%`, sub: 'Минфин' },
+                { label: 'Кредит (ср.)', value: \`\${macro.avg_lending_rate_pct}%\`, sub: 'банки' },
+                { label: 'Гособл. 3Y', value: \`\${macro.gov_bond_3y_pct}%\`, sub: 'Минфин' },
                 { label: 'TSMI', value: macro.tsmi_index.toString(), sub: 'биржа Ташкент' },
               ].map((item, i) => (
                 <div key={i} className="flex flex-col items-center min-w-[80px] border-r border-slate-700/40 last:border-0 pr-5">
@@ -274,22 +274,22 @@ export default function UzMarketPage() {
         <div className="flex gap-3 mb-6">
           <button
             onClick={() => setMode('quick')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all \${
+            className={\`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all \${
               mode === 'quick'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
                 : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/60 border border-slate-700/50'
-            }`}
+            }\`}
           >
             <Zap className="w-4 h-4" />
             Быстрый вопрос
           </button>
           <button
             onClick={() => setMode('detailed')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all \${
+            className={\`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all \${
               mode === 'detailed'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
                 : 'bg-slate-800/60 text-slate-400 hover:bg-slate-700/60 border border-slate-700/50'
-            }`}
+            }\`}
           >
             <Sparkles className="w-4 h-4" />
             Детальный анализ
@@ -399,11 +399,11 @@ export default function UzMarketPage() {
                       <button
                         key={s.id}
                         onClick={() => setStep(s.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all \${
+                        className={\`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all \${
                           isActive ? 'bg-blue-600 text-white' :
                           isDone ? 'bg-slate-700/50 text-emerald-400' :
                           'text-slate-400 hover:bg-slate-700/30'
-                        }`}
+                        }\`}
                       >
                         {isDone
                           ? <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -519,7 +519,7 @@ export default function UzMarketPage() {
                         <div className="grid grid-cols-2 gap-2">
                           {[{v:'greenfield',l:'Greenfield'},{v:'expansion',l:'Расширение'},{v:'ma',l:'M&A'},{v:'franchise',l:'Франшиза'}].map(opt => (
                             <button key={opt.v} onClick={() => handleUpdate('investment_type', opt.v)}
-                              className={`px-3 py-2 rounded-lg text-xs font-medium transition-all \${form.investment_type === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'}`}>
+                              className={\`px-3 py-2 rounded-lg text-xs font-medium transition-all \${form.investment_type === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'}\`}>
                               {opt.l}
                             </button>
                           ))}
@@ -545,11 +545,11 @@ export default function UzMarketPage() {
                           {v:'leasing',l:'Лизинг'},{v:'investor',l:'Инвестор'},{v:'grant',l:'Грант'}
                         ].map(opt => (
                           <button key={opt.v} onClick={() => handleMultiSelect('funding_sources', opt.v)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
+                            className={\`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
                               form.funding_sources.includes(opt.v)
                                 ? 'bg-blue-600 text-white'
                                 : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
-                            }`}>
+                            }\`}>
                             {opt.l}
                           </button>
                         ))}
@@ -651,9 +651,9 @@ export default function UzMarketPage() {
                       <div className="flex gap-3">
                         {[{v:'domestic',l:'Внутренний'},{v:'cis_export',l:'Экспорт СНГ'},{v:'global_export',l:'Дальнее зарубежье'}].map(opt => (
                           <button key={opt.v} onClick={() => handleMultiSelect('target_markets', opt.v)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
+                            className={\`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
                               form.target_markets.includes(opt.v) ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
-                            }`}>{opt.l}</button>
+                            }\`}>{opt.l}</button>
                         ))}
                       </div>
                     </div>
@@ -672,9 +672,9 @@ export default function UzMarketPage() {
                       <div className="flex gap-3">
                         {[{v:'0-3',l:'0-3'},{v:'4-10',l:'4-10'},{v:'11-50',l:'11-50'},{v:'50+',l:'50+'}].map(opt => (
                           <button key={opt.v} onClick={() => handleUpdate('competitors_range', opt.v)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
+                            className={\`px-4 py-2 rounded-lg text-sm font-medium transition-all \${
                               form.competitors_range === opt.v ? 'bg-blue-600 text-white' : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
-                            }`}>{opt.l}</button>
+                            }\`}>{opt.l}</button>
                         ))}
                       </div>
                     </div>
@@ -706,7 +706,7 @@ export default function UzMarketPage() {
                             {v:'simplified',l:'Упрощённый (оборотный 4%)'},
                             {v:'sez',l:'СЭЗ (льготный)'},
                           ].map(opt => (
-                            <label key={opt.v} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all \${form.tax_regime === opt.v ? 'bg-blue-600/20 border border-blue-500/50' : 'bg-slate-700/30 border border-transparent'}`}>
+                            <label key={opt.v} className={\`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all \${form.tax_regime === opt.v ? 'bg-blue-600/20 border border-blue-500/50' : 'bg-slate-700/30 border border-transparent'}\`}>
                               <input type="radio" value={opt.v} checked={form.tax_regime === opt.v}
                                 onChange={() => handleUpdate('tax_regime', opt.v)} className="accent-blue-500" />
                               <span className="text-sm text-slate-300">{opt.l}</span>
@@ -780,9 +780,9 @@ export default function UzMarketPage() {
                       <h4 className="text-white font-semibold mb-3">Сводка параметров</h4>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {[
-                          {l:'ОКЭД',v:`\${form.oked_section}/\${form.oked_division}`},
-                          {l:'Инвестиции',v:`\${form.investment_amount.toLocaleString()} \${form.investment_currency}`},
-                          {l:'Горизонт',v:`\${form.investment_horizon_years} лет`},
+                          {l:'ОКЭД',v:\`\${form.oked_section}/\${form.oked_division}\`},
+                          {l:'Инвестиции',v:\`\${form.investment_amount.toLocaleString()} \${form.investment_currency}\`},
+                          {l:'Горизонт',v:\`\${form.investment_horizon_years} лет\`},
                           {l:'Регион',v:regions.find(r=>r.code===form.region)?.name_ru||form.region},
                           {l:'Налоговый режим',v:form.tax_regime},
                           {l:'Сотрудников',v:String(form.planned_employees)},
@@ -810,10 +810,10 @@ export default function UzMarketPage() {
                   <div className="flex gap-1.5">
                     {STEPS.map(s => (
                       <div key={s.id}
-                        className={`w-2 h-2 rounded-full transition-all \${
+                        className={\`w-2 h-2 rounded-full transition-all \${
                           s.id === step ? 'w-6 bg-blue-500' :
                           s.id < step ? 'bg-emerald-500' : 'bg-slate-600'
-                        }`} />
+                        }\`} />
                     ))}
                   </div>
 
@@ -871,11 +871,11 @@ export default function UzMarketPage() {
                     <h2 className="text-2xl font-bold text-white">Инвестиционный анализ готов</h2>
                   </div>
                   <div className="flex gap-4 mt-3">
-                    <span className={`px-4 py-1.5 rounded-full text-sm font-semibold \${
+                    <span className={\`px-4 py-1.5 rounded-full text-sm font-semibold \${
                       report.recommendation === 'invest' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' :
                       report.recommendation === 'avoid' ? 'bg-red-500/20 text-red-400 border border-red-500/40' :
                       'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                    }`}>
+                    }\`}>
                       {report.recommendation === 'invest' ? '✅ INVEST' : report.recommendation === 'avoid' ? '❌ AVOID' : '⏳ HOLD'}
                     </span>
                     <span className="px-4 py-1.5 bg-blue-600/20 text-blue-400 rounded-full text-sm border border-blue-500/30">
@@ -932,4 +932,3 @@ export default function UzMarketPage() {
     </div>
   )
 }
-
