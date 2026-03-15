@@ -66,3 +66,8 @@ from app.db.models.islamic_finance import (
     IslamicContract, PoSCReport, SSBFatwa, SSBMember,
     IslamicGlossary, HaramIndustryDB, IslamicP2PProject,
 )
+
+# === Organization Models (TZ#2) ===
+from app.db.models.organization_models import (
+    Organization, ChartOfAccounts, BalanceEntry, ImportSession,
+)
