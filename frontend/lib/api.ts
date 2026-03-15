@@ -100,8 +100,8 @@ export const marketUz = {
 };
 
 export const dd = {
-  searchByInn: (inn: string) => apiRequest(`/dd/search?inn=${encodeURIComponent(inn)}`),
-  getReport: (inn: string) => apiRequest(`/dd/report/${encodeURIComponent(inn)}`),
+  searchByInn: (inn: string) => apiRequest(`/companies/search?q=${encodeURIComponent(inn)}`),
+  getReport: (inn: string) => apiRequest(`/dd/scoring/${encodeURIComponent(inn)}`),
 };
 
 export const organizations = {
@@ -184,14 +184,14 @@ export const accessControl = {
 };
 
 export const companyLookup = {
-  search: (query: string) => apiRequest(`/company-lookup/search?q=${encodeURIComponent(query)}`),
-  getByInn: (inn: string) => apiRequest(`/company-lookup/inn/${encodeURIComponent(inn)}`),
-    get: (inn: string) => apiRequest(`/company-lookup/inn/${encodeURIComponent(inn)}`),
+  search: (query: string) => apiRequest(`/companies/search?q=${encodeURIComponent(query)}`),
+  getByInn: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
+    get: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
 };
 
 export const ddScoring = {
   score: (inn: string) => apiRequest(`/dd/scoring/${encodeURIComponent(inn)}`),
-    run: (data: unknown) => apiRequest('/dd/scoring/run', { method: 'POST', body: JSON.stringify(data) }),
+    run: (data: unknown) => apiRequest('/dd/scoring', { method: 'POST', body: JSON.stringify(data) }),
     updateChecklist: (id: number, data: unknown) => apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PUT', body: JSON.stringify(data) }),
     history: () => apiRequest('/dd/scoring/history'),
 };
