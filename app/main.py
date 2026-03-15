@@ -72,7 +72,7 @@ from app.services.telegram_bot_service import TelegramBotService, telegram_bot a
 # Phase 3: New routers
 from app.api.v1.routers import rate_limit
 from app.api.v1.routers import dd_documents
-from app.api.v1.routers import calculator
+# from app.api.v1.routers import calculator  # replaced by calculator_fe
 from app.api.v1.routers import contacts
 from app.api.v1.routers import excel_export
 
@@ -239,7 +239,7 @@ app.include_router(portfolio_analytics.router, prefix="/api/v1")
 # Phase 3: New routers
 app.include_router(rate_limit.router, prefix="/api/v1")
 app.include_router(dd_documents.router, prefix="/api/v1")
-app.include_router(calculator.router, prefix="/api/v1")
+# app.include_router(calculator.router, prefix="/api/v1")  # replaced by calculator_fe_router
 app.include_router(uz_market_router, prefix="/api/v1")
 app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(excel_export.router, prefix="/api/v1")
