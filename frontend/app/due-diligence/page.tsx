@@ -339,12 +339,17 @@ export default function DueDiligencePage() {
     if (!innQuery.trim()) return;
     setLookupLoading(true);
     try {
-      const res = await companyLookup.search(innQuery.trim());
-      setLookupResult(res);
-      if (res?.name) setCompanyName(res.name);
-      if (res?.industry) setIndustry(res.industry);
-      if (res?.region) setGeography(res.region);
-      if (res?.employee_count) setEmployeeCount(String(res.employee_count));
+            const results = await companyLookup.search(innQuery.trim());
+        const items = Array.isArray(results) ? results : (results?.items || [results]);
+        const company = items[0];
+        if (!company) { setError('Компания не найдена'); return; }
+        let detail = company;
+        try { detail = await companyLookup.get(innQuery.trim()); } catch {}
+        setLookupResult(detail);
+        if (detail?.name) setCompanyName(detail.name);
+        if (detail?.oked || detail?.industry) setIndustry(detail.oked || detail.industry);
+        if (detail?.address || detail?.region) setGeography(detail.address || detail.region);
+        if (detail?.employee_count) setEmployeeCount(String(detail.employee_count));
     } catch (e: any) {
       setError(e.message || 'Ошибка поиска компании');
     } finally {
