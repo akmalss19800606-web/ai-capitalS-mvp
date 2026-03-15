@@ -2,11 +2,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface Org { id:number; name:string; mode:string }
 interface BalanceSummary { total_assets:number; long_term_assets:number; current_assets:number; total_liabilities:number; total_equity:number; balance_check:boolean }
 
+function getAuthHeaders(extra:any={}){const t=typeof window!=='undefined'?localStorage.getItem('token'):null;const h:any={'Content-Type':'application/json',...extra};if(t)h['Authorization']=`Bearer ${t}`;return h;}
 const SCENARIOS = [
   {id:"devaluation", name:"Девальвация UZS", icon:"💱", desc:"Резкое обесценивание сума на 15-30%", factors:[
     {name:"Рост валютных обязательств (7810, 6810 в USD)", impact:-1},
@@ -49,12 +50,12 @@ export default function StressTestPage(){
   const [periodDate]=useState(new Date().toISOString().split("T")[0]);
 
   useEffect(()=>{
-    fetch(`${API}/organizations`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setOrgs(d)}).catch(()=>{});
+    fetch(`${API}/organizations`,{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setOrgs(d)}).catch(()=>{});
   },[]);
 
   useEffect(()=>{
     if(selectedOrg){
-      fetch(`${API}/organizations/${selectedOrg}/balance/summary?period_date=${periodDate}`)
+      fetch(`${API}/organizations/${selectedOrg}/balance/summary?period_date=${periodDate}`,{headers:getAuthHeaders()})
         .then(r=>r.json()).then(setBalance).catch(()=>setBalance(null));
     }
   },[selectedOrg]);
