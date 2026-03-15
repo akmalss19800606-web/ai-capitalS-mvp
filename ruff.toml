@@ -9,4 +9,6 @@ ignore = [
   "I001",    # import sorting (MVP flexibility)
   "F401",    # unused imports (some kept for re-export)
   "E501",    # line too long
+    "E702",   # multiple statements on one line (MVP compact style)
+  "E402",   # module level import not at top (MVP structure)
 ]
