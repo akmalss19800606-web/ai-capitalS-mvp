@@ -1,0 +1,12 @@
+# Ruff linter configuration for AI Capital MVP
+target-version = "py311"
+line-length = 120
+
+[lint]
+ignore = [
+  "UP035",   # typing.List/Dict deprecated -> use builtins (MVP style)
+  "UP045",   # Optional[X] -> X | None (MVP style)
+  "I001",    # import sorting (MVP flexibility)
+  "F401",    # unused imports (some kept for re-export)
+  "E501",    # line too long
+]
