@@ -321,7 +321,7 @@ export default function DueDiligencePage() {
   const loadData = useCallback(async () => {
     setLoadingData(true);
     try {
-      const res = await decisions.list({ per_page: 100 });
+      const res = await decisions.list();
       const items = Array.isArray(res) ? res : (res?.items || []);
       setDecisionsList(items.map((d: Record<string, unknown>) => ({ id: d.id, title: d.title })));
     } catch (e: unknown) {
@@ -363,7 +363,7 @@ export default function DueDiligencePage() {
     if (!file) return;
     setUploadingDoc(true);
     try {
-      const res = await ddDocuments.upload(file);
+      const res = await ddDocuments.upload(innQuery || companyName, { filename: file.name });
       setUploadedDocs(prev => [...prev, res]);
     } catch (err: any) {
       setError(err.message || 'Ошибка загрузки документа');
@@ -378,7 +378,7 @@ export default function DueDiligencePage() {
     setLoading(true);
     setError(null);
     try {
-      const payload: unknown= {
+      const payload: any = {
         company_name: companyName.trim(),
         geography,
       };
