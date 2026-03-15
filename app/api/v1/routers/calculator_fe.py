@@ -7,7 +7,7 @@ from app.api.v1.deps import get_current_user
 from app.services.calculator_service import InvestmentCalculatorService
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/calc", tags=["Calculator Frontend"])
+router = APIRouter(prefix="/calculator", tags=["Calculator Frontend"])
 calc = InvestmentCalculatorService
 
 
@@ -204,3 +204,109 @@ async def fe_monte_carlo(body: dict = Body(...), _u=Depends(get_current_user)):
     except Exception as e:
         logger.error("FE Monte Carlo error: %s", e)
         raise HTTPException(status_code=500, detail="Monte Carlo error")
+
+
+# ── GET endpoints for frontend ──
+
+@router.get("/benchmarks", summary="UZ Benchmarks List 2026")
+async def get_benchmarks_list(_u=Depends(get_current_user)):
+    raw = calc.get_benchmarks_list()
+    # Frontend expects {benchmarks: [{name_ru, annual_return_pct, risk_level, liquidity, notes}, ...]}
+    items = []
+    for key, val in raw.items():
+        items.append({
+            "id": key,
+            "name_ru": val.get("name", key),
+            "annual_return_pct": val.get("rate", 0),
+            "risk_level": val.get("type", "unknown"),
+            "liquidity": "Medium",
+            "notes": val.get("type", ""),
+        })
+    return {"benchmarks": items}
+
+
+@router.get("/tax-rates", summary="UZ Tax Rates 2026")
+async def get_tax_rates(_u=Depends(get_current_user)):
+    return {
+        "cit_standard_pct": 15,
+        "vat_pct": 12,
+        "turnover_tax_simplified_pct": 4,
+        "personal_income_tax_pct": 12,
+        "social_tax_pct": 12,
+        "property_tax_pct": 2,
+        "sez_exemption": {
+            "navoi": {"years": 10, "note": "Навоийская СЭЗ"},
+            "jizzakh": {"years": 7, "note": "Джизакская СЭЗ"},
+            "angren": {"years": 10, "note": "Ангренская СЭЗ"},
+        },
+        "source": "Налоговый кодекс РУз, 2026",
+    }
+
+
+@router.get("/presets", summary="Calculator Presets")
+async def get_presets(_u=Depends(get_current_user)):
+    return {"presets": [
+        {
+            "id": "textile",
+            "name_ru": "Текстильное производство",
+            "description": "Средний проект текстильной отрасли УЗ",
+            "prefilled": {"initial_investment": 500000, "revenue_year1": 800000, "revenue_growth_rate": 12, "operating_margin": 18, "horizon_years": 7, "discount_rate": 20}
+        },
+        {
+            "id": "agriculture",
+            "name_ru": "Агропромышленный комплекс",
+            "description": "Теплицы, переработка, экспорт",
+            "prefilled": {"initial_investment": 300000, "revenue_year1": 450000, "revenue_growth_rate": 10, "operating_margin": 22, "horizon_years": 5, "discount_rate": 18}
+        },
+        {
+            "id": "it_outsource",
+            "name_ru": "IT-аутсорсинг",
+            "description": "Разработка ПО, IT Park резидент",
+            "prefilled": {"initial_investment": 50000, "revenue_year1": 200000, "revenue_growth_rate": 25, "operating_margin": 35, "horizon_years": 5, "discount_rate": 15}
+        },
+        {
+            "id": "real_estate",
+            "name_ru": "Коммерческая недвижимость",
+            "description": "Офисный центр / ТРЦ",
+            "prefilled": {"initial_investment": 2000000, "revenue_year1": 600000, "revenue_growth_rate": 8, "operating_margin": 45, "horizon_years": 10, "discount_rate": 16}
+        },
+    ]}
+
+
+@router.get("/wacc-defaults", summary="WACC Default Parameters")
+async def get_wacc_defaults(_u=Depends(get_current_user)):
+    return calc.get_wacc_defaults()
+
+
+@router.post("/benchmarks", summary="Compare with UZ Benchmarks")
+async def compare_benchmarks(body: dict = Body(...), _u=Depends(get_current_user)):
+    try:
+        irr = body.get("irr") or body.get("irr_pct", 0)
+        return calc.get_benchmarks(
+            npv=body.get("npv", 0),
+            irr_pct=irr,
+            investment_usd=body.get("investment_usd", 0),
+            horizon_years=body.get("horizon_years", 3),
+        )
+    except Exception as e:
+        logger.error("Benchmarks error: %s", e)
+        raise HTTPException(status_code=500, detail="Benchmarks error")
+
+
+@router.post("/wacc", summary="WACC via CAPM")
+async def calculate_wacc(body: dict = Body(...), _u=Depends(get_current_user)):
+    try:
+        return calc.calculate_wacc_capm(
+            equity_weight=body.get("equity_weight", 0.6),
+            debt_weight=body.get("debt_weight", 0.4),
+            risk_free_rate=body.get("risk_free_rate", 0.043),
+            beta=body.get("beta", 1.0),
+            equity_risk_premium=body.get("equity_risk_premium", 0.055),
+            country_risk_premium=body.get("country_risk_premium", 0.055),
+            size_premium=body.get("size_premium", 0.025),
+            cost_of_debt=body.get("cost_of_debt", 0.228),
+            tax_rate=body.get("tax_rate", 0.15),
+        )
+    except Exception as e:
+        logger.error("WACC error: %s", e)
+        raise HTTPException(status_code=500, detail="WACC error")
