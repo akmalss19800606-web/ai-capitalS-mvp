@@ -51,8 +51,8 @@ export default function DecisionsPage(){
   const [tab,setTab]=useState<"new"|"list">("new");
 
   useEffect(()=>{
-    fetch(`${API}/organizations`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setOrgs(d)}).catch(()=>{});
-    fetch(`${API}/decisions`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setDecisions(d)}).catch(()=>{});
+    fetch(`${API}/organizations`,{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setOrgs(d)}).catch(()=>{});
+    fetch(`${API}/decisions`,{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setDecisions(d)}).catch(()=>{});
   },[]);
 
   const calcImpact=()=>{
@@ -74,6 +74,7 @@ export default function DecisionsPage(){
   useEffect(()=>{if(form.quantity&&form.price)calcImpact()},[form.quantity,form.price,form.financing,form.category,form.decision_type]);
 
   const fmtNum=(n:number)=>new Intl.NumberFormat("ru-RU").format(n);
+    const saveDecision=async()=>{try{const body={...form,quantity:parseFloat(form.quantity)||0,price:parseFloat(form.price)||0,target_return:parseFloat(form.target_return)||0,financing_amount:parseFloat(form.financing_amount)||0,interest_rate:parseFloat(form.interest_rate)||0,historical_cost:parseFloat(form.historical_cost)||0,fair_value:parseFloat(form.fair_value)||0,tags:form.tags?form.tags.split(',').map((t:string)=>t.trim()):[],balance_impact:balanceImpact};const r=await fetch(`${API}/decisions`,{method:'POST',headers:getAuthHeaders(),body:JSON.stringify(body)});if(!r.ok)throw new Error((await r.json()).detail||'Error');const data=await r.json();setDecisions((prev:any)=>[data,...prev]);setTab('list');alert('Saved!');}catch(e:any){alert('Error: '+e.message)}};
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
