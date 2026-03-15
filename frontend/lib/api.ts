@@ -227,18 +227,25 @@ export const charts = {
 };
 
 export const etl = {
-  pipelines: () => apiRequest('/etl/pipelines'),
-  run: (id: number) => apiRequest(`/etl/pipelines/${id}/run`, { method: 'POST' }),
-  status: (id: number) => apiRequest(`/etl/pipelines/${id}/status`),
-  history: () => apiRequest('/etl/history'),
+  run: () => apiRequest('/etl/run', { method: 'POST' }),
+  status: () => apiRequest('/etl/status'),
+  refreshViews: () => apiRequest('/etl/refresh-views', { method: 'POST' }),
 };
 
 export const olap = {
-  cubes: () => apiRequest('/olap/cubes'),
-  query: (data: unknown) => apiRequest('/olap/query', { method: 'POST', body: JSON.stringify(data) }),
-  dimensions: () => apiRequest('/olap/dimensions'),
+  overview: () => apiRequest('/analytics/olap/overview'),
+  breakdown: (dimension: string) => apiRequest(`/analytics/olap/breakdown?dimension=${encodeURIComponent(dimension)}`),
+  timeSeries: (granularity: string) => apiRequest(`/analytics/olap/time-series?granularity=${encodeURIComponent(granularity)}`),
+  drillDown: (dimension: string, value: string, subDimension: string) => apiRequest(`/analytics/olap/drill-down?dimension=${encodeURIComponent(dimension)}&value=${encodeURIComponent(value)}&sub_dimension=${encodeURIComponent(subDimension)}`),
+  crossTab: (rowDim: string, colDim: string) => apiRequest(`/analytics/olap/cross-tab?row_dim=${encodeURIComponent(rowDim)}&col_dim=${encodeURIComponent(colDim)}`),
+  kpi: () => apiRequest('/analytics/olap/kpi'),
+  compare: (dimension: string, items: string) => apiRequest(`/analytics/olap/compare?dimension=${encodeURIComponent(dimension)}&items=${encodeURIComponent(items)}`),
+  heatmap: (xDim: string, yDim: string) => apiRequest(`/analytics/olap/heatmap?x_dim=${encodeURIComponent(xDim)}&y_dim=${encodeURIComponent(yDim)}`),
+  etlBalance: (orgId?: number) => apiRequest(`/analytics/olap/etl-balance${orgId ? `?org_id=${orgId}` : ''}`, { method: 'POST' }),
+  cacheStats: () => apiRequest('/analytics/olap/cache/stats'),
+  cacheClear: () => apiRequest('/analytics/olap/cache/clear', { method: 'POST' }),
+  cacheInvalidate: () => apiRequest('/analytics/olap/cache/invalidate', { method: 'POST' }),
 };
-
 export const cpiData = {
   current: () => apiRequest('/cpi-uz/current'),
   historical: () => apiRequest('/cpi-uz/historical'),
