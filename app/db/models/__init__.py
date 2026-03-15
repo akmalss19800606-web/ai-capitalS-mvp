@@ -9,3 +9,15 @@ from app.db.models.olap import (
     FactInvestmentPerformance, FactDecisionEvent, FactPortfolioSnapshot,
     FactBalanceOLAP,
 )
+
+# Organization Models (TZ#2)
+from app.db.models.organization_models import (
+    Organization, ChartOfAccounts, BalanceEntry, ImportSession,
+)
+
+# Islamic Finance Models
+from app.db.models.islamic_finance import (
+    IslamicScreening, ZakatCalculation, PurificationRecord,
+    IslamicContract, PoSCReport, SSBFatwa, SSBMember,
+    IslamicGlossary, HaramIndustryDB, IslamicP2PProject,
+)
