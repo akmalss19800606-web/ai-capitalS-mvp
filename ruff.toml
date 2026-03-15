@@ -4,7 +4,6 @@ line-length = 120
 
 [lint]
 # Only check for critical errors in MVP phase
-select = ["F811", "F821", "E999"]
+select = ["F811", "F821"]
 # F811 = redefined unused name
 # F821 = undefined name
-# E999 = syntax error
