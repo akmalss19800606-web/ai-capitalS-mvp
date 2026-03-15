@@ -13,6 +13,7 @@ from app.db.models.workflow import WorkflowDefinition, WorkflowInstance, Workflo
 from app.db.models.olap import (
     DimTime, DimCompany, DimGeography, DimCategory,
     FactInvestmentPerformance, FactDecisionEvent, FactPortfolioSnapshot,
+    DimAccount, DimCurrency, DimDataType, FactBalanceOLAP,
 )
 from app.db.models.ai_analytics import (
     MonteCarloSimulation, ShapAnalysis, PortfolioOptimization,
