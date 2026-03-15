@@ -9,62 +9,36 @@ import {
 import { useLocale } from '@/lib/i18n';
 
 /* ─── Types ─── */
-interface ScreeningResult {
-  success: boolean;
-  data: unknown;
-}
+interface ScreeningResult { success: boolean; data: unknown; }
 
-/* ─── Tab type ─── */
-type TabId = 'screening' | 'zakat' | 'reference';
+type TabId = 'screening' | 'zakat' | 'reference' | 'products' | 'purification' | 'posc' | 'ssb' | 'glossary' | 'p2p';
 
 /* ─── Status badge colors ─── */
 const complianceColors: Record<string, { bg: string; text: string; label: string }> = {
-  compliant:     { bg: colors.success[50],  text: colors.success[700], label: 'Халяль' },
-  non_compliant: { bg: colors.error[50],    text: colors.error[700],   label: 'Харам' },
-  doubtful:      { bg: colors.warning[50],  text: colors.warning[700], label: 'Сомнительный' },
-  not_screened:  { bg: colors.neutral[100], text: colors.neutral[600], label: 'Не проверено' },
+  compliant:      { bg: colors.success[50],  text: colors.success[700], label: 'Халяль' },
+  non_compliant:  { bg: colors.error[50],    text: colors.error[700],   label: 'Харам' },
+  doubtful:       { bg: colors.warning[50],  text: colors.warning[700], label: 'Сомнительный' },
+  not_screened:   { bg: colors.neutral[100], text: colors.neutral[600], label: 'Не проверено' },
 };
 
 /* ─── Styles ─── */
-const cardStyle: React.CSSProperties = {
-  ...componentStyles.card,
-  marginBottom: spacing[5],
-};
-
+const cardStyle: React.CSSProperties = { ...componentStyles.card, marginBottom: spacing[5] };
 const inputStyle: React.CSSProperties = {
-  ...componentStyles.input,
-  width: '100%',
-  padding: '10px 14px',
-  fontSize: typography.fontSize.md,
-  fontWeight: typography.fontWeight.medium,
-  color: semantic.textPrimary,
+  ...componentStyles.input, width: '100%', padding: '10px 14px',
+  fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.medium, color: semantic.textPrimary,
 };
-
 const labelStyle: React.CSSProperties = {
-  fontSize: typography.fontSize.sm,
-  color: semantic.textSecondary,
-  fontWeight: typography.fontWeight.medium,
-  display: 'block',
-  marginBottom: '6px',
+  fontSize: typography.fontSize.sm, color: semantic.textSecondary,
+  fontWeight: typography.fontWeight.medium, display: 'block', marginBottom: '6px',
 };
-
 const btnPrimary: React.CSSProperties = {
-  padding: '11px 28px',
-  borderRadius: radius.lg,
-  backgroundColor: colors.primary[600],
-  color: '#fff',
-  border: 'none',
-  fontSize: typography.fontSize.md,
-  fontWeight: typography.fontWeight.semibold,
-  cursor: 'pointer',
-  transition: transitions.color,
+  padding: '11px 28px', borderRadius: radius.lg, backgroundColor: colors.primary[600],
+  color: '#fff', border: 'none', fontSize: typography.fontSize.md,
+  fontWeight: typography.fontWeight.semibold, cursor: 'pointer', transition: transitions.color,
 };
-
 const sectionTitle: React.CSSProperties = {
-  fontSize: typography.fontSize.lg,
-  fontWeight: typography.fontWeight.semibold,
-  color: semantic.textPrimary,
-  marginBottom: spacing[4],
+  fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold,
+  color: semantic.textPrimary, marginBottom: spacing[4],
 };
 
 /* ─── Main Component ─── */
@@ -79,82 +53,62 @@ export default function IslamicFinancePage() {
   }, []);
 
   const tabs: { id: TabId; label: string; icon: string }[] = [
-    { id: 'screening', label: 'Шариат-скрининг', icon: '🛡️' },
-    { id: 'zakat',     label: 'Калькулятор закята', icon: '🧮' },
-    { id: 'reference', label: 'Справочники', icon: '📚' },
+    { id: 'screening',    label: 'Шариат-скрининг',    icon: '🛡️' },
+    { id: 'zakat',        label: 'Калькулятор закята',  icon: '🧮' },
+    { id: 'products',     label: 'Продукты',           icon: '📦' },
+    { id: 'purification', label: 'Очистка дохода',      icon: '🧹' },
+    { id: 'posc',         label: 'PoSC',                icon: '📋' },
+    { id: 'ssb',          label: 'SSB / Фатвы',         icon: '⚖️' },
+    { id: 'glossary',     label: 'Глоссарий',           icon: '📖' },
+    { id: 'p2p',          label: 'P2P Исламские',       icon: '🤝' },
+    { id: 'reference',    label: 'Справочники',         icon: '📚' },
   ];
 
   return (
-    <div>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: spacing[6] }}>
       {/* Header */}
-      <div style={{ marginBottom: spacing[6] }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3], marginBottom: spacing[2] }}>
-          <div style={{
-            width: 44, height: 44, borderRadius: radius.xl,
-            background: 'linear-gradient(135deg, #059669, #10b981)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '22px',
-          }}>
-            ☪
-          </div>
-          <div>
-            <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: semantic.textPrimary }}>
-              Исламские финансы
-            </h1>
-            <p style={{ color: semantic.textSecondary, fontSize: typography.fontSize.md }}>
-              Шариат-скрининг и калькулятор закята · AAOIFI / DJIM / S&P Shariah
-            </p>
-          </div>
-        </div>
+      <div style={{ marginBottom: spacing[6], textAlign: 'center' }}>
+        <div style={{ fontSize: '48px', marginBottom: spacing[3] }}>☪</div>
+        <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: semantic.textPrimary, marginBottom: spacing[2] }}>Исламские финансы</h1>
+        <p style={{ color: semantic.textSecondary, fontSize: typography.fontSize.md }}>Шариат-скрининг, закят, продукты, очистка · AAOIFI / DJIM / S&P Shariah</p>
       </div>
 
       {/* Tab navigation */}
-      <div style={{
-        display: 'flex', gap: spacing[1], marginBottom: spacing[5],
-        borderBottom: `2px solid ${semantic.borderLight}`, paddingBottom: 0,
-      }}>
+      <div style={{ display: 'flex', borderBottom: `1px solid ${semantic.border}`, marginBottom: spacing[6], overflowX: 'auto', gap: spacing[1] }}>
         {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: `${spacing[3]} ${spacing[5]}`,
-              border: 'none',
-              borderBottom: activeTab === tab.id ? `2px solid ${colors.primary[600]}` : '2px solid transparent',
-              backgroundColor: 'transparent',
-              color: activeTab === tab.id ? colors.primary[700] : semantic.textSecondary,
-              fontWeight: activeTab === tab.id ? typography.fontWeight.semibold : typography.fontWeight.medium,
-              fontSize: typography.fontSize.md,
-              cursor: 'pointer',
-              transition: transitions.color,
-              marginBottom: '-2px',
-              display: 'flex', alignItems: 'center', gap: spacing[2],
-            }}
-          >
-            <span>{tab.icon}</span>
-            {tab.label}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
+            padding: `${spacing[3]} ${spacing[4]}`, border: 'none',
+            borderBottom: activeTab === tab.id ? `2px solid ${colors.primary[600]}` : '2px solid transparent',
+            backgroundColor: 'transparent',
+            color: activeTab === tab.id ? colors.primary[700] : semantic.textSecondary,
+            fontWeight: activeTab === tab.id ? typography.fontWeight.semibold : typography.fontWeight.medium,
+            fontSize: typography.fontSize.sm, cursor: 'pointer', transition: transitions.color,
+            marginBottom: '-1px', display: 'flex', alignItems: 'center', gap: spacing[1], whiteSpace: 'nowrap',
+          }}>
+            <span>{tab.icon}</span> <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
       {/* Tab content */}
-      {activeTab === 'screening' && <ScreeningTab />}
-      {activeTab === 'zakat' && <ZakatTab />}
-      {activeTab === 'reference' && <ReferenceTab />}
+      {activeTab === 'screening'    && <ScreeningTab />}
+      {activeTab === 'zakat'        && <ZakatTab />}
+      {activeTab === 'products'     && <ProductsTab />}
+      {activeTab === 'purification' && <PurificationTab />}
+      {activeTab === 'posc'         && <PoSCTab />}
+      {activeTab === 'ssb'          && <SSBTab />}
+      {activeTab === 'glossary'     && <GlossaryTab />}
+      {activeTab === 'p2p'          && <P2PTab />}
+      {activeTab === 'reference'    && <ReferenceTab />}
     </div>
   );
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   TAB 1: Шариат-скрининг
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ======= TAB 1: Screening ======= */
 function ScreeningTab() {
   const [mode, setMode] = useState<'industry' | 'financial' | 'full'>('full');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
-
-  // Form state
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [description, setDescription] = useState('');
@@ -165,782 +119,567 @@ function ScreeningTab() {
 
   const handleScreening = async () => {
     if (!companyName) return;
-    setLoading(true);
-    setResult(null);
-
+    setLoading(true); setResult(null);
     try {
       let endpoint = '/islamic-finance/screening/full';
-      const body: unknown= { company_name: companyName, industry, description };
-
-      if (mode === 'industry') {
-        endpoint = '/islamic-finance/screening/industry';
-      } else if (mode === 'financial') {
-        endpoint = '/islamic-finance/screening/financial';
-        body.total_assets = parseFloat(totalAssets) || 0;
-        body.total_debt = parseFloat(totalDebt) || 0;
-        body.total_revenue = parseFloat(totalRevenue) || 0;
-        body.haram_revenue = parseFloat(haramRevenue) || 0;
-      } else {
+      const body: any = { company_name: companyName, industry, description };
+      if (mode === 'industry') { endpoint = '/islamic-finance/screening/industry'; }
+      else if (mode === 'financial') { endpoint = '/islamic-finance/screening/financial'; }
+      if (mode !== 'industry') {
         body.total_assets = parseFloat(totalAssets) || 0;
         body.total_debt = parseFloat(totalDebt) || 0;
         body.total_revenue = parseFloat(totalRevenue) || 0;
         body.haram_revenue = parseFloat(haramRevenue) || 0;
       }
-
-      const res = await apiRequest(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
+      const res = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify(body) });
       setResult(res.data);
-    } catch (e) {
-      setResult({ error: 'Ошибка при выполнении скрининга' });
-    } finally {
-      setLoading(false);
-    }
+    } catch { setResult({ error: 'Ошибка при скрининге' }); }
+    finally { setLoading(false); }
   };
-
-  const getStatus = (status: string) => complianceColors[status] || complianceColors.not_screened;
 
   return (
     <div>
-      {/* Mode selector */}
-      <div style={cardStyle}>
-        <h3 style={sectionTitle}>Тип скрининга</h3>
-        <div style={{ display: 'flex', gap: spacing[3], flexWrap: 'wrap' }}>
-          {[
-            { id: 'full' as const, label: 'Комплексный', desc: 'Отрасль + финансы' },
-            { id: 'industry' as const, label: 'Отраслевой', desc: 'Только харам-индустрии' },
-            { id: 'financial' as const, label: 'Финансовый', desc: 'Пороги AAOIFI' },
-          ].map(m => (
-            <button
-              key={m.id}
-              onClick={() => { setMode(m.id); setResult(null); }}
-              style={{
-                flex: '1 1 180px',
-                padding: spacing[4],
-                borderRadius: radius.xl,
-                border: mode === m.id ? `2px solid ${colors.primary[500]}` : `1px solid ${semantic.border}`,
-                backgroundColor: mode === m.id ? colors.primary[50] : semantic.bgCard,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: transitions.normal,
-              }}
-            >
-              <div style={{ fontWeight: typography.fontWeight.semibold, color: mode === m.id ? colors.primary[700] : semantic.textPrimary, fontSize: typography.fontSize.md }}>
-                {m.label}
-              </div>
-              <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted, marginTop: '2px' }}>
-                {m.desc}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Input form */}
-      <div style={cardStyle}>
-        <h3 style={sectionTitle}>Данные компании</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: spacing[4] }}>
-          <div>
-            <span style={labelStyle}>Название компании *</span>
-            <input
-              value={companyName}
-              onChange={e => setCompanyName(e.target.value)}
-              placeholder="Например: Uzpromstroybank"
-              style={inputStyle}
-            />
+      <h3 style={sectionTitle}>Тип скрининга</h3>
+      <div style={{ display: 'flex', gap: spacing[3], flexWrap: 'wrap', marginBottom: spacing[5] }}>
+        {[
+          { id: 'full' as const, label: 'Комплексный', desc: 'Отрасль + финансы' },
+          { id: 'industry' as const, label: 'Отраслевой', desc: 'Только харам-индустрии' },
+          { id: 'financial' as const, label: 'Финансовый', desc: 'Пороги AAOIFI' },
+        ].map(m => (
+          <div key={m.id} onClick={() => { setMode(m.id); setResult(null); }} style={{
+            flex: '1 1 180px', padding: spacing[4], borderRadius: radius.xl,
+            border: mode === m.id ? `2px solid ${colors.primary[500]}` : `1px solid ${semantic.border}`,
+            backgroundColor: mode === m.id ? colors.primary[50] : semantic.bgCard,
+            cursor: 'pointer', textAlign: 'left',
+          }}>
+            <div style={{ fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary }}>{m.label}</div>
+            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.desc}</div>
           </div>
-
-          {(mode === 'full' || mode === 'industry') && (
-            <>
-              <div>
-                <span style={labelStyle}>Отрасль / Сектор</span>
-                <input
-                  value={industry}
-                  onChange={e => setIndustry(e.target.value)}
-                  placeholder="Например: Banking, IT, Agriculture"
-                  style={inputStyle}
-                />
-              </div>
-              <div style={{ gridColumn: 'span 1' }}>
-                <span style={labelStyle}>Описание деятельности</span>
-                <input
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
-                  placeholder="Краткое описание"
-                  style={inputStyle}
-                />
-              </div>
-            </>
-          )}
-
-          {(mode === 'full' || mode === 'financial') && (
-            <>
-              <div>
-                <span style={labelStyle}>Общие активы (USD)</span>
-                <input type="number" value={totalAssets} onChange={e => setTotalAssets(e.target.value)} placeholder="0" style={inputStyle} />
-              </div>
-              <div>
-                <span style={labelStyle}>Общий долг (USD)</span>
-                <input type="number" value={totalDebt} onChange={e => setTotalDebt(e.target.value)} placeholder="0" style={inputStyle} />
-              </div>
-              <div>
-                <span style={labelStyle}>Общий доход (USD)</span>
-                <input type="number" value={totalRevenue} onChange={e => setTotalRevenue(e.target.value)} placeholder="0" style={inputStyle} />
-              </div>
-              <div>
-                <span style={labelStyle}>Запрещённый доход (USD)</span>
-                <input type="number" value={haramRevenue} onChange={e => setHaramRevenue(e.target.value)} placeholder="0" style={inputStyle} />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ marginTop: spacing[5] }}>
-          <button
-            onClick={handleScreening}
-            disabled={loading || !companyName}
-            style={{ ...btnPrimary, opacity: loading || !companyName ? 0.6 : 1 }}
-          >
-            {loading ? 'Анализ...' : 'Запустить скрининг'}
-          </button>
-        </div>
+        ))}
       </div>
 
-      {/* Results */}
+      <h3 style={sectionTitle}>Данные компании</h3>
+      <div style={cardStyle}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[4] }}>
+          <div style={{ gridColumn: 'span 2' }}>
+            <label style={labelStyle}>Название компании *</label>
+            <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Uzpromstroybank" style={inputStyle} />
+          </div>
+          {(mode === 'full' || mode === 'industry') && <>
+            <div><label style={labelStyle}>Отрасль</label><input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="Banking" style={inputStyle} /></div>
+            <div><label style={labelStyle}>Описание</label><input value={description} onChange={e => setDescription(e.target.value)} placeholder="Краткое описание" style={inputStyle} /></div>
+          </>}
+          {(mode === 'full' || mode === 'financial') && <>
+            <div><label style={labelStyle}>Общие активы (USD)</label><input type="number" value={totalAssets} onChange={e => setTotalAssets(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>Общий долг (USD)</label><input type="number" value={totalDebt} onChange={e => setTotalDebt(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>Общий доход (USD)</label><input type="number" value={totalRevenue} onChange={e => setTotalRevenue(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>Харам доход (USD)</label><input type="number" value={haramRevenue} onChange={e => setHaramRevenue(e.target.value)} style={inputStyle} /></div>
+          </>}
+        </div>
+        <button onClick={handleScreening} disabled={loading} style={{ ...btnPrimary, marginTop: spacing[4], opacity: loading ? 0.6 : 1 }}>
+          {loading ? 'Анализ...' : 'Запустить скрининг'}
+        </button>
+      </div>
+
       {result && !result.error && (
         <div style={cardStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[5] }}>
-            <h3 style={{ ...sectionTitle, marginBottom: 0 }}>Результат скрининга</h3>
-            <StatusBadge status={result.overall_status || result.status} />
-          </div>
-
-          {/* Summary cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: spacing[4], marginBottom: spacing[5] }}>
-            <SummaryCard label="Компания" value={result.company_name || companyName} color={colors.primary[600]} bg={colors.primary[50]} />
-            <SummaryCard
-              label="Статус"
-              value={getStatus(result.overall_status || result.status).label}
-              color={getStatus(result.overall_status || result.status).text}
-              bg={getStatus(result.overall_status || result.status).bg}
-            />
-            {result.industry_screening && (
-              <SummaryCard
-                label="Отраслевой скрининг"
-                value={result.industry_screening.violations_count > 0 ? `${result.industry_screening.violations_count} нарушений` : 'Чисто'}
-                color={result.industry_screening.violations_count > 0 ? colors.error[600] : colors.success[600]}
-                bg={result.industry_screening.violations_count > 0 ? colors.error[50] : colors.success[50]}
-              />
-            )}
-            {result.financial_screening && result.financial_screening.checks && (
-              <SummaryCard
-                label="Финансовые проверки"
-                value={`${result.financial_screening.checks_count - result.financial_screening.violations_count} / ${result.financial_screening.checks_count} пройдено`}
-                color={result.financial_screening.violations_count > 0 ? colors.warning[600] : colors.success[600]}
-                bg={result.financial_screening.violations_count > 0 ? colors.warning[50] : colors.success[50]}
-              />
-            )}
-          </div>
-
-          {/* Financial checks detail */}
-          {result.financial_screening && result.financial_screening.checks && (
-            <div style={{ marginBottom: spacing[5] }}>
-              <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary, marginBottom: spacing[3] }}>
-                Финансовые показатели (AAOIFI)
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: spacing[2] }}>
-                {result.financial_screening.checks.map((check: Record<string, unknown>, i: number) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: `${spacing[3]} ${spacing[4]}`,
-                    backgroundColor: check.passed ? colors.success[50] : colors.error[50],
-                    borderRadius: radius.lg,
-                    border: `1px solid ${check.passed ? colors.success[200] : colors.error[200]}`,
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: spacing[3] }}>
-                      <span style={{ fontSize: '16px' }}>{check.passed ? '✅' : '❌'}</span>
-                      <div>
-                        <div style={{ fontWeight: typography.fontWeight.medium, color: semantic.textPrimary, fontSize: typography.fontSize.md }}>
-                          {check.name_ru}
-                        </div>
-                        <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>
-                          {check.standard}
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{
-                      fontWeight: typography.fontWeight.semibold,
-                      color: check.passed ? colors.success[700] : colors.error[700],
-                      fontSize: typography.fontSize.md,
-                    }}>
-                      {check.display}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Industry violations */}
-          {result.industry_screening && result.industry_screening.violations && result.industry_screening.violations.length > 0 && (
-            <div style={{ marginBottom: spacing[5] }}>
-              <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.error[700], marginBottom: spacing[3] }}>
-                Нарушения отраслевых ограничений
-              </h4>
-              {result.industry_screening.violations.map((v: Record<string, unknown>, i: number) => (
-                <div key={i} style={{
-                  padding: `${spacing[3]} ${spacing[4]}`,
-                  backgroundColor: colors.error[50],
-                  borderRadius: radius.lg,
-                  border: `1px solid ${colors.error[200]}`,
-                  marginBottom: spacing[2],
-                }}>
-                  <div style={{ fontWeight: typography.fontWeight.semibold, color: colors.error[700] }}>
-                    ❌ {v.category_name_ru} ({v.category_name_en})
-                  </div>
-                  <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: '2px' }}>
-                    {v.description}
-                  </div>
+          <h3 style={sectionTitle}>Результат скрининга</h3>
+          {result.overall_status && <StatusBadge status={result.overall_status} />}
+          {result.financial_screening?.checks && (
+            <div style={{ marginTop: spacing[4] }}>
+              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Финансовые показатели (AAOIFI)</h4>
+              {result.financial_screening.checks.map((c: any, i: number) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing[3], padding: spacing[3], borderBottom: `1px solid ${semantic.border}` }}>
+                  <span>{c.passed ? '✅' : '❌'}</span>
+                  <div><div style={{ fontWeight: typography.fontWeight.semibold }}>{c.name_ru}</div><div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{c.display}</div></div>
                 </div>
               ))}
             </div>
           )}
-
-          {/* Recommendations */}
-          {result.recommendations && result.recommendations.length > 0 && (
-            <div style={{
-              padding: spacing[4],
-              backgroundColor: colors.primary[50],
-              borderRadius: radius.xl,
-              border: `1px solid ${colors.primary[200]}`,
-            }}>
-              <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: colors.primary[700], marginBottom: spacing[3] }}>
-                Рекомендации
-              </h4>
-              {result.recommendations.map((rec: string, i: number) => (
-                <div key={i} style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[2] }}>
-                  <span style={{ color: colors.primary[500] }}>•</span>
-                  <span style={{ fontSize: typography.fontSize.md, color: semantic.textPrimary }}>{rec}</span>
-                </div>
-              ))}
+          {result.recommendations?.length > 0 && (
+            <div style={{ marginTop: spacing[4] }}>
+              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Рекомендации</h4>
+              {result.recommendations.map((r: string, i: number) => <div key={i} style={{ padding: spacing[2], color: semantic.textSecondary }}>• {r}</div>)}
             </div>
           )}
         </div>
       )}
-
-      {result && result.error && (
-        <div style={{ ...cardStyle, backgroundColor: colors.error[50], borderColor: colors.error[200] }}>
-          <p style={{ color: colors.error[700] }}>{result.error}</p>
-        </div>
-      )}
+      {result?.error && <div style={{ ...cardStyle, color: colors.error[600] }}>{result.error}</div>}
     </div>
   );
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   TAB 2: Калькулятор закята
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ======= TAB 2: Zakat Calculator ======= */
 function ZakatTab() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [nisab, setNisab] = useState<any>(null);
-  const [guide, setGuide] = useState<any>(null);
-  const [showGuide, setShowGuide] = useState(false);
-
-  // Form
   const [currency, setCurrency] = useState('UZS');
   const [cash, setCash] = useState('');
   const [investments, setInvestments] = useState('');
   const [businessInv, setBusinessInv] = useState('');
-  const [receivables, setReceivables] = useState('');
   const [goldGrams, setGoldGrams] = useState('');
   const [silverGrams, setSilverGrams] = useState('');
   const [loans, setLoans] = useState('');
   const [debts, setDebts] = useState('');
-  const [hawlStart, setHawlStart] = useState('');
 
-  // Load nisab on mount
-  useEffect(() => {
-    fetchNisab(currency);
-  }, [currency]);
-
-  const fetchNisab = async (curr: string) => {
-    try {
-      const res = await apiRequest(`/islamic-finance/zakat/nisab?currency=${curr}`);
-      setNisab(res.data);
-    } catch (e) { /* ignore */ }
+  useEffect(() => { fetchNisab(currency); }, [currency]);
+  const fetchNisab = async (c: string) => {
+    try { const r = await apiRequest(`/islamic-finance/zakat/nisab?currency=${c}`); setNisab(r.data); } catch {}
   };
 
-  const loadGuide = async () => {
-    if (guide) { setShowGuide(!showGuide); return; }
-    try {
-      const res = await apiRequest('/islamic-finance/zakat/guide');
-      setGuide(res.data);
-      setShowGuide(true);
-    } catch (e) { /* ignore */ }
-  };
-
-  const calculateZakat = async () => {
-    setLoading(true);
-    setResult(null);
-
-    const assets: Record<string, number> = {};
+  const calculate = async () => {
+    setLoading(true); setResult(null);
+    const assets: any = {};
     if (cash) assets.cash = parseFloat(cash);
     if (investments) assets.investments = parseFloat(investments);
     if (businessInv) assets.business_inventory = parseFloat(businessInv);
-    if (receivables) assets.receivables = parseFloat(receivables);
-
-    const liabilities: Record<string, number> = {};
+    const liabilities: any = {};
     if (loans) liabilities.loans = parseFloat(loans);
     if (debts) liabilities.debts = parseFloat(debts);
-
     try {
-      const res = await apiRequest('/islamic-finance/zakat/calculate', {
-        method: 'POST',
-        body: JSON.stringify({
-          assets,
-          liabilities: Object.keys(liabilities).length > 0 ? liabilities : null,
-          currency,
-          gold_grams: parseFloat(goldGrams) || 0,
-          silver_grams: parseFloat(silverGrams) || 0,
-          hijri_year_start: hawlStart || null,
+      const r = await apiRequest('/islamic-finance/zakat/calculate', {
+        method: 'POST', body: JSON.stringify({
+          assets, liabilities: Object.keys(liabilities).length ? liabilities : null,
+          currency, gold_grams: parseFloat(goldGrams) || 0, silver_grams: parseFloat(silverGrams) || 0,
         }),
       });
-      setResult(res.data);
-    } catch (e) {
-      setResult({ error: 'Ошибка расчёта закята' });
-    } finally {
-      setLoading(false);
-    }
+      setResult(r.data);
+    } catch { setResult({ error: 'Ошибка расчёта' }); }
+    finally { setLoading(false); }
   };
-
-  const formatNumber = (n: number) => n?.toLocaleString('ru-RU') || '0';
 
   return (
     <div>
-      {/* Nisab info */}
       {nisab && (
-        <div style={{
-          ...cardStyle,
-          background: 'linear-gradient(135deg, #ecfdf5, #d1fae5)',
-          borderColor: colors.success[200],
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: spacing[3] }}>
-            <div>
-              <h3 style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.semibold, color: colors.success[800], marginBottom: spacing[1] }}>
-                Текущий нисаб
-              </h3>
-              <p style={{ fontSize: typography.fontSize.sm, color: colors.success[600] }}>
-                Минимальный порог для обязательности закята
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: spacing[5], flexWrap: 'wrap' }}>
-              <div className="text-right">
-                <div style={{ fontSize: typography.fontSize.sm, color: colors.success[600] }}>Золото (85г)</div>
-                <div style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.success[800] }}>
-                  {nisab.nisab_gold.display}
-                </div>
-              </div>
-              <div className="text-right">
-                <div style={{ fontSize: typography.fontSize.sm, color: colors.success[600] }}>Серебро (595г)</div>
-                <div style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: colors.success[800] }}>
-                  {nisab.nisab_silver.display}
-                </div>
-              </div>
-            </div>
-          </div>
+        <div style={{ ...cardStyle, display: 'flex', gap: spacing[6], justifyContent: 'center' }}>
+          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>Нисаб (золото 85г)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_gold?.display}</div></div>
+          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>Нисаб (серебро 595г)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_silver?.display}</div></div>
         </div>
       )}
 
-      {/* Input form */}
       <div style={cardStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing[4] }}>
-          <h3 style={{ ...sectionTitle, marginBottom: 0 }}>Расчёт закята</h3>
-          <button onClick={loadGuide} style={{
-            padding: `${spacing[2]} ${spacing[4]}`,
-            borderRadius: radius.lg,
-            border: `1px solid ${semantic.border}`,
-            backgroundColor: 'transparent',
-            color: semantic.textSecondary,
-            fontSize: typography.fontSize.sm,
-            cursor: 'pointer',
-          }}>
-            {showGuide ? 'Скрыть руководство' : '📖 Руководство по закяту'}
-          </button>
+        <h3 style={sectionTitle}>Расчёт закята</h3>
+        <div style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[4] }}>
+          {['UZS','USD','EUR','RUB'].map(c => (
+            <button key={c} onClick={() => setCurrency(c)} style={{
+              padding: `${spacing[2]} ${spacing[4]}`, borderRadius: radius.lg,
+              border: currency === c ? `2px solid ${colors.primary[500]}` : `1px solid ${semantic.border}`,
+              backgroundColor: currency === c ? colors.primary[50] : 'transparent',
+              color: currency === c ? colors.primary[700] : semantic.textSecondary,
+              fontWeight: typography.fontWeight.semibold, cursor: 'pointer',
+            }}>{c}</button>
+          ))}
         </div>
 
-        {/* Guide section */}
-        {showGuide && guide && (
-          <div style={{
-            padding: spacing[4], marginBottom: spacing[4],
-            backgroundColor: colors.primary[50], borderRadius: radius.xl,
-            border: `1px solid ${colors.primary[200]}`,
-          }}>
-            {guide.sections.map((section: Record<string, unknown>, i: number) => (
-              <div key={i} style={{ marginBottom: spacing[3] }}>
-                <h4 style={{ fontWeight: typography.fontWeight.semibold, color: colors.primary[700], marginBottom: spacing[1] }}>
-                  {section.title}
-                </h4>
-                {section.content && (
-                  <p style={{ fontSize: typography.fontSize.md, color: semantic.textSecondary, lineHeight: 1.6 }}>
-                    {section.content}
-                  </p>
-                )}
-                {section.categories && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[2] }}>
-                    {section.categories.map((cat: string, j: number) => (
-                      <span key={j} style={{
-                        padding: `${spacing[1]} ${spacing[3]}`,
-                        backgroundColor: colors.primary[100],
-                        borderRadius: radius.full,
-                        fontSize: typography.fontSize.sm,
-                        color: colors.primary[700],
-                      }}>
-                        {cat}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            <p style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted, fontStyle: 'italic', marginTop: spacing[3] }}>
-              {guide.disclaimer}
-            </p>
-          </div>
-        )}
-
-        {/* Currency selector */}
-        <div style={{ marginBottom: spacing[4] }}>
-          <span style={labelStyle}>Валюта расчёта</span>
-          <div style={{ display: 'flex', gap: spacing[2] }}>
-            {['UZS', 'USD', 'EUR', 'RUB'].map(curr => (
-              <button
-                key={curr}
-                onClick={() => setCurrency(curr)}
-                style={{
-                  padding: `${spacing[2]} ${spacing[4]}`,
-                  borderRadius: radius.lg,
-                  border: currency === curr ? `2px solid ${colors.primary[500]}` : `1px solid ${semantic.border}`,
-                  backgroundColor: currency === curr ? colors.primary[50] : 'transparent',
-                  color: currency === curr ? colors.primary[700] : semantic.textSecondary,
-                  fontWeight: typography.fontWeight.semibold,
-                  cursor: 'pointer',
-                  fontSize: typography.fontSize.md,
-                }}
-              >
-                {curr}
-              </button>
-            ))}
-          </div>
+        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Активы</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Наличные ({currency})</label><input type="number" value={cash} onChange={e => setCash(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Инвестиции ({currency})</label><input type="number" value={investments} onChange={e => setInvestments(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Товарные запасы ({currency})</label><input type="number" value={businessInv} onChange={e => setBusinessInv(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Золото (граммы)</label><input type="number" value={goldGrams} onChange={e => setGoldGrams(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Серебро (граммы)</label><input type="number" value={silverGrams} onChange={e => setSilverGrams(e.target.value)} style={inputStyle} /></div>
         </div>
 
-        {/* Assets */}
-        <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary, marginBottom: spacing[3] }}>
-          Активы
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: spacing[4], marginBottom: spacing[4] }}>
-          <div>
-            <span style={labelStyle}>Наличные и вклады ({currency})</span>
-            <input type="number" value={cash} onChange={e => setCash(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Инвестиции ({currency})</span>
-            <input type="number" value={investments} onChange={e => setInvestments(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Товарные запасы ({currency})</span>
-            <input type="number" value={businessInv} onChange={e => setBusinessInv(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Дебиторская задолженность ({currency})</span>
-            <input type="number" value={receivables} onChange={e => setReceivables(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Золото (граммы)</span>
-            <input type="number" value={goldGrams} onChange={e => setGoldGrams(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Серебро (граммы)</span>
-            <input type="number" value={silverGrams} onChange={e => setSilverGrams(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
+        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md, marginTop: spacing[4] }}>Обязательства</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Кредиты ({currency})</label><input type="number" value={loans} onChange={e => setLoans(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Прочие долги ({currency})</label><input type="number" value={debts} onChange={e => setDebts(e.target.value)} style={inputStyle} /></div>
         </div>
 
-        {/* Liabilities */}
-        <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary, marginBottom: spacing[3] }}>
-          Обязательства (вычитаются)
-        </h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: spacing[4], marginBottom: spacing[4] }}>
-          <div>
-            <span style={labelStyle}>Кредиты ({currency})</span>
-            <input type="number" value={loans} onChange={e => setLoans(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Прочие долги ({currency})</span>
-            <input type="number" value={debts} onChange={e => setDebts(e.target.value)} placeholder="0" style={inputStyle} />
-          </div>
-          <div>
-            <span style={labelStyle}>Начало хауля (лунного года)</span>
-            <input type="date" value={hawlStart} onChange={e => setHawlStart(e.target.value)} style={inputStyle} />
-          </div>
-        </div>
-
-        <button
-          onClick={calculateZakat}
-          disabled={loading}
-          style={{ ...btnPrimary, opacity: loading ? 0.6 : 1 }}
-        >
+        <button onClick={calculate} disabled={loading} style={{ ...btnPrimary, marginTop: spacing[4], opacity: loading ? 0.6 : 1 }}>
           {loading ? 'Расчёт...' : 'Рассчитать закят'}
         </button>
       </div>
 
-      {/* Results */}
       {result && !result.error && (
-        <div>
-          {/* Main result */}
-          <div style={{
-            ...cardStyle,
-            background: result.meets_nisab
-              ? 'linear-gradient(135deg, #ecfdf5, #d1fae5)'
-              : 'linear-gradient(135deg, #fefce8, #fef9c3)',
-            borderColor: result.meets_nisab ? colors.success[300] : colors.warning[300],
-          }}>
-            <div style={{ textAlign: 'center', padding: spacing[4] }}>
-              <div style={{ fontSize: typography.fontSize.sm, color: result.meets_nisab ? colors.success[600] : colors.warning[600], marginBottom: spacing[2] }}>
-                {result.meets_nisab ? 'Закят обязателен' : 'Закят не обязателен (ниже нисаба)'}
-              </div>
-              <div style={{
-                fontSize: '36px', fontWeight: typography.fontWeight.bold,
-                color: result.meets_nisab ? colors.success[800] : colors.warning[800],
-              }}>
-                {result.zakat_display}
-              </div>
-              <div style={{ fontSize: typography.fontSize.md, color: result.meets_nisab ? colors.success[600] : colors.warning[600], marginTop: spacing[2] }}>
-                Ставка: {result.zakat_rate} от чистых активов
-              </div>
-            </div>
+        <div style={{ ...cardStyle, textAlign: 'center', marginTop: spacing[4] }}>
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: result.meets_nisab ? colors.success[600] : semantic.textSecondary }}>
+            {result.zakat_display}
           </div>
-
-          {/* Details */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: spacing[4], marginBottom: spacing[5] }}>
-            <SummaryCard label="Общие активы" value={`${formatNumber(result.total_assets)} ${currency}`} color={colors.primary[600]} bg={colors.primary[50]} />
-            <SummaryCard label="Общие обязательства" value={`${formatNumber(result.total_liabilities)} ${currency}`} color={colors.error[600]} bg={colors.error[50]} />
-            <SummaryCard label="Чистые активы" value={result.net_assets_display} color={colors.success[600]} bg={colors.success[50]} />
-            <SummaryCard label="Порог нисаба" value={result.nisab_display} color={colors.warning[600]} bg={colors.warning[50]} />
+          <div style={{ color: semantic.textSecondary, marginTop: spacing[2] }}>
+            {result.meets_nisab ? 'Закят обязателен' : 'Ниже нисаба — закят не обязателен'}
           </div>
-
-          {/* Hawl info */}
-          {result.hawl && !result.hawl.error && (
-            <div style={cardStyle}>
-              <h4 style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary, marginBottom: spacing[3] }}>
-                Хауль (лунный год)
-              </h4>
-              <div style={{ display: 'flex', gap: spacing[4], flexWrap: 'wrap' }}>
-                <div style={{ padding: spacing[3], backgroundColor: semantic.bgHover, borderRadius: radius.lg }}>
-                  <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>До хауля</div>
-                  <div style={{ fontSize: typography.fontSize.xl, fontWeight: typography.fontWeight.bold, color: semantic.textPrimary }}>
-                    {result.hawl.days_remaining} дней
-                  </div>
-                </div>
-                <div style={{ padding: spacing[3], backgroundColor: semantic.bgHover, borderRadius: radius.lg }}>
-                  <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>Статус</div>
-                  <div style={{ fontSize: typography.fontSize.md, fontWeight: typography.fontWeight.semibold, color: result.hawl.completed ? colors.success[600] : colors.primary[600] }}>
-                    {result.hawl.completed ? 'Завершён — закят обязателен' : 'В процессе'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-
         </div>
       )}
-
-      {result && result.error && (
-        <div style={{ ...cardStyle, backgroundColor: colors.error[50], borderColor: colors.error[200] }}>
-          <p style={{ color: colors.error[700] }}>{result.error}</p>
-        </div>
-      )}
+      {result?.error && <div style={{ ...cardStyle, color: colors.error[600] }}>{result.error}</div>}
     </div>
   );
 }
 
+/* ======= TAB 3: Products (Murabaha, Ijara, etc.) ======= */
+function ProductsTab() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ title: '', product_type: 'murabaha', amount: '', rate: '', periods: '' });
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   TAB 3: Справочники
-   ═══════════════════════════════════════════════════════════════════════════ */
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try { const r = await apiRequest('/islamic-finance/products'); setData(r.data || []); } catch {}
+    setLoading(false);
+  };
+
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const onSubmit = async () => {
+    try {
+      await apiRequest('/islamic-finance/products', {
+        method: 'POST', body: JSON.stringify({
+          product_type: form.product_type, title: form.title,
+          params: { amount: parseFloat(form.amount) || 0, rate: parseFloat(form.rate) || 0.05, periods: parseInt(form.periods) || 12 },
+        }),
+      });
+      load();
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div style={cardStyle}>
+        <h3 style={sectionTitle}>Создать продукт</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Название</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Тип</label>
+            <select value={form.product_type} onChange={e => set('product_type', e.target.value)} style={inputStyle}>
+              <option value="murabaha">Мурабаха</option><option value="ijara">Иджара</option>
+              <option value="musharaka">Мушарака</option><option value="mudaraba">Мудараба</option>
+              <option value="sukuk">Сукук</option><option value="takaful">Такафул</option>
+            </select>
+          </div>
+          <div><label style={labelStyle}>Сумма</label><input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Ставка</label><input type="number" value={form.rate} onChange={e => set('rate', e.target.value)} placeholder="0.05" style={inputStyle} /></div>
+          <div><label style={labelStyle}>Периоды</label><input type="number" value={form.periods} onChange={e => set('periods', e.target.value)} placeholder="12" style={inputStyle} /></div>
+        </div>
+        <button onClick={onSubmit} style={{ ...btnPrimary, marginTop: spacing[4] }}>Создать</button>
+      </div>
+
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
+        data.length === 0 ? <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>Нет продуктов</div> :
+        data.map((p: any) => (
+          <div key={p.id} style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: typography.fontWeight.semibold }}>{p.title || p.product_type}</span>
+              <span style={{ fontSize: typography.fontSize.xs, padding: `${spacing[1]} ${spacing[2]}`, borderRadius: radius.lg, backgroundColor: colors.primary[50], color: colors.primary[700] }}>{p.product_type}</span>
+            </div>
+            {p.params && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>Сумма: {p.params.amount?.toLocaleString()} | Ставка: {p.params.rate} | Периоды: {p.params.periods}</div>}
+          </div>
+        ))
+      }
+    </div>
+  );
+}
+
+/* ======= TAB 4: Purification ======= */
+function PurificationTab() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalIncome, setTotalIncome] = useState('');
+  const [haramPct, setHaramPct] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try { const r = await apiRequest('/islamic-finance/purification'); setData(r.data || []); } catch {}
+    setLoading(false);
+  };
+
+  const calculate = async () => {
+    try {
+      const r = await apiRequest('/islamic-finance/purification/calculate', {
+        method: 'POST', body: JSON.stringify({ total_income: parseFloat(totalIncome) || 0, haram_percentage: parseFloat(haramPct) || 0 }),
+      });
+      setResult(r.data); load();
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div style={cardStyle}>
+        <h3 style={sectionTitle}>Расчёт очистки дохода</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Общий доход</label><input type="number" value={totalIncome} onChange={e => setTotalIncome(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Доля харам (%)</label><input type="number" value={haramPct} onChange={e => setHaramPct(e.target.value)} placeholder="5" style={inputStyle} /></div>
+        </div>
+        <button onClick={calculate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Рассчитать</button>
+        {result && <div style={{ marginTop: spacing[4], padding: spacing[4], backgroundColor: colors.warning[50], borderRadius: radius.lg }}>
+          <div style={{ fontWeight: typography.fontWeight.bold }}>Сумма к очистке: {result.purification_amount_display || result.purification_amount}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>Направить на благотворительность (sadaqah)</div>
+        </div>}
+      </div>
+
+      {data.length > 0 && <h3 style={sectionTitle}>История очисток</h3>}
+      {data.map((r: any) => (
+        <div key={r.id} style={cardStyle}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Доход: {r.total_income?.toLocaleString()}</span>
+            <span style={{ color: colors.warning[600] }}>Очистка: {r.purification_amount?.toLocaleString()}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ======= TAB 5: PoSC (Product of Shariah Compliance) ======= */
+function PoSCTab() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [targetName, setTargetName] = useState('');
+  const [targetType, setTargetType] = useState('product');
+
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try { const r = await apiRequest('/islamic-finance/posc'); setData(r.data || []); } catch {}
+    setLoading(false);
+  };
+
+  const generate = async () => {
+    try {
+      await apiRequest('/islamic-finance/posc', {
+        method: 'POST', body: JSON.stringify({ target_name: targetName, target_type: targetType }),
+      });
+      load();
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div style={cardStyle}>
+        <h3 style={sectionTitle}>Сгенерировать PoSC</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Название объекта</label><input value={targetName} onChange={e => setTargetName(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Тип</label>
+            <select value={targetType} onChange={e => setTargetType(e.target.value)} style={inputStyle}>
+              <option value="product">Продукт</option><option value="portfolio">Портфель</option><option value="company">Компания</option>
+            </select>
+          </div>
+        </div>
+        <button onClick={generate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Сгенерировать</button>
+      </div>
+
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
+        data.map((r: any) => (
+          <div key={r.id} style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing[2] }}>
+              <span style={{ fontWeight: typography.fontWeight.semibold }}>{r.target_name}</span>
+              <StatusBadge status={r.compliance_status || 'not_screened'} />
+            </div>
+            {r.report_json && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
+              Стандарт: {r.report_json.standard} | Скор: {r.report_json.score}
+            </div>}
+          </div>
+        ))
+      }
+    </div>
+  );
+}
+
+/* ======= TAB 6: SSB / Fatwas ======= */
+function SSBTab() {
+  const [members, setMembers] = useState<any[]>([]);
+  const [fatwas, setFatwas] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try {
+      const [m, f] = await Promise.all([
+        apiRequest('/islamic-finance/ssb/members'),
+        apiRequest('/islamic-finance/ssb/fatwas'),
+      ]);
+      setMembers(m.data || []); setFatwas(f.data || []);
+    } catch {}
+    setLoading(false);
+  };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
+
+  return (
+    <div>
+      <h3 style={sectionTitle}>Члены Шариатского совета (SSB)</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing[3], marginBottom: spacing[6] }}>
+        {members.map((m: any) => (
+          <div key={m.id} style={cardStyle}>
+            <div style={{ fontWeight: typography.fontWeight.semibold }}>{m.full_name}</div>
+            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.title} · {m.specialization}</div>
+          </div>
+        ))}
+        {members.length === 0 && <div style={{ color: semantic.textSecondary }}>Нет данных</div>}
+      </div>
+
+      <h3 style={sectionTitle}>Фатвы</h3>
+      {fatwas.map((f: any) => (
+        <div key={f.id} style={cardStyle}>
+          <div style={{ fontWeight: typography.fontWeight.semibold }}>{f.title}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>{f.topic} · {f.status}</div>
+          {f.summary && <div style={{ marginTop: spacing[2], fontSize: typography.fontSize.sm }}>{f.summary}</div>}
+        </div>
+      ))}
+      {fatwas.length === 0 && <div style={{ ...cardStyle, color: semantic.textSecondary }}>Нет фатв</div>}
+    </div>
+  );
+}
+
+/* ======= TAB 7: Glossary ======= */
+function GlossaryTab() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try { const r = await apiRequest('/islamic-finance/glossary'); setData(r.data || []); } catch {}
+    setLoading(false);
+  };
+
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
+
+  return (
+    <div>
+      <h3 style={sectionTitle}>Глоссарий исламских финансов</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+        {data.map((r: any) => (
+          <div key={r.id} style={cardStyle}>
+            <div style={{ fontWeight: typography.fontWeight.semibold, color: semantic.textPrimary }}>
+              {r.term_arabic} <span style={{ color: semantic.textSecondary, fontWeight: typography.fontWeight.medium }}>{r.transliteration}</span>
+            </div>
+            {r.term_ru && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{r.term_ru}</div>}
+            {r.definition && <div style={{ fontSize: typography.fontSize.xs, color: semantic.textSecondary, marginTop: spacing[1] }}>{r.definition}</div>}
+          </div>
+        ))}
+      </div>
+      {data.length === 0 && <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>Глоссарий пуст</div>}
+    </div>
+  );
+}
+
+/* ======= TAB 8: P2P Islamic ======= */
+function P2PTab() {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [form, setForm] = useState({ title: '', target_amount: '', product_type: 'mudaraba', profit_sharing_ratio: '' });
+
+  useEffect(() => { load(); }, []);
+  const load = async () => {
+    try { const r = await apiRequest('/islamic-finance/p2p'); setData(r.data || []); } catch {}
+    setLoading(false);
+  };
+
+  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const create = async () => {
+    try {
+      await apiRequest('/islamic-finance/p2p', {
+        method: 'POST', body: JSON.stringify({
+          title: form.title, target_amount: parseFloat(form.target_amount) || 0,
+          product_type: form.product_type, profit_sharing_ratio: form.profit_sharing_ratio || '60:40',
+        }),
+      });
+      load();
+    } catch {}
+  };
+
+  return (
+    <div>
+      <div style={cardStyle}>
+        <h3 style={sectionTitle}>Создать P2P проект</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
+          <div><label style={labelStyle}>Название</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Целевая сумма</label><input type="number" value={form.target_amount} onChange={e => set('target_amount', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Тип</label>
+            <select value={form.product_type} onChange={e => set('product_type', e.target.value)} style={inputStyle}>
+              <option value="mudaraba">Мудараба</option><option value="musharaka">Мушарака</option>
+            </select>
+          </div>
+          <div><label style={labelStyle}>Пропорция прибыли</label><input value={form.profit_sharing_ratio} onChange={e => set('profit_sharing_ratio', e.target.value)} placeholder="60:40" style={inputStyle} /></div>
+        </div>
+        <button onClick={create} style={{ ...btnPrimary, marginTop: spacing[4] }}>Создать проект</button>
+      </div>
+
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
+        data.map((p: any) => (
+          <div key={p.id} style={cardStyle}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: typography.fontWeight.semibold }}>{p.title}</span>
+              <span style={{ fontSize: typography.fontSize.xs, padding: `${spacing[1]} ${spacing[2]}`, borderRadius: radius.lg,
+                backgroundColor: p.status === 'active' ? colors.success[50] : colors.neutral[100],
+                color: p.status === 'active' ? colors.success[700] : semantic.textSecondary }}>{p.status}</span>
+            </div>
+            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>
+              {Number(p.collected_amount).toLocaleString()} / {Number(p.target_amount).toLocaleString()} | {p.product_type} | {p.profit_sharing_ratio}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  );
+}
+
+/* ======= TAB 9: Reference ======= */
 function ReferenceTab() {
   const [haramList, setHaramList] = useState<any[]>([]);
   const [thresholds, setThresholds] = useState<any[]>([]);
   const [indices, setIndices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  const loadAll = async () => {
-    setLoading(true);
+  useEffect(() => { load(); }, []);
+  const load = async () => {
     try {
-      const [h, t, ind] = await Promise.all([
+      const [h, t, i] = await Promise.all([
         apiRequest('/islamic-finance/reference/haram-industries'),
         apiRequest('/islamic-finance/reference/financial-thresholds'),
         apiRequest('/islamic-finance/reference/shariah-indices'),
       ]);
-      setHaramList(h.data || []);
-      setThresholds(t.data || []);
-      setIndices(ind.data || []);
-    } catch (e) { /* ignore */ }
+      setHaramList(h.data || []); setThresholds(t.data || []); setIndices(i.data || []);
+    } catch {}
     setLoading(false);
   };
 
-  if (loading) {
-    return (
-      <div style={{ ...cardStyle, textAlign: 'center', padding: spacing[10] }}>
-        <p style={{ color: semantic.textMuted }}>Загрузка справочников...</p>
-      </div>
-    );
-  }
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
 
   return (
     <div>
-      {/* Haram industries */}
+      <h3 style={sectionTitle}>Запрещённые отрасли (Харам)</h3>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Запрещённые отрасли (Харам)</h3>
-        <p style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted, marginBottom: spacing[4] }}>
-          По стандартам AAOIFI Shariah Standard No. 21 и DJIM Methodology
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing[3] }}>
-          {haramList.map((item: Record<string, unknown>, i: number) => (
-            <div key={i} style={{
-              padding: spacing[4],
-              backgroundColor: colors.error[50],
-              borderRadius: radius.xl,
-              border: `1px solid ${colors.error[200]}`,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: spacing[2], marginBottom: spacing[1] }}>
-                <span style={{ fontSize: '18px' }}>🚫</span>
-                <span style={{ fontWeight: typography.fontWeight.semibold, color: colors.error[700], fontSize: typography.fontSize.md }}>
-                  {item.name_ru}
-                </span>
-                <span style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>
-                  ({item.name_en})
-                </span>
-              </div>
-              <p style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
-                {item.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        {haramList.map((item: any, i: number) => (
+          <div key={i} style={{ padding: spacing[2], borderBottom: i < haramList.length - 1 ? `1px solid ${semantic.border}` : 'none' }}>
+            <span>🚫 {item.name_ru}</span> <span style={{ color: semantic.textSecondary }}>({item.name_en})</span>
+            {item.description && <div style={{ fontSize: typography.fontSize.xs, color: semantic.textSecondary }}>{item.description}</div>}
+          </div>
+        ))}
+        {haramList.length === 0 && <div style={{ color: semantic.textSecondary }}>Нет данных</div>}
       </div>
 
-      {/* Financial thresholds */}
+      <h3 style={sectionTitle}>Финансовые пороги AAOIFI</h3>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Финансовые пороги AAOIFI</h3>
-        <div className="overflow-x-auto">
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: `2px solid ${semantic.border}` }}>
-                <th style={{ textAlign: 'left', padding: `${spacing[3]} ${spacing[4]}`, fontSize: typography.fontSize.sm, color: semantic.textMuted, fontWeight: typography.fontWeight.semibold }}>Критерий</th>
-                <th style={{ textAlign: 'center', padding: `${spacing[3]} ${spacing[4]}`, fontSize: typography.fontSize.sm, color: semantic.textMuted, fontWeight: typography.fontWeight.semibold }}>Максимум</th>
-                <th style={{ textAlign: 'left', padding: `${spacing[3]} ${spacing[4]}`, fontSize: typography.fontSize.sm, color: semantic.textMuted, fontWeight: typography.fontWeight.semibold }}>Стандарт</th>
-              </tr>
-            </thead>
-            <tbody>
-              {thresholds.map((item: Record<string, unknown>, i: number) => (
-                <tr key={i} style={{ borderBottom: `1px solid ${semantic.borderLight}` }}>
-                  <td style={{ padding: `${spacing[3]} ${spacing[4]}` }}>
-                    <div style={{ fontWeight: typography.fontWeight.medium, color: semantic.textPrimary, fontSize: typography.fontSize.md }}>{item.name_ru}</div>
-                    <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted }}>{item.description}</div>
-                  </td>
-                  <td style={{ textAlign: 'center', padding: `${spacing[3]} ${spacing[4]}` }}>
-                    <span style={{
-                      padding: `${spacing[1]} ${spacing[3]}`,
-                      backgroundColor: colors.warning[100],
-                      borderRadius: radius.full,
-                      fontWeight: typography.fontWeight.bold,
-                      color: colors.warning[700],
-                      fontSize: typography.fontSize.md,
-                    }}>
-                      {item.max_percentage}
-                    </span>
-                  </td>
-                  <td style={{ padding: `${spacing[3]} ${spacing[4]}`, fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
-                    {item.standard}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr style={{ borderBottom: `2px solid ${semantic.border}` }}>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>Критерий</th>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>Максимум</th>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>Стандарт</th>
+          </tr></thead>
+          <tbody>{thresholds.map((t: any, i: number) => (
+            <tr key={i} style={{ borderBottom: `1px solid ${semantic.border}` }}>
+              <td style={{ padding: spacing[2] }}>{t.name_ru}</td>
+              <td style={{ padding: spacing[2] }}>{t.max_percentage}</td>
+              <td style={{ padding: spacing[2] }}>{t.standard}</td>
+            </tr>
+          ))}</tbody>
+        </table>
       </div>
 
-      {/* Shariah indices */}
-      <div style={cardStyle}>
-        <h3 style={sectionTitle}>Шариатские индексы</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: spacing[3] }}>
-          {indices.map((item: Record<string, unknown>, i: number) => (
-            <div key={i} style={{
-              padding: spacing[4],
-              backgroundColor: colors.primary[50],
-              borderRadius: radius.xl,
-              border: `1px solid ${colors.primary[200]}`,
-            }}>
-              <div style={{ fontWeight: typography.fontWeight.semibold, color: colors.primary[700], fontSize: typography.fontSize.md, marginBottom: spacing[1] }}>
-                {item.name}
-              </div>
-              <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted, marginBottom: spacing[2] }}>
-                {item.provider}
-              </div>
-              <p style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginBottom: spacing[2] }}>
-                {item.description}
-              </p>
-              <a href={item.methodology_url} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: typography.fontSize.sm, color: colors.primary[600], textDecoration: 'none' }}>
-                Методология →
-              </a>
-            </div>
-          ))}
+      <h3 style={sectionTitle}>Шариатские индексы</h3>
+      {indices.map((item: any, i: number) => (
+        <div key={i} style={cardStyle}>
+          <div style={{ fontWeight: typography.fontWeight.semibold }}>{item.name}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{item.provider} · {item.description}</div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Helper Components
-   ═══════════════════════════════════════════════════════════════════════════ */
-
+/* ======= Helper Components ======= */
 function StatusBadge({ status }: { status: string }) {
   const s = complianceColors[status] || complianceColors.not_screened;
-  return (
-    <span style={{
-      padding: `${spacing[1]} ${spacing[4]}`,
-      borderRadius: radius.full,
-      backgroundColor: s.bg,
-      color: s.text,
-      fontWeight: typography.fontWeight.bold,
-      fontSize: typography.fontSize.sm,
-      letterSpacing: typography.letterSpacing.wide,
-      textTransform: 'uppercase',
-    }}>
-      {s.label}
-    </span>
-  );
-}
-
-function SummaryCard({ label, value, color, bg }: { label: string; value: string; color: string; bg: string }) {
-  return (
-    <div style={{
-      padding: spacing[4],
-      backgroundColor: bg,
-      borderRadius: radius.xl,
-      border: `1px solid ${color}20`,
-    }}>
-      <div style={{ fontSize: typography.fontSize.sm, color: semantic.textMuted, marginBottom: spacing[1] }}>{label}</div>
-      <div style={{ fontSize: typography.fontSize.lg, fontWeight: typography.fontWeight.bold, color }}>{value}</div>
-    </div>
-  );
+  return <span style={{ display: 'inline-block', padding: `${spacing[1]} ${spacing[3]}`, borderRadius: radius.lg, backgroundColor: s.bg, color: s.text, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold }}>{s.label}</span>;
 }
