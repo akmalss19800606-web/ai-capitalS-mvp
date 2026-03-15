@@ -51,7 +51,7 @@ export default function DecisionsPage(){
 
   useEffect(()=>{
     fetch(`${API}/organizations`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setOrgs(d)}).catch(()=>{});
-    fetch(`${API}/investment-decisions`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setDecisions(d)}).catch(()=>{});
+    fetch(`${API}/decisions`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setDecisions(d)}).catch(()=>{});
   },[]);
 
   const calcImpact=()=>{
