@@ -80,9 +80,9 @@ function formatMoney(val: number | null | undefined, currency = 'USD'): string {
   if (val === null || val === undefined) return 'N/A'
   const abs = Math.abs(val)
   const sign = val < 0 ? '-' : ''
-  if (abs >= 1_000_000) return `\${sign}\${currency === 'USD' ? '$' : ''}\${(abs / 1_000_000).toFixed(2)}M`
-  if (abs >= 1_000) return `\${sign}\${currency === 'USD' ? '$' : ''}\${(abs / 1_000).toFixed(1)}K`
-  return `\${sign}\${currency === 'USD' ? '$' : ''}\${abs.toFixed(2)}`
+  if (abs >= 1_000_000) return `${sign}${currency === 'USD' ? '$' : ''}${(abs / 1_000_000).toFixed(2)}M`
+  if (abs >= 1_000) return `${sign}${currency === 'USD' ? '$' : ''}${(abs / 1_000).toFixed(1)}K`
+  return `${sign}${currency === 'USD' ? '$' : ''}${abs.toFixed(2)}`
 }
 
 function npvColor(npv: number): string {
@@ -118,7 +118,7 @@ export default function CalculatorProPage() {
   const [nSimulations, setNSimulations] = useState(10000)
 
   const token = () => typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('token') || '' : ''
-  const authHeader = () => ({ 'Authorization': `Bearer \${token()}`, 'Content-Type': 'application/json' })
+  const authHeader = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' })
 
   useEffect(() => {
     const load = async () => {
@@ -207,7 +207,7 @@ export default function CalculatorProPage() {
   }
 
   const downloadPdf = (calcId: string) => {
-    window.open(`/api/v1/calculator/history/\${calcId}/pdf?token=\${token()}`, '_blank')
+    window.open(`/api/v1/calculator/history/${calcId}/pdf?token=${token()}`, '_blank')
   }
 
   const applyPreset = (preset: any) => {
@@ -242,7 +242,7 @@ export default function CalculatorProPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap \${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25'
                     : 'text-slate-400 hover:text-white hover:bg-slate-700/40'
@@ -329,7 +329,7 @@ export default function CalculatorProPage() {
                 <div className="flex gap-2">
                   {[{v:'manual',l:'Вручную'},{v:'wacc',l:'WACC'}].map(opt => (
                     <button key={opt.v} onClick={() => { updateDcf('discount_rate_mode', opt.v); setShowWacc(opt.v==='wacc') }}
-                      className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all \${
+                      className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
                         dcfParams.discount_rate_mode === opt.v ? 'bg-violet-600 text-white' : 'bg-slate-700/50 text-slate-400'
                       }`}>{opt.l}</button>
                   ))}
@@ -428,27 +428,27 @@ export default function CalculatorProPage() {
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className={`bg-slate-900/60 rounded-xl p-4 \${dcfResult.npv >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
+                      <div className={`bg-slate-900/60 rounded-xl p-4 ${dcfResult.npv >= 0 ? 'border border-emerald-500/30' : 'border border-red-500/30'}`}>
                         <div className="text-slate-400 text-xs mb-1">NPV</div>
-                        <div className={`text-2xl font-bold \${npvColor(dcfResult.npv)}`}>
+                        <div className={`text-2xl font-bold ${npvColor(dcfResult.npv)}`}>
                           {formatMoney(dcfResult.npv, dcfResult.currency)}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">{dcfResult.npv >= 0 ? 'Проект добавляет стоимость' : 'Проект разрушает стоимость'}</div>
                       </div>
                       <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4">
                         <div className="text-slate-400 text-xs mb-1">IRR</div>
-                        <div className="text-2xl font-bold text-white">{dcfResult.irr ? `\${dcfResult.irr.toFixed(2)}%` : 'N/A'}</div>
+                        <div className="text-2xl font-bold text-white">{dcfResult.irr ? `${dcfResult.irr.toFixed(2)}%` : 'N/A'}</div>
                         <div className="text-xs text-slate-500 mt-1">Внутренняя норма доходности</div>
                       </div>
                       <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4">
                         <div className="text-slate-400 text-xs mb-1">MIRR</div>
-                        <div className="text-2xl font-bold text-white">{dcfResult.mirr ? `\${dcfResult.mirr.toFixed(2)}%` : 'N/A'}</div>
+                        <div className="text-2xl font-bold text-white">{dcfResult.mirr ? `${dcfResult.mirr.toFixed(2)}%` : 'N/A'}</div>
                         <div className="text-xs text-slate-500 mt-1">Модифицированная IRR</div>
                       </div>
                       <div className="bg-slate-900/60 border border-slate-700/30 rounded-xl p-4">
                         <div className="text-slate-400 text-xs mb-1">ROI</div>
-                        <div className={`text-2xl font-bold \${(dcfResult.roi_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                          {dcfResult.roi_pct ? `\${dcfResult.roi_pct.toFixed(1)}%` : 'N/A'}
+                        <div className={`text-2xl font-bold ${(dcfResult.roi_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {dcfResult.roi_pct ? `${dcfResult.roi_pct.toFixed(1)}%` : 'N/A'}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">Return on Investment</div>
                       </div>
@@ -457,15 +457,15 @@ export default function CalculatorProPage() {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-slate-900/60 rounded-xl p-3">
                         <div className="text-slate-400 text-xs">Срок окупаемости</div>
-                        <div className="text-white font-bold mt-1">{dcfResult.payback_period ? `\${dcfResult.payback_period.toFixed(1)} лет` : 'N/A'}</div>
+                        <div className="text-white font-bold mt-1">{dcfResult.payback_period ? `${dcfResult.payback_period.toFixed(1)} лет` : 'N/A'}</div>
                       </div>
                       <div className="bg-slate-900/60 rounded-xl p-3">
                         <div className="text-slate-400 text-xs">Диск. окупаемость</div>
-                        <div className="text-white font-bold mt-1">{dcfResult.discounted_payback ? `\${dcfResult.discounted_payback.toFixed(1)} лет` : 'N/A'}</div>
+                        <div className="text-white font-bold mt-1">{dcfResult.discounted_payback ? `${dcfResult.discounted_payback.toFixed(1)} лет` : 'N/A'}</div>
                       </div>
                       <div className="bg-slate-900/60 rounded-xl p-3">
                         <div className="text-slate-400 text-xs">Индекс прибыльности</div>
-                        <div className={`font-bold mt-1 \${(dcfResult.profitability_index || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`font-bold mt-1 ${(dcfResult.profitability_index || 0) >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
                           {dcfResult.profitability_index ? dcfResult.profitability_index.toFixed(4) : 'N/A'}
                         </div>
                       </div>
@@ -519,13 +519,13 @@ export default function CalculatorProPage() {
                                 <td className="py-2 pr-4 text-white">{formatMoney(yr.revenue, dcfResult.currency)}</td>
                                 <td className="py-2 pr-4">{formatMoney(yr.ebit, dcfResult.currency)}</td>
                                 <td className="py-2 pr-4 text-red-400">{formatMoney(yr.taxes, dcfResult.currency)}</td>
-                                <td className={`py-2 pr-4 font-medium \${yr.free_cash_flow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <td className={`py-2 pr-4 font-medium ${yr.free_cash_flow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                   {formatMoney(yr.free_cash_flow, dcfResult.currency)}
                                 </td>
-                                <td className={`py-2 pr-4 \${yr.discounted_cf >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                                <td className={`py-2 pr-4 ${yr.discounted_cf >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
                                   {formatMoney(yr.discounted_cf, dcfResult.currency)}
                                 </td>
-                                <td className={`py-2 pr-4 font-semibold \${yr.cumulative_dcf >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <td className={`py-2 pr-4 font-semibold ${yr.cumulative_dcf >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                                   {formatMoney(yr.cumulative_dcf, dcfResult.currency)}
                                 </td>
                               </tr>
@@ -552,7 +552,7 @@ export default function CalculatorProPage() {
                 onClick={() => {
                   if (compareProjects.length < 5) {
                     setCompareProjects(prev => [...prev, { ...DEFAULT_DCF }])
-                    setCompareNames(prev => [...prev, `Проект \${prev.length + 1}`])
+                    setCompareNames(prev => [...prev, `Проект ${prev.length + 1}`])
                   }
                 }}
                 disabled={compareProjects.length >= 5}
@@ -562,7 +562,7 @@ export default function CalculatorProPage() {
               </button>
             </div>
 
-            <div className={`grid grid-cols-1 md:grid-cols-\${compareProjects.length} gap-4`}>
+            <div className={`grid grid-cols-1 md:grid-cols-${compareProjects.length} gap-4`}>
               {compareProjects.map((proj, idx) => (
                 <div key={idx} className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
@@ -620,17 +620,17 @@ export default function CalculatorProPage() {
                     </thead>
                     <tbody>
                       {compareResult.projects?.map((p: any, i: number) => (
-                        <tr key={i} className={`border-b border-slate-700/30 \${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
+                        <tr key={i} className={`border-b border-slate-700/30 ${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
                           <td className="py-2 pr-4 font-medium text-white flex items-center gap-2">
                             {p.name === compareResult.best_npv && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
                             {p.name}
                           </td>
-                          <td className={`py-2 pr-4 font-semibold \${(p.npv||0)>=0?'text-emerald-400':'text-red-400'}`}>{formatMoney(p.npv)}</td>
-                          <td className="py-2 pr-4 text-white">{p.irr?`\${p.irr.toFixed(2)}%`:'N/A'}</td>
-                          <td className="py-2 pr-4 text-white">{p.mirr?`\${p.mirr.toFixed(2)}%`:'N/A'}</td>
-                          <td className="py-2 pr-4 text-white">{p.payback_period?`\${p.payback_period.toFixed(1)}л`:'N/A'}</td>
-                          <td className={`py-2 pr-4 \${(p.profitability_index||0)>=1?'text-emerald-400':'text-red-400'}`}>{p.profitability_index?.toFixed(3)||'N/A'}</td>
-                          <td className={`py-2 pr-4 \${(p.roi_pct||0)>=0?'text-emerald-400':'text-red-400'}`}>{p.roi_pct?`\${p.roi_pct.toFixed(1)}%`:'N/A'}</td>
+                          <td className={`py-2 pr-4 font-semibold ${(p.npv||0)>=0?'text-emerald-400':'text-red-400'}`}>{formatMoney(p.npv)}</td>
+                          <td className="py-2 pr-4 text-white">{p.irr?`${p.irr.toFixed(2)}%`:'N/A'}</td>
+                          <td className="py-2 pr-4 text-white">{p.mirr?`${p.mirr.toFixed(2)}%`:'N/A'}</td>
+                          <td className="py-2 pr-4 text-white">{p.payback_period?`${p.payback_period.toFixed(1)}л`:'N/A'}</td>
+                          <td className={`py-2 pr-4 ${(p.profitability_index||0)>=1?'text-emerald-400':'text-red-400'}`}>{p.profitability_index?.toFixed(3)||'N/A'}</td>
+                          <td className={`py-2 pr-4 ${(p.roi_pct||0)>=0?'text-emerald-400':'text-red-400'}`}>{p.roi_pct?`${p.roi_pct.toFixed(1)}%`:'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -662,7 +662,7 @@ export default function CalculatorProPage() {
               <div className="flex gap-3 mb-4">
                 {[{v:'tornado',l:'Торнадо'},{v:'spider',l:'Spider'},{v:'data_table',l:'Таблица 2D'}].map(opt => (
                   <button key={opt.v} onClick={() => setSensitMode(opt.v as any)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all \${sensitMode===opt.v?'bg-violet-600 text-white':'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'}`}>
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${sensitMode===opt.v?'bg-violet-600 text-white':'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'}`}>
                     {opt.l}
                   </button>
                 ))}
@@ -697,8 +697,8 @@ export default function CalculatorProPage() {
                             <div
                               className="absolute inset-y-0 bg-gradient-to-r from-violet-500 to-blue-500 rounded"
                               style={{
-                                left: `\${50 - barWidth/2}%`,
-                                width: `\${barWidth}%`,
+                                left: `${50 - barWidth/2}%`,
+                                width: `${barWidth}%`,
                               }}
                             />
                           </div>
@@ -731,7 +731,7 @@ export default function CalculatorProPage() {
                             {[-30,-20,-10,0,10,20,30].map(p => {
                               const row = rows.find((r: any) => r.pct_change === p)
                               return (
-                                <td key={p} className={`py-2 pr-3 text-center \${(row?.npv||0) >= sensitResult.base_npv ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <td key={p} className={`py-2 pr-3 text-center ${(row?.npv||0) >= sensitResult.base_npv ? 'text-emerald-400' : 'text-red-400'}`}>
                                   {row ? formatMoney(row.npv) : '—'}
                                 </td>
                               )
@@ -778,14 +778,14 @@ export default function CalculatorProPage() {
                 {/* Ключевые метрики */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    {l:'P(NPV>0)',v:`\${(mcResult.prob_positive*100).toFixed(1)}%`,c:mcResult.prob_positive>0.6?'text-emerald-400':'text-red-400'},
+                    {l:'P(NPV>0)',v:`${(mcResult.prob_positive*100).toFixed(1)}%`,c:mcResult.prob_positive>0.6?'text-emerald-400':'text-red-400'},
                     {l:'Ожид. NPV (P50)',v:formatMoney(mcResult.p50),c:mcResult.p50>=0?'text-emerald-400':'text-red-400'},
                     {l:'VaR 95%',v:formatMoney(mcResult.var_95),c:'text-amber-400'},
                     {l:'CVaR 95%',v:formatMoney(mcResult.cvar_95),c:'text-red-400'},
                   ].map(m => (
                     <div key={m.l} className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
                       <div className="text-slate-400 text-xs mb-1">{m.l}</div>
-                      <div className={`text-xl font-bold \${m.c}`}>{m.v}</div>
+                      <div className={`text-xl font-bold ${m.c}`}>{m.v}</div>
                     </div>
                   ))}
                 </div>
@@ -803,7 +803,7 @@ export default function CalculatorProPage() {
                     ].map(p => (
                       <div key={p.l} className="text-center bg-slate-900/40 rounded-xl p-3">
                         <div className="text-slate-400 text-xs mb-2">{p.l}</div>
-                        <div className={`font-bold text-lg \${p.c}`}>{formatMoney(p.v)}</div>
+                        <div className={`font-bold text-lg ${p.c}`}>{formatMoney(p.v)}</div>
                       </div>
                     ))}
                   </div>
@@ -818,7 +818,7 @@ export default function CalculatorProPage() {
                     {[
                       {l:'Среднее',v:formatMoney(mcResult.mean_npv)},
                       {l:'Стд. отклонение',v:formatMoney(mcResult.std_npv)},
-                      {l:'Min / Max',v:`\${formatMoney(mcResult.min_npv)} / \${formatMoney(mcResult.max_npv)}`},
+                      {l:'Min / Max',v:`${formatMoney(mcResult.min_npv)} / ${formatMoney(mcResult.max_npv)}`},
                     ].map(s => (
                       <div key={s.l} className="bg-slate-900/40 rounded-lg px-3 py-2">
                         <div className="text-slate-500">{s.l}</div>
@@ -855,13 +855,13 @@ export default function CalculatorProPage() {
                 {benchmarks.map((bm: any) => {
                   const isBeaten = dcfResult?.irr && dcfResult.irr > bm.annual_return_pct
                   return (
-                    <div key={bm.name} className={`flex items-center justify-between p-4 rounded-xl border transition-all \${
+                    <div key={bm.name} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
                       isBeaten ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-slate-900/40 border-slate-700/30'
                     }`}>
                       <div className="flex items-center gap-3">
                         {isBeaten
                           ? <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                          : <div className={`w-3 h-3 rounded-full shrink-0 \${
+                          : <div className={`w-3 h-3 rounded-full shrink-0 ${
                               bm.risk_level === 'minimal' ? 'bg-emerald-400' :
                               bm.risk_level === 'low' ? 'bg-blue-400' :
                               bm.risk_level === 'medium' ? 'bg-amber-400' : 'bg-red-400'
@@ -875,7 +875,7 @@ export default function CalculatorProPage() {
                       <div className="flex items-center gap-4">
                         <div className="text-center">
                           <div className="text-xs text-slate-400">Риск</div>
-                          <div className={`text-xs font-medium \${
+                          <div className={`text-xs font-medium ${
                             bm.risk_level==='minimal'?'text-emerald-400':bm.risk_level==='low'?'text-blue-400':bm.risk_level==='medium'?'text-amber-400':'text-red-400'
                           }`}>{bm.risk_level}</div>
                         </div>
@@ -888,10 +888,10 @@ export default function CalculatorProPage() {
                           <div className="text-xs text-slate-400">год</div>
                         </div>
                         {dcfResult?.irr && (
-                          <div className={`text-sm font-semibold \${isBeaten ? 'text-emerald-400' : 'text-red-400'}`}>
+                          <div className={`text-sm font-semibold ${isBeaten ? 'text-emerald-400' : 'text-red-400'}`}>
                             {isBeaten
-                              ? `+\${(dcfResult.irr - bm.annual_return_pct).toFixed(1)}%`
-                              : `-\${(bm.annual_return_pct - dcfResult.irr).toFixed(1)}%`
+                              ? `+${(dcfResult.irr - bm.annual_return_pct).toFixed(1)}%`
+                              : `-${(bm.annual_return_pct - dcfResult.irr).toFixed(1)}%`
                             }
                           </div>
                         )}
@@ -919,12 +919,12 @@ export default function CalculatorProPage() {
                 <h3 className="text-white font-bold mb-4">Налоговые ставки Узбекистана 2026</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
-                    {l:'КПН (стандарт)',v:`\${taxRates.cit_standard_pct}%`},
-                    {l:'НДС',v:`\${taxRates.vat_pct}%`},
-                    {l:'Упрощённый налог',v:`\${taxRates.turnover_tax_simplified_pct}%`},
-                    {l:'НДФЛ',v:`\${taxRates.personal_income_tax_pct}%`},
-                    {l:'Социальный налог',v:`\${taxRates.social_tax_pct}%`},
-                    {l:'Налог на имущество',v:`\${taxRates.property_tax_pct}%`},
+                    {l:'КПН (стандарт)',v:`${taxRates.cit_standard_pct}%`},
+                    {l:'НДС',v:`${taxRates.vat_pct}%`},
+                    {l:'Упрощённый налог',v:`${taxRates.turnover_tax_simplified_pct}%`},
+                    {l:'НДФЛ',v:`${taxRates.personal_income_tax_pct}%`},
+                    {l:'Социальный налог',v:`${taxRates.social_tax_pct}%`},
+                    {l:'Налог на имущество',v:`${taxRates.property_tax_pct}%`},
                   ].map(t => (
                     <div key={t.l} className="bg-slate-900/60 rounded-xl p-3 flex justify-between items-center">
                       <span className="text-slate-400 text-sm">{t.l}</span>
