@@ -115,7 +115,7 @@ export default function CalculatorProPage() {
   const [mcLoading, setMcLoading] = useState(false)
   const [nSimulations, setNSimulations] = useState(10000)
 
-  const token = () => typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
+  const token = () => typeof window !== 'undefined' ? localStorage.getItem('access_token') || '' : ''
   const authHeader = () => ({ 'Authorization': `Bearer \${token()}`, 'Content-Type': 'application/json' })
 
   useEffect(() => {
