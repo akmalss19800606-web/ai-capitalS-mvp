@@ -119,7 +119,7 @@ async def fe_compare(body: dict = Body(...), _u=Depends(get_current_user)):
             dr = proj.get("discount_rate", 20) / 100 if proj.get("discount_rate", 20) > 1 else proj.get("discount_rate", 0.10)
             raw = calc.calculate_dcf(cash_flows=cfs, discount_rate=dr, initial_investment=proj.get("initial_investment", 0), tax_regime=proj.get("tax_regime", "general"), currency=proj.get("currency", "USD"))
             name = names[i] if i < len(names) else f"Project {i+1}"
-            r = {"name": name, "npv": raw.get("npv", 0), "irr": raw.get("irr"), "mirr": raw.get("mirr"), "payback_period": raw.get("payback_years"), "profitability_index": raw.get("profitability_index"), "roi_pct": raw.get("roi_pct")}
+            r = {"name": name, "npv": raw.get("npv", 0), "irr": raw.get("irr"), "mirr": raw.get("mirr"), "payback_period": raw.get("payback_years"), "profitability_index": raw.get("profitability_index"), "roi_pct": raw.get("roi_pct"), "discounted_payback": raw.get("discounted_payback"), "total_revenue": sum(p.get("cash_flow", 0) for p in raw.get("periods", []) if p.get("cash_flow", 0) > 0), "total_profit": raw.get("npv", 0), "yearly_cashflows": [p.get("cash_flow", 0) for p in raw.get("periods", [])]}
             results.append(r)
             if raw.get("npv", 0) > best_npv_val:
                 best_npv_val = raw["npv"]; best_npv_name = name
