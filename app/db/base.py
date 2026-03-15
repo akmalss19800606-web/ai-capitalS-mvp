@@ -60,3 +60,9 @@ from app.db.models.cpi_data import CPIRecord
 from app.db.models.company_lookup import CompanyProfile
 # ═══ Этап 3, Сессия 3.1: AI Chat Log ═══
 from app.db.models.ai_chat_log import AIChatLog
+# === Islamic Finance Models ===
+from app.db.models.islamic_finance import (
+    IslamicScreening, ZakatCalculation, PurificationRecord,
+    IslamicContract, PoSCReport, SSBFatwa, SSBMember,
+    IslamicGlossary, HaramIndustryDB, IslamicP2PProject,
+)
