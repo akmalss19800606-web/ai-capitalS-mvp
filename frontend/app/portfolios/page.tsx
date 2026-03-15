@@ -177,7 +177,7 @@ export default function PortfoliosPage(){
 
             <div className="flex justify-between mt-6">
               <div/>
-              <button onClick={saveOrg} disabled={!org.name||saving} className="px-6 py-2 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Next ->"}</button>
+              <button onClick={saveOrg} disabled={!org.name||saving} className="px-6 py-2 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Next →"}</button>
             </div>
           </div>
         )}
@@ -211,7 +211,7 @@ export default function PortfoliosPage(){
               </table>
               <div className="flex justify-between mt-6">
                 <button onClick={()=>setStep(step-1)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
-                <button onClick={()=>step<5?setStep(step+1):setStep(6)} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Next -></button>
+                <button onClick={()=>step<5?setStep(step+1):setStep(6)} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Next →</button>
               </div>
             </div>
           );
@@ -249,7 +249,7 @@ export default function PortfoliosPage(){
             )}
             <div className="flex justify-between mt-6">
               <button onClick={()=>setStep(5)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
-              <button onClick={saveBalance} disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Save and verify balance ->"}</button>
+              <button onClick={saveBalance} disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Save and verify balance →"}</button>
             </div>
           </div>
         )}
@@ -283,7 +283,7 @@ export default function PortfoliosPage(){
                   <div className="flex gap-2">
                     <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Export PDF</button>
                     <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Export Excel</button>
-                    <button onClick={()=>{window.location.href="/analytics"}} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Go to Analytics -></button>
+                    <button onClick={()=>{window.location.href="/analytics"}} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Go to Analytics →</button>
                   </div>
                 </div>
               </>
