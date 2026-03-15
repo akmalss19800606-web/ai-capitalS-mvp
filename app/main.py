@@ -27,6 +27,7 @@ from app.api.v1.routers.ai_analytics import router as ai_analytics_router
 from app.api.v1.routers.stress_retrospective import router as stress_retro_router
 from app.api.v1.routers.dd_scoring import router as dd_scoring_router
 from app.api.v1.routers.reports import router as reports_router
+from app.api.v1.routers.risk import router as risk_router
 from app.api.v1.routers.charts import router as charts_router
 # CLN-001: dashboards_router consolidated into dashboard_router
 from app.api.v1.routers.mfa import router as mfa_router
@@ -253,3 +254,4 @@ app.include_router(ai_orch_router.router, prefix="/api/v1")
 app.include_router(ai_provider_health.router, prefix="/api/v1")
 # Phase 5: Demo seed data
 app.include_router(demo_router.router, prefix="/api/v1")
+app.include_router(risk_router, prefix='/api/v1')
