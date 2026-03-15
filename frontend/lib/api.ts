@@ -186,11 +186,14 @@ export const accessControl = {
 export const companyLookup = {
   search: (query: string) => apiRequest(`/company-lookup/search?q=${encodeURIComponent(query)}`),
   getByInn: (inn: string) => apiRequest(`/company-lookup/inn/${encodeURIComponent(inn)}`),
+    get: (inn: string) => apiRequest(`/company-lookup/inn/${encodeURIComponent(inn)}`),
 };
 
 export const ddScoring = {
   score: (inn: string) => apiRequest(`/dd/scoring/${encodeURIComponent(inn)}`),
-  history: () => apiRequest('/dd/scoring/history'),
+    run: (data: unknown) => apiRequest('/dd/scoring/run', { method: 'POST', body: JSON.stringify(data) }),
+    updateChecklist: (id: number, data: unknown) => apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PUT', body: JSON.stringify(data) }),
+    history: () => apiRequest('/dd/scoring/history'),
 };
 
 export const ddDocuments = {
