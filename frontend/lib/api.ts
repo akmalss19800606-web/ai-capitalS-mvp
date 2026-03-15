@@ -1122,11 +1122,8 @@ export const cpiData = {
 export const companyLookup = {
   // Поиск компании (ИНН или название)
   search: (query: string, searchOnline: boolean = true) =>
-    apiRequest('/company/search', {
-      method: 'POST',
-      body: JSON.stringify({ query, search_online: searchOnline }),
-    }),
-
+    apiRequest(`/companies/search?q=${encodeURIComponent(query)}`),
+      
   // Список компаний из кэша
   list: (params?: { search?: string; status?: string; region?: string; limit?: number; offset?: number }) => {
     const sp = new URLSearchParams();
@@ -1136,14 +1133,14 @@ export const companyLookup = {
       });
     }
     const q = sp.toString();
-    return apiRequest(`/company/list${q ? '?' + q : ''}`);
+    return apiRequest(`/companies/list${q ? '?' + q : ''}`);
   },
 
   // Профиль по ИНН
-  get: (inn: string) => apiRequest(`/company/${inn}`),
+  get: (inn: string) => apiRequest(`/companies/${inn}`),
 
   // Инициализация каталога
-  init: () => apiRequest('/company/init', { method: 'POST' }),
+  init: () => apiRequest('/companies/init', { method: 'POST' }),
 };
 
 // ─── Этап 2, Сессия 2.4: Объединённый дашборд с реальными данными ──────────
