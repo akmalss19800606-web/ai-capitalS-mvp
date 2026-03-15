@@ -71,7 +71,7 @@ class ChartOfAccounts(Base):
     name_ru = Column(String(500), nullable=False)
     name_uz = Column(String(500), nullable=True)
     parent_code = Column(String(10), nullable=True, index=True)
-        category = Column(String(50), nullable=False)
+    category = Column(String(50), nullable=False)
     level = Column(Integer, default=1)
     is_active = Column(Boolean, default=True)
     description = Column(Text, nullable=True)
