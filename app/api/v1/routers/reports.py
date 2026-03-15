@@ -240,3 +240,68 @@ def decision_memo_shortcut(
         decision_id=decision_id,
     )
     return generate_report_endpoint(req, db, user)
+
+
+# — Tasks 51-65: OLAP-powered report endpoints (appended) ————
+from fastapi.responses import StreamingResponse
+import io as _io
+try:
+    from app.services.olap_report_service import (
+        generate_portfolio_report as _gen_report,
+        export_decisions_csv as _export_csv,
+        generate_ai_insights as _gen_insights,
+        generate_trend_analysis as _gen_trends,
+    )
+    _olap_service_available = True
+except ImportError:
+    _olap_service_available = False
+
+
+@router.get("/olap/portfolio")
+def olap_portfolio_report(
+    portfolio_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Task 51-53: OLAP portfolio analytics report."""
+    if not _olap_service_available:
+        return {"error": "OLAP report service not available"}
+    return _gen_report(db, portfolio_id)
+
+
+@router.get("/olap/insights")
+def olap_insights(
+    portfolio_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Task 54-57: AI-driven portfolio insights."""
+    if not _olap_service_available:
+        return {"error": "OLAP report service not available"}
+    return _gen_insights(db, portfolio_id)
+
+
+@router.get("/olap/trends")
+def olap_trends(
+    months: int = Query(12),
+    db: Session = Depends(get_db),
+):
+    """Task 58-60: Investment trend analysis."""
+    if not _olap_service_available:
+        return {"error": "OLAP report service not available"}
+    return _gen_trends(db, months)
+
+
+@router.get("/olap/export/csv")
+def olap_export_csv(
+    portfolio_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Task 61-65: Export decisions as CSV."""
+    if not _olap_service_available:
+        return {"error": "OLAP report service not available"}
+    csv_data = _export_csv(db, portfolio_id)
+    fname = f"decisions_portfolio_{portfolio_id or 'all'}.csv"
+    return StreamingResponse(
+        _io.StringIO(csv_data),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={fname}"},
+    )
