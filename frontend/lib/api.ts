@@ -220,11 +220,6 @@ export const workflows = {
   execute: (id: number) => apiRequest(`/workflows/${id}/execute`, { method: 'POST' }),
 };
 
-export const charts = {
-  portfolio: (id: number) => apiRequest(`/charts/portfolio/${id}`),
-  performance: (id: number) => apiRequest(`/charts/performance/${id}`),
-  allocation: (id: number) => apiRequest(`/charts/allocation/${id}`),
-};
 
 export const etl = {
   run: () => apiRequest('/etl/run', { method: 'POST' }),
@@ -232,6 +227,12 @@ export const etl = {
   refreshViews: () => apiRequest('/etl/refresh-views', { method: 'POST' }),
 };
 
+export const charts = {
+waterfall: (portfolioId?: number) => apiRequest(`/charts/waterfall${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  tornado: (portfolioId?: number) => apiRequest(`/charts/tornado${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  bubble: (portfolioId?: number) => apiRequest(`/charts/bubble${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  heatmap: (portfolioId?: number) => apiRequest(`/charts/heatmap${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+};
 export const olap = {
   overview: () => apiRequest('/analytics/olap/overview'),
   breakdown: (dimension: string) => apiRequest(`/analytics/olap/breakdown?dimension=${encodeURIComponent(dimension)}`),
