@@ -394,7 +394,7 @@ export default function DueDiligencePage() {
       setResult(res);
       setActiveTab('Обзор');
     } catch (e: unknown) {
-      setError(e.message || 'Ошибка при DD-скоринге');
+            setError((e as any).message || 'Ошибка при DD-скоринге');
     } finally {
       setLoading(false);
     }
@@ -410,7 +410,7 @@ export default function DueDiligencePage() {
       });
       setResult(updated);
     } catch (e: unknown) {
-      setError(e.message || 'Ошибка обновления чеклиста');
+            setError((e as any).message || 'Ошибка обновления чеклиста');
     }
   };
 
@@ -699,7 +699,7 @@ export default function DueDiligencePage() {
                                 strokeWidth={2}
                               />
                               <Tooltip
-                                content={({ active, payload  }: Record<string, unknown>) => {
+                                              content={({ active, payload }: any) => {
                                   if (!active || !payload?.length) return null;
                                   const d = payload[0]?.payload;
                                   return (
@@ -887,7 +887,7 @@ export default function DueDiligencePage() {
                             <XAxis type="number" tick={{ fontSize: 11, fill: C.textMuted }} unit="" />
                             <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: C.text }} width={155} />
                             <Tooltip
-                              content={({ active, payload  }: Record<string, unknown>) => {
+                                            content={({ active, payload }: any) => {
                                 if (!active || !payload?.length) return null;
                                 const d = payload[0]?.payload;
                                 return (
