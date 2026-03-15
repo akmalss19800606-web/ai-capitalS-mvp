@@ -98,7 +98,7 @@ class PoSCReport(Base):
 class SSBFatwa(Base):
     __tablename__ = "ssb_fatwas"
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    organization_id = Column(Integer, nullable=True)
     subject = Column(String(500), nullable=False)
     product_type = Column(String(50))
     decision = Column(String(20))  # approved/rejected/conditional
@@ -114,7 +114,7 @@ class SSBFatwa(Base):
 class SSBMember(Base):
     __tablename__ = "ssb_members"
     id = Column(Integer, primary_key=True, index=True)
-    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)
+    organization_id = Column(Integer, nullable=True)
     full_name = Column(String(255), nullable=False)
     qualifications = Column(Text)
     certificates = Column(JSON)  # [{name, issuer, year}]
