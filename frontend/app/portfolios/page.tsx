@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API = '/api/v1'; function getAuthHeaders(extra:any={}){const t=typeof window!=='undefined'?localStorage.getItem('token'):null;const h:any={'Content-Type':'application/json',...extra};if(t)h['Authorization']=`Bearer ${t}`;return h;}
 
 // -- Types
 interface Account { id:number; code:string; name_ru:string; name_uz?:string; category:string; level:number; parent_code?:string }
@@ -59,8 +59,8 @@ export default function PortfoliosPage(){
   const [error,setError]=useState("");
 
   useEffect(()=>{
-    fetch(`${API}/chart-of-accounts`).then(r=>r.json()).then(setAccounts).catch(()=>{});
-    fetch(`${API}/organizations`).then(r=>r.json()).then(d=>{if(Array.isArray(d))setExistingOrgs(d)}).catch(()=>{});
+    fetch(`${API}/chart-of-accounts`,{headers:getAuthHeaders()}).then(r=>r.json()).then(setAccounts).catch(()=>{});
+    fetch(`${API}/organizations`,{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setExistingOrgs(d)}).catch(()=>{});
   },[]);
 
   const accountsByCategory=(cat:string)=>accounts.filter(a=>a.category===cat&&a.level>=1).sort((a,b)=>a.code.localeCompare(b.code));
@@ -82,7 +82,7 @@ export default function PortfoliosPage(){
   const saveOrg=async()=>{
     setSaving(true); setError("");
     try{
-      const r=await fetch(`${API}/organizations`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({...org,charter_capital:parseFloat(org.charter_capital)||0})});
+      const r=await fetch(`${API}/organizations`,{method:"POST",headers:getAuthHeaders(),body:JSON.stringify({...org,charter_capital:parseFloat(org.charter_capital)||0})});
       if(!r.ok) throw new Error((await r.json()).detail||"Error");
       const data=await r.json(); setOrgId(data.id); setStep(2);
     }catch(e:any){setError(e.message)}finally{setSaving(false)}
@@ -92,9 +92,9 @@ export default function PortfoliosPage(){
     if(!orgId)return; setSaving(true); setError("");
     const entries=Object.values(balanceRows).filter(r=>r.debit!==0||r.credit!==0||r.balance!==0);
     try{
-      const r=await fetch(`${API}/organizations/${orgId}/balance`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({organization_id:orgId,period_date:periodDate,entries})});
+      const r=await fetch(`${API}/organizations/${orgId}/balance`,{method:"POST",headers:getAuthHeaders(),body:JSON.stringify({organization_id:orgId,period_date:periodDate,entries})});
       if(!r.ok) throw new Error((await r.json()).detail||"Error");
-      const sr=await fetch(`${API}/organizations/${orgId}/balance/summary?period_date=${periodDate}`);
+      const sr=await fetch(`${API}/organizations/${orgId}/balance/summary?period_date=${periodDate}`,{headers:getAuthHeaders()});
       if(sr.ok) setSummary(await sr.json());
       setStep(7);
     }catch(e:any){setError(e.message)}finally{setSaving(false)}
@@ -104,7 +104,7 @@ export default function PortfoliosPage(){
     if(!orgId||!importFile)return; setSaving(true); setError(""); setImportResult(null);
     const fd=new FormData(); fd.append("file",importFile);
     try{
-      const r=await fetch(`${API}/organizations/${orgId}/import/excel?period_date=${periodDate}`,{method:"POST",body:fd});
+      const r=await fetch(`${API}/organizations/${orgId}/import/excel?period_date=${periodDate}`,{method:"POST",body:fd,headers:(()=>{const t=typeof window!=='undefined'?localStorage.getItem('token'):null;return t?{Authorization:`Bearer ${t}`}:{}})()});
       if(!r.ok) throw new Error((await r.json()).detail||"Import error");
       setImportResult(await r.json());
     }catch(e:any){setError(e.message)}finally{setSaving(false)}
