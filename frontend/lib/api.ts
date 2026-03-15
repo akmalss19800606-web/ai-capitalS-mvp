@@ -1282,3 +1282,34 @@ export const calculatorPro = {
   compare: (data: Record<string, unknown>) =>
     apiRequest('/calculator/compare', { method: 'POST', body: JSON.stringify(data) }),
 };
+
+
+// --- UZ Market Analysis (MARKET-001) -------------------------------------------
+export const uzMarketApi = {
+  sectors: () => apiRequest('/uz-market/sectors'),
+  quickAsk: (data: { question: string; sector?: string; provider?: string }) =>
+    apiRequest('/uz-market/quick-ask', { method: 'POST', body: JSON.stringify(data) }),
+  deepAnalysis: (data: { sector_id: string; provider?: string }) =>
+    apiRequest('/uz-market/deep-analysis', { method: 'POST', body: JSON.stringify(data) }),
+  compare: (data: { sector_ids: string[]; provider?: string }) =>
+    apiRequest('/uz-market/compare', { method: 'POST', body: JSON.stringify(data) }),
+  generateReport: (data: Record<string, unknown>) =>
+    apiRequest('/uz-market/generate-report', { method: 'POST', body: JSON.stringify(data) }),
+  macroContext: () => apiRequest('/uz-market/macro-context'),
+  history: (limit?: number) =>
+    apiRequest(`/uz-market/history${limit ? '?limit=' + limit : ''}`),
+};
+
+// --- Risk Analysis (tasks 121-135) -----------------------------------------------
+export const riskAnalysis = {
+  concentration: (portfolioId?: number) =>
+    apiRequest(`/risk/concentration${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+  performance: (portfolioId?: number) =>
+    apiRequest(`/risk/performance${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+  composite: (portfolioId?: number) =>
+    apiRequest(`/risk/composite${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+  recommendations: (portfolioId?: number) =>
+    apiRequest(`/risk/recommendations${portfolioId ? '?portfolio_id=' + portfolioId : ''}`),
+  scoreInvestment: (data: { asset_name: string; category: string; geography?: string; status?: string; total_value?: number }) =>
+    apiRequest('/risk/score-investment', { method: 'POST', body: JSON.stringify(data) }),
+};
