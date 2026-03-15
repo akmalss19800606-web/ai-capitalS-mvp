@@ -15,8 +15,8 @@ def build_cash_flows(p: dict) -> List[float]:
     """Build cash_flows array from frontend DCF params."""
     inv = p.get("initial_investment", 0)
     rev = p.get("revenue_year1", 0)
-    growth = p.get("revenue_growth_rate", 0) / 100
-    margin = p.get("operating_margin", 20) / 100
+    growth_raw = p.get("revenue_growth_rate", 0); growth = growth_raw / 100 if growth_raw > 1 else growth_raw
+    margin_raw = p.get("operating_margin", 20); margin = margin_raw / 100 if margin_raw > 1 else margin_raw
     horizon = p.get("horizon_years", 5)
     cfs = [-inv]
     for yr in range(1, horizon + 1):
@@ -36,7 +36,7 @@ def adapt_dcf_response(raw: dict, params: dict) -> dict:
             continue
         yearly.append({
             "year": p["period"],
-            "revenue": p.get("cash_flow", 0) / max(params.get("operating_margin", 20) / 100, 0.01),
+            "revenue": p.get("cash_flow", 0) / max((params.get("operating_margin", 20) / 100 if params.get("operating_margin", 20) > 1 else params.get("operating_margin", 0.20)), 0.01),
             "ebit": p.get("cash_flow", 0),
             "taxes": 0,
             "free_cash_flow": p.get("cash_flow", 0),
