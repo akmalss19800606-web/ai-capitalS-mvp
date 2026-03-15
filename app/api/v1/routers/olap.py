@@ -399,3 +399,37 @@ def olap_heatmap(
         }
     except Exception as e:
         return {"x_dimension": x_dim, "y_dimension": y_dim, "data": [], "error": str(e)}
+
+
+# — Tasks 91-100: Cache management endpoints ————
+try:
+    from app.services.cache_service import cache_stats, cache_clear, invalidate_olap_cache
+    _cache_available = True
+except ImportError:
+    _cache_available = False
+
+
+@router.get("/cache/stats")
+def olap_cache_stats():
+    """Task 91-93: Get cache statistics."""
+    if not _cache_available:
+        return {"error": "Cache service not available"}
+    return cache_stats()
+
+
+@router.post("/cache/clear")
+def olap_cache_clear():
+    """Task 94-96: Clear all cache entries."""
+    if not _cache_available:
+        return {"error": "Cache service not available"}
+    count = cache_clear()
+    return {"cleared": count, "message": f"Cleared {count} cache entries"}
+
+
+@router.post("/cache/invalidate")
+def olap_cache_invalidate():
+    """Task 97-100: Invalidate OLAP-related cache entries."""
+    if not _cache_available:
+        return {"error": "Cache service not available"}
+    count = invalidate_olap_cache()
+    return {"invalidated": count, "message": f"Invalidated {count} OLAP cache entries"}
