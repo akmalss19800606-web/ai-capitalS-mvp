@@ -398,3 +398,50 @@ def get_widget_data(
     current_user: User = Depends(get_current_user),
 ):
     return widget_data(db, current_user.id, widget_type, metric, portfolio_id, drill_into)
+
+
+# ===============================================================
+# Dashboard Widget Endpoints (TZ: Plan-dorabotki-Glavnaya-Panel)
+# ===============================================================
+
+@router.get("/ticker")
+async def get_dashboard_ticker():
+    """A: Ticker bar - currency rates from cbu.uz."""
+    from app.services.dashboard_widget_service import get_ticker_data
+    items = await get_ticker_data()
+    return {"items": items}
+
+
+@router.get("/heatmap")
+async def get_dashboard_heatmap():
+    """C: UZSE stock heatmap."""
+    from app.services.dashboard_widget_service import get_heatmap_data
+    return await get_heatmap_data()
+
+
+@router.get("/sectors")
+async def get_dashboard_sectors():
+    """F: Sector breakdown."""
+    from app.services.dashboard_widget_service import get_sectors_data
+    return await get_sectors_data()
+
+
+@router.get("/macro")
+async def get_dashboard_macro():
+    """I: Macro indicators."""
+    from app.services.dashboard_widget_service import get_macro_data
+    return await get_macro_data()
+
+
+@router.get("/organization-kpi")
+def get_dashboard_org_kpi(
+    org_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """H: Organization KPI from balance entries."""
+    from app.services.dashboard_widget_service import get_org_kpi
+    result = get_org_kpi(db, org_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return result
