@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Info, CheckCircle2, AlertCircle,
   ArrowUpRight, ArrowDownRight, Minus
 } from 'lucide-react'
+import { apiRequest } from '@/lib/api'
 
 // ─────────────────────────────────────────────────────────
 // Типы
@@ -122,9 +123,9 @@ export default function CalculatorProPage() {
   useEffect(() => {
     const load = async () => {
       const [bmRes, prRes, txRes] = await Promise.all([
-        fetch('/api/v1/calculator/benchmarks', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/presets', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/tax-rates', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
+        apiRequest('/calculator/benchmarks', { headers: authHeader() }).catch(() => ({})),
+        apiRequest('/calculator/presets', { headers: authHeader() }).catch(() => ({})),
+        apiRequest('/calculator/tax-rates', { headers: authHeader() }).catch(() => ({})),
       ])
       setBenchmarks(bmRes.benchmarks || [])
       setPresets(prRes.presets || [])
@@ -154,10 +155,10 @@ export default function CalculatorProPage() {
         ...(dcfParams.discount_rate_mode === 'wacc' ? { wacc_params: waccParams } : {}),
         salvage_value: dcfParams.salvage_value || null,
       }
-      const res = await fetch('/api/v1/calculator/dcf', {
-        method: 'POST', headers: authHeader(), body: JSON.stringify(body)
+      const data = await apiRequest('/calculator/dcf', {
+        method: 'POST', body: JSON.stringify(body)
       })
-      const data = await res.json()
+      
       if (data.detail) throw new Error(data.detail)
       setDcfResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
@@ -167,11 +168,11 @@ export default function CalculatorProPage() {
   const calcCompare = async () => {
     setCompareLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/compare', {
-        method: 'POST', headers: authHeader(),
+      const data = await apiRequest('/calculator/compare', {
+        method: 'POST',
         body: JSON.stringify({ projects: compareProjects, project_names: compareNames })
       })
-      const data = await res.json()
+      
       if (data.detail) throw new Error(data.detail)
       setCompareResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
@@ -181,11 +182,11 @@ export default function CalculatorProPage() {
   const calcSensitivity = async () => {
     setSensitLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/sensitivity', {
-        method: 'POST', headers: authHeader(),
+      const data = await apiRequest('/calculator/sensitivity', {
+        method: 'POST',
         body: JSON.stringify({ base_params: dcfParams, mode: sensitMode, variation_range_pct: 20 })
       })
-      const data = await res.json()
+      
       setSensitResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
@@ -194,11 +195,11 @@ export default function CalculatorProPage() {
   const calcMonteCarlo = async () => {
     setMcLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/monte-carlo', {
-        method: 'POST', headers: authHeader(),
+      const data = await apiRequest('/calculator/monte-carlo', {
+        method: 'POST',
         body: JSON.stringify({ base_params: dcfParams, n_simulations: nSimulations })
       })
-      const data = await res.json()
+      
       if (data.detail) throw new Error(data.detail)
       setMcResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
