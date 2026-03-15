@@ -220,3 +220,182 @@ def run_balance_etl(
     org_id=None — обработать все организации."""
     from app.services.olap_etl_service import run_etl
     return run_etl(db, org_id=org_id)
+
+
+# — Tasks 19-25: Drill-down, Cross-tab, KPI, Compare, Heatmap, ETL endpoints ————
+
+@router.get("/drill-down")
+def olap_drill_down(
+    dimension: str = Query("category", description="category|geography|status|type"),
+    value: str = Query(..., description="Value to drill down into"),
+    sub_dimension: str = Query("status", description="Sub-dimension to break by"),
+    db: Session = Depends(get_db),
+):
+    """Drill down: break a dimension value by sub-dimension."""
+    col_map = {
+        "category": InvestmentDecision.category,
+        "geography": InvestmentDecision.geography,
+        "status": InvestmentDecision.status,
+        "type": InvestmentDecision.decision_type,
+    }
+    col = col_map.get(dimension, InvestmentDecision.category)
+    sub_col = col_map.get(sub_dimension, InvestmentDecision.status)
+    try:
+        rows = db.query(
+            sub_col.label("sub_label"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
+            func.count(InvestmentDecision.id).label("count"),
+        ).filter(col == value).group_by(sub_col).order_by(
+            func.sum(InvestmentDecision.total_value).desc()
+        ).all()
+        return [
+            {"dimension": dimension, "value": value,
+             "sub_dimension": sub_dimension, "sub_label": r.sub_label or "N/A",
+             "total_value": float(r.total_value or 0), "count": r.count}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+@router.get("/cross-tab")
+def olap_cross_tab(
+    row_dim: str = Query("category", description="Row dimension"),
+    col_dim: str = Query("status", description="Column dimension"),
+    db: Session = Depends(get_db),
+):
+    """Cross-tab (pivot): row_dim x col_dim by total_value."""
+    col_map = {
+        "category": InvestmentDecision.category,
+        "geography": InvestmentDecision.geography,
+        "status": InvestmentDecision.status,
+        "type": InvestmentDecision.decision_type,
+    }
+    row_col = col_map.get(row_dim, InvestmentDecision.category)
+    col_col = col_map.get(col_dim, InvestmentDecision.status)
+    try:
+        rows = db.query(
+            row_col.label("row_label"),
+            col_col.label("col_label"),
+            func.sum(InvestmentDecision.total_value).label("total_value"),
+            func.count(InvestmentDecision.id).label("count"),
+        ).group_by(row_col, col_col).order_by(row_col, col_col).all()
+        result = {}
+        for r in rows:
+            rk = r.row_label or "N/A"
+            ck = r.col_label or "N/A"
+            if rk not in result:
+                result[rk] = {}
+            result[rk][ck] = {"total_value": float(r.total_value or 0), "count": r.count}
+        return {"row_dimension": row_dim, "col_dimension": col_dim, "data": result}
+    except Exception:
+        return {"row_dimension": row_dim, "col_dimension": col_dim, "data": {}}
+
+@router.get("/kpi")
+def olap_kpi(db: Session = Depends(get_db)):
+    """Key Performance Indicators for dashboard."""
+    try:
+        total_value = db.query(func.sum(InvestmentDecision.total_value)).scalar() or 0
+        total_decisions = db.query(func.count(InvestmentDecision.id)).scalar() or 0
+        avg_value = db.query(func.avg(InvestmentDecision.total_value)).scalar() or 0
+        active_count = db.query(func.count(InvestmentDecision.id)).filter(
+            InvestmentDecision.status == "active"
+        ).scalar() or 0
+        completed_count = db.query(func.count(InvestmentDecision.id)).filter(
+            InvestmentDecision.status == "completed"
+        ).scalar() or 0
+        # Month-over-month growth
+        from datetime import date
+        now = datetime.utcnow()
+        first_this_month = now.replace(day=1, hour=0, minute=0, second=0)
+        first_last_month = (first_this_month - timedelta(days=1)).replace(day=1)
+        this_month_value = db.query(func.sum(InvestmentDecision.total_value)).filter(
+            InvestmentDecision.created_at >= first_this_month
+        ).scalar() or 0
+        last_month_value = db.query(func.sum(InvestmentDecision.total_value)).filter(
+            InvestmentDecision.created_at >= first_last_month,
+            InvestmentDecision.created_at < first_this_month,
+        ).scalar() or 0
+        mom_growth = round(
+            (float(this_month_value) - float(last_month_value)) / float(last_month_value) * 100, 2
+        ) if last_month_value else 0
+        return {
+            "total_portfolio_value": round(float(total_value), 2),
+            "total_decisions": total_decisions,
+            "avg_decision_value": round(float(avg_value), 2),
+            "active_decisions": active_count,
+            "completed_decisions": completed_count,
+            "this_month_value": round(float(this_month_value), 2),
+            "last_month_value": round(float(last_month_value), 2),
+            "mom_growth_pct": mom_growth,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.get("/compare")
+def olap_compare(
+    dimension: str = Query("category", description="Dimension to compare"),
+    items: str = Query(..., description="Comma-separated values to compare"),
+    db: Session = Depends(get_db),
+):
+    """Compare multiple dimension values side by side."""
+    col_map = {
+        "category": InvestmentDecision.category,
+        "geography": InvestmentDecision.geography,
+        "status": InvestmentDecision.status,
+        "type": InvestmentDecision.decision_type,
+    }
+    col = col_map.get(dimension, InvestmentDecision.category)
+    item_list = [i.strip() for i in items.split(",") if i.strip()]
+    try:
+        result = []
+        for item in item_list:
+            row = db.query(
+                func.sum(InvestmentDecision.total_value).label("total_value"),
+                func.count(InvestmentDecision.id).label("count"),
+                func.avg(InvestmentDecision.total_value).label("avg_value"),
+            ).filter(col == item).one_or_none()
+            result.append({
+                "label": item,
+                "total_value": float(row.total_value or 0) if row else 0,
+                "count": row.count if row else 0,
+                "avg_value": round(float(row.avg_value or 0), 2) if row else 0,
+            })
+        return {"dimension": dimension, "items": result}
+    except Exception as e:
+        return {"dimension": dimension, "items": [], "error": str(e)}
+
+
+@router.get("/heatmap")
+def olap_heatmap(
+    x_dim: str = Query("category", description="X axis dimension"),
+    y_dim: str = Query("geography", description="Y axis dimension"),
+    db: Session = Depends(get_db),
+):
+    """Heatmap data: x_dim vs y_dim with total_value intensity."""
+    col_map = {
+        "category": InvestmentDecision.category,
+        "geography": InvestmentDecision.geography,
+        "status": InvestmentDecision.status,
+        "type": InvestmentDecision.decision_type,
+    }
+    x_col = col_map.get(x_dim, InvestmentDecision.category)
+    y_col = col_map.get(y_dim, InvestmentDecision.geography)
+    try:
+        rows = db.query(
+            x_col.label("x"),
+            y_col.label("y"),
+            func.sum(InvestmentDecision.total_value).label("value"),
+            func.count(InvestmentDecision.id).label("count"),
+        ).group_by(x_col, y_col).all()
+        return {
+            "x_dimension": x_dim,
+            "y_dimension": y_dim,
+            "data": [
+                {"x": r.x or "N/A", "y": r.y or "N/A",
+                 "value": float(r.value or 0), "count": r.count}
+                for r in rows
+            ]
+        }
+    except Exception as e:
+        return {"x_dimension": x_dim, "y_dimension": y_dim, "data": [], "error": str(e)}
