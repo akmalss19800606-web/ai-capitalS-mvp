@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routers.market_analysis_export import router as market_export_router
 from app.api.v1.routers.calculator_export import router as calc_export_router
+from app.api.v1.routers.calculator_fe import router as calculator_fe_router
 from app.api.v1.routers.organizations_router import router as org_router
 from app.api.v1.routers.health import router as health_router
 from app.api.v1.routers.users import router as users_router
@@ -243,6 +244,7 @@ app.include_router(uz_market_router, prefix="/api/v1")
 app.include_router(contacts.router, prefix="/api/v1")
 app.include_router(excel_export.router, prefix="/api/v1")
 # Phase 4: New routers
+app.include_router(calculator_fe_router, prefix="/api/v1")
 app.include_router(business_cases.router, prefix="/api/v1")
 app.include_router(reference_router, prefix='/api/v1')
 app.include_router(monte_carlo_v2.router, prefix="/api/v1")
