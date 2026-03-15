@@ -9,18 +9,18 @@ const C={bg:"#f8fafc",card:"#ffffff",primary:"#3b82f6",primaryLight:"#eff6ff",su
 const TABS=["DCF & ROI","Сравнение","Чувствительность","Монте-Карло","Бенчмарки"];
 
 async function api(path:string,body?:any){
-  const token=localStorage.getItem("token");
+  const token=localStorage.getItem("access_token")||localStorage.getItem("token");
   const opts:any={headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})}};
   if(body){opts.method="POST";opts.body=JSON.stringify(body);}
   const r=await fetch(`${API}/api/v1/calculator${path}`,opts);
-  if(!r.ok) throw new Error(await r.text());return r.json();
+  if(!r.ok){let msg="Ошибка сервера";try{const d=await r.json();msg=d.detail||d.message||JSON.stringify(d);}catch{msg=await r.text();}throw new Error(msg);}return r.json();
 }
 function Card({children,title,style}:{children:any;title?:string;style?:any}){
   return <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.border}`,padding:"1.25rem",marginBottom:16,...(style||{})}}>{title&&<h3 style={{margin:"0 0 12px",fontSize:15,fontWeight:700,color:C.text}}>{title}</h3>}{children}</div>;
 }
 function Label({text,tip}:{text:string;tip?:string}){return <label style={{display:"block",fontWeight:600,marginBottom:6,color:C.text,fontSize:13}}>{text}{tip&&<span title={tip} style={{cursor:"help",marginLeft:4,color:C.muted}}>ⓘ</span>}</label>;}
-function Inp(p:any){return <input {...p} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,boxSizing:"border-box",...(p.style||{})}}/>;}
-function Sel({children,...p}:any){return <select {...p} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,...(p.style||{})}}>{children}</select>;}
+function Inp(p:any){return <input {...p} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#ffffff",color:C.text,boxSizing:"border-box",...(p.style||{})}}/>;}
+function Sel({children,...p}:any){return <select {...p} style={{width:"100%",padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#ffffff",color:C.text,...(p.style||{})}}>{children}</select>;}
 function Metric({label,value,color,sub}:{label:string;value:string;color?:string;sub?:string}){
   return <div style={{textAlign:"center",padding:12}}><div style={{fontSize:12,color:C.muted}}>{label}</div><div style={{fontSize:22,fontWeight:700,color:color||C.text}}>{value}</div>{sub&&<div style={{fontSize:11,color:C.muted}}>{sub}</div>}</div>;
 }
@@ -179,7 +179,7 @@ export default function CalculatorPage(){
     </div>:<p style={{color:C.muted}}>Сначала выполните DCF расчёт, затем бенчмарки подтянутся.</p>}
   </div>;}
 
-  return <div style={{minHeight:"100vh",background:C.bg,padding:"2rem 1rem"}}><div style={{maxWidth:1100,margin:"0 auto"}}>
+  return <div className="p-6" style={{maxWidth:1200,margin:"0 auto"}}>
     <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>💰 Investment Calculator Pro</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>DCF · WACC CAPM · Monte-Carlo · Sensitivity · Бенчмарки Узбекистан 2026</p></div>
     <div style={{display:"flex",gap:4,marginBottom:20,background:C.card,borderRadius:10,padding:4,border:`1px solid ${C.border}`}}>{TABS.map(t=><button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"10px 8px",borderRadius:8,border:"none",fontSize:13,fontWeight:600,cursor:"pointer",background:tab===t?C.primary:"transparent",color:tab===t?"#fff":C.muted,transition:"all 0.2s"}}>{t}</button>)}</div>
     {error&&<div style={{padding:12,background:C.errorBg,borderRadius:8,border:`1px solid ${C.error}`,color:C.error,marginBottom:16}}>{error}</div>}
@@ -188,5 +188,5 @@ export default function CalculatorPage(){
     {tab==="Чувствительность"&&TabSens()}
     {tab==="Монте-Карло"&&TabMC()}
     {tab==="Бенчмарки"&&TabBench()}
-  </div></div>;
+  </div>;
 }
