@@ -26,7 +26,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titleKey: 'main',
     items: [
-      { labelKey: 'dashboard', path: '/',
+            { labelKey: 'dashboard', path: '/dashboard',
         icon: <Icon paths={<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>} /> },
     ],
   },
