@@ -36,7 +36,6 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_capital
       REDIS_URL: redis://redis:6379/0
-      GROQ_API_KEY: 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
     depends_on:
       db:
         condition: service_healthy
