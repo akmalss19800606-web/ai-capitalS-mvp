@@ -162,3 +162,81 @@ class FactPortfolioSnapshot(Base):
     __table_args__ = (
         Index("ix_fact_snap_time_portfolio", "time_id", "portfolio_id"),
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ─── BALANCE OLAP DIMENSIONS (Аналитика v1.0, задачи 2-4) ──────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class DimAccount(Base):
+    """Измерение счёта / статьи баланса."""
+    __tablename__ = "dim_account"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_code = Column(String(20), unique=True, nullable=False, index=True)
+    account_name = Column(String(200), nullable=False)
+    account_type = Column(String(50), nullable=True)  # asset, liability, equity, revenue, expense
+    parent_code = Column(String(20), nullable=True)    # для иерархии
+    level = Column(Integer, default=1)                 # глубина в иерархии
+    is_leaf = Column(Integer, default=1)               # 1=конечный, 0=группирующий
+
+
+class DimCurrency(Base):
+    """Измерение валюты."""
+    __tablename__ = "dim_currency"
+
+    id = Column(Integer, primary_key=True, index=True)
+    currency_code = Column(String(3), unique=True, nullable=False, index=True)  # UZS, USD, EUR, RUB
+    currency_name = Column(String(100), nullable=False)
+    exchange_rate_to_uzs = Column(Float, nullable=True)  # курс к UZS
+
+
+class DimDataType(Base):
+    """Измерение типа данных — balance, turnover, budget, forecast."""
+    __tablename__ = "dim_data_type"
+
+    id = Column(Integer, primary_key=True, index=True)
+    data_type_code = Column(String(20), unique=True, nullable=False, index=True)
+    data_type_name = Column(String(100), nullable=False)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ─── BALANCE OLAP FACT TABLE (Аналитика v1.0, задачи 5-6) ──────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class FactBalanceOLAP(Base):
+    """
+    Факт-таблица баланса OLAP.
+    Данные из balance_entries, агрегированные через ETL.
+    FK на все dimension-таблицы.
+    """
+    __tablename__ = "fact_balance_olap"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dim_time_id = Column(Integer, ForeignKey("dim_time.id"), nullable=False, index=True)
+    dim_company_id = Column(Integer, ForeignKey("dim_company.id"), nullable=False, index=True)
+    dim_account_id = Column(Integer, ForeignKey("dim_account.id"), nullable=False, index=True)
+    dim_currency_id = Column(Integer, ForeignKey("dim_currency.id"), nullable=True, index=True)
+    dim_data_type_id = Column(Integer, ForeignKey("dim_data_type.id"), nullable=True, index=True)
+
+    # Measures
+    amount = Column(Float, nullable=False, default=0)
+    debit = Column(Float, nullable=False, default=0)
+    credit = Column(Float, nullable=False, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    dim_time = relationship("DimTime", backref="fact_balances")
+    dim_company = relationship("DimCompany", backref="fact_balances")
+    dim_account = relationship("DimAccount", backref="fact_balances")
+    dim_currency = relationship("DimCurrency", backref="fact_balances")
+    dim_data_type = relationship("DimDataType", backref="fact_balances")
+
+    __table_args__ = (
+        Index("ix_fact_balance_time_company", "dim_time_id", "dim_company_id"),
+        Index("ix_fact_balance_account", "dim_account_id", "dim_time_id"),
+        Index("ix_fact_balance_full", "dim_time_id", "dim_company_id", "dim_account_id"),
+    )
