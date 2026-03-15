@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
+function getAuthHeaders(extra:any={}){const t=typeof window!=='undefined'?localStorage.getItem('token'):null;const h:any={'Content-Type':'application/json',...extra};if(t)h['Authorization']=`Bearer ${t}`;return h;}
 
 interface Org { id:number; name:string; mode:string; inn?:string }
 type DecisionType = "buy"|"sell"|"hold"|"restructure";
