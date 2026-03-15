@@ -113,6 +113,7 @@ export default function CalculatorProPage() {
   const [sensitMode, setSensitMode] = useState<'tornado' | 'spider' | 'data_table'>( 'tornado')
   const [mcResult, setMcResult] = useState<any>(null)
   const [mcLoading, setMcLoading] = useState(false)
+                                             const [error, setError] = useState<string | null>(null)
   const [nSimulations, setNSimulations] = useState(10000)
 
   const token = () => typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('token') || '' : ''
@@ -146,6 +147,7 @@ export default function CalculatorProPage() {
 
   const calcDCF = async () => {
     setDcfLoading(true)
+        setError(null)
     try {
       const body: any = {
         ...dcfParams,
@@ -158,7 +160,7 @@ export default function CalculatorProPage() {
       const data = await res.json()
       if (data.detail) throw new Error(data.detail)
       setDcfResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setDcfLoading(false) }
   }
 
@@ -172,7 +174,7 @@ export default function CalculatorProPage() {
       const data = await res.json()
       if (data.detail) throw new Error(data.detail)
       setCompareResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setCompareLoading(false) }
   }
 
@@ -185,7 +187,7 @@ export default function CalculatorProPage() {
       })
       const data = await res.json()
       setSensitResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
   }
 
@@ -199,7 +201,7 @@ export default function CalculatorProPage() {
       const data = await res.json()
       if (data.detail) throw new Error(data.detail)
       setMcResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setMcLoading(false) }
   }
 
@@ -390,6 +392,7 @@ export default function CalculatorProPage() {
 
             {/* Результаты */}
             <div className="lg:col-span-3">
+                          {error && <div className="mt-3 p-3 bg-red-500/20 border border-red-500/50 rounded-xl text-red-300 text-sm">{error}</div>}
               {!dcfResult && !dcfLoading && (
                 <div className="bg-slate-800/40 border border-slate-700/40 rounded-2xl p-12 text-center h-full flex flex-col items-center justify-center">
                   <Calculator className="w-16 h-16 text-slate-600 mb-4" />
