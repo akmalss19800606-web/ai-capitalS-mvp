@@ -40,7 +40,7 @@ class Organization(Base):
     director = Column(String(300), nullable=True)
     charter_capital = Column(Numeric(18, 2), nullable=True)
     charter_currency = Column(String(3), default="UZS")
-        mode = Column(String(20), default="solo", nullable=False)
+    mode = Column(String(20), default="solo", nullable=False)
 
     accounting_currency = Column(String(3), default="UZS")
     ownership_share = Column(Numeric(5, 2), default=100.00)
