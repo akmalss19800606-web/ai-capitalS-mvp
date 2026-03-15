@@ -123,8 +123,8 @@ export default function CalculatorProPage() {
     const load = async () => {
       const [bmRes, prRes, txRes] = await Promise.all([
         fetch('/api/v1/calculator/benchmarks', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/presets').then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/tax-rates').then(r => r.json()).catch(() => ({})),
+        fetch('/api/v1/calculator/presets', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
+        fetch('/api/v1/calculator/tax-rates', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
       ])
       setBenchmarks(bmRes.benchmarks || [])
       setPresets(prRes.presets || [])
