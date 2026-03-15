@@ -208,3 +208,15 @@ def olap_events(db: Session = Depends(get_db)):
                  "category": r.category, "updated_at": str(r.updated_at)} for r in rows]
     except Exception:
         return []
+
+
+# ── Задача 10: POST /olap/etl-balance ────────────────────────────────────
+@router.post("/etl-balance", tags=["OLAP ETL"])
+def run_balance_etl(
+    org_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+):
+    """Запуск ETL: balance_entries -> fact_balance_olap.
+    org_id=None — обработать все организации."""
+    from app.services.olap_etl_service import run_etl
+    return run_etl(db, org_id=org_id)
