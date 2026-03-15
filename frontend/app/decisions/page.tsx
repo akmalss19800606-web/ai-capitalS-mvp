@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API = process.env.NEXT_PUBLIC_API_URL || "/api/v1";
 
 interface Org { id:number; name:string; mode:string; inn?:string }
 type DecisionType = "buy"|"sell"|"hold"|"restructure";
@@ -31,11 +31,11 @@ const FINANCING = [
   {value:"mixed", label:"Смешанное финансирование", accounts:""},
 ];
 
-function T(p:any){return <input {...p} className={`w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 ${p.className||""}`}/>}
+function T(p:any){return <input {...p} className={`w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:border-blue-500 ${p.className||""}`}/>}
 function L({label,tip,children}:{label:string;tip?:string;children:React.ReactNode}){
   return <div className="mb-3"><label className="block text-sm font-medium text-gray-300 mb-1">{label}{tip&&<span className="ml-1 text-gray-500 cursor-help" title={tip}>ⓘ</span>}</label>{children}</div>
 }
-function S(p:any){return <select {...p} className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500">{p.children}</select>}
+function S(p:any){return <select {...p} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm focus:outline-none focus:border-blue-500">{p.children}</select>}
 
 export default function DecisionsPage(){
   const [orgs,setOrgs]=useState<Org[]>([]);
@@ -75,23 +75,23 @@ export default function DecisionsPage(){
   const fmtNum=(n:number)=>new Intl.NumberFormat("ru-RU").format(n);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white p-6">
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
       <div className="max-w-5xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">📊 Инвестиционные решения</h1>
 
         <div className="flex gap-2 mb-6">
-          <button onClick={()=>setTab("new")} className={`px-4 py-2 rounded-lg font-bold ${tab==="new"?"bg-blue-600":"bg-gray-800 hover:bg-gray-700"}`}>+ Новое решение</button>
-          <button onClick={()=>setTab("list")} className={`px-4 py-2 rounded-lg font-bold ${tab==="list"?"bg-blue-600":"bg-gray-800 hover:bg-gray-700"}`}>Все решения ({decisions.length})</button>
+          <button onClick={()=>setTab("new")} className={`px-4 py-2 rounded-lg font-bold ${tab==="new"?"bg-blue-600":"bg-white hover:bg-gray-100"}`}>+ Новое решение</button>
+          <button onClick={()=>setTab("list")} className={`px-4 py-2 rounded-lg font-bold ${tab==="list"?"bg-blue-600":"bg-white hover:bg-gray-100"}`}>Все решения ({decisions.length})</button>
         </div>
 
         {tab==="new"&&(
-          <div className="bg-gray-900 rounded-xl p-6">
+          <div className="bg-gray-50 rounded-xl p-6">
             <div className="grid grid-cols-4 gap-3 mb-6">
               {DECISION_TYPES.map(dt=>(
-                <button key={dt.value} onClick={()=>setForm({...form,decision_type:dt.value})} className={`p-3 rounded-lg border text-center ${form.decision_type===dt.value?"border-blue-500 bg-blue-900/30":"border-gray-700 bg-gray-800"}`}>
+                <button key={dt.value} onClick={()=>setForm({...form,decision_type:dt.value})} className={`p-3 rounded-lg border text-center ${form.decision_type===dt.value?"border-blue-500 bg-blue-50":"border-gray-200 bg-white"}`}>
                   <div className="text-2xl">{dt.icon}</div>
                   <div className="font-bold text-sm">{dt.label}</div>
-                  <div className="text-xs text-gray-400">{dt.desc}</div>
+                  <div className="text-xs text-gray-500">{dt.desc}</div>
                 </button>
               ))}
             </div>
@@ -144,19 +144,19 @@ export default function DecisionsPage(){
             </div>
 
             {balanceImpact&&(
-              <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+              <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
                 <h3 className="font-bold mb-3">⚡ Влияние на баланс</h3>
                 <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="p-3 bg-blue-900/30 rounded-lg">
-                    <p className="text-gray-400">Актив ({balanceImpact.asset_account})</p>
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-gray-500">Актив ({balanceImpact.asset_account})</p>
                     <p className={`text-lg font-bold ${balanceImpact.asset_change>=0?"text-green-400":"text-red-400"}`}>{balanceImpact.asset_change>=0?"+":""}{fmtNum(balanceImpact.asset_change)}</p>
                   </div>
-                  <div className="p-3 bg-red-900/30 rounded-lg">
-                    <p className="text-gray-400">Обязательства ({balanceImpact.liability_account||"—"})</p>
+                  <div className="p-3 bg-red-50 rounded-lg">
+                    <p className="text-gray-500">Обязательства ({balanceImpact.liability_account||"—"})</p>
                     <p className="text-lg font-bold text-red-400">{balanceImpact.liability_change>0?"+":""}{fmtNum(balanceImpact.liability_change)}</p>
                   </div>
-                  <div className="p-3 bg-green-900/30 rounded-lg">
-                    <p className="text-gray-400">Денежные средства (5100)</p>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <p className="text-gray-500">Денежные средства (5100)</p>
                     <p className={`text-lg font-bold ${balanceImpact.cash_change>=0?"text-green-400":"text-red-400"}`}>{balanceImpact.cash_change>=0?"+":""}{fmtNum(balanceImpact.cash_change)}</p>
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export default function DecisionsPage(){
             )}
 
             <div className="mt-6">
-              <L label="Обоснование решения"><textarea value={form.justification} onChange={(e:any)=>setForm({...form,justification:e.target.value})} rows={3} className="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm" placeholder="Почему принимается данное решение..."/></L>
+              <L label="Обоснование решения"><textarea value={form.justification} onChange={(e:any)=>setForm({...form,justification:e.target.value})} rows={3} className="w-full bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-900 text-sm" placeholder="Почему принимается данное решение..."/></L>
               <L label="Теги"><T value={form.tags} onChange={(e:any)=>setForm({...form,tags:e.target.value})} placeholder="банк, акции, дивиденды"/></L>
             </div>
 
@@ -175,8 +175,8 @@ export default function DecisionsPage(){
         )}
 
         {tab==="list"&&(
-          <div className="bg-gray-900 rounded-xl p-6">
-            <p className="text-gray-400">Всего решений: {decisions.length}</p>
+          <div className="bg-gray-50 rounded-xl p-6">
+            <p className="text-gray-500">Всего решений: {decisions.length}</p>
             {decisions.length===0&&<p className="text-center text-gray-500 py-10">Пока нет решений. Создайте первое.</p>}
           </div>
         )}
