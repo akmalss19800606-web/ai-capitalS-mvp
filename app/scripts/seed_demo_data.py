@@ -25,6 +25,8 @@ from app.db.models.macro_data import MacroIndicator
 from app.db.models.portfolio import Portfolio
 from app.db.models.stock_exchange import StockEmitter, StockQuote
 from app.db.models.user import User
+from app.db.models.organization_models import ChartOfAccounts
+from app.db.seeds.chart_of_accounts_seed import NSBU_ACCOUNTS
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,27 @@ def seed_demo_data(db: Session) -> dict:
         dict со статистикой загруженных данных
     """
     stats = {"user": False, "portfolios": 0, "decisions": 0}
+
+        # ── 0. План счетов НСБУ (Chart of Accounts) ──
+    stats["chart_of_accounts"] = 0
+    existing_coa = db.query(ChartOfAccounts).first()
+    if not existing_coa:
+        for acc in NSBU_ACCOUNTS:
+            account = ChartOfAccounts(
+                code=acc["code"],
+                name_ru=acc["name_ru"],
+                name_uz=acc.get("name_uz", ""),
+                parent_code=acc.get("parent_code"),
+                category=acc["category"],
+                level=acc.get("level", 1),
+                description=acc.get("description", ""),
+            )
+            db.add(account)
+        db.flush()
+        stats["chart_of_accounts"] = len(NSBU_ACCOUNTS)
+        logger.info("План счетов НСБУ загружен: %d счетов", len(NSBU_ACCOUNTS))
+    else:
+        logger.info("План счетов уже существует, пропуск")
 
     # ── 1. Демо-пользователь ──
     user = db.query(User).filter(User.email == DEMO_EMAIL).first()
