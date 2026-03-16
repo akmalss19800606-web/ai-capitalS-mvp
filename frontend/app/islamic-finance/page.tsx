@@ -121,10 +121,10 @@ function ScreeningTab() {
     if (!companyName) return;
     setLoading(true); setResult(null);
     try {
-      let endpoint = '/islamic-finance/screening/full';
+      let endpoint = '/islamic-finance/screening';
       const body: any = { company_name: companyName, industry, description };
-      if (mode === 'industry') { endpoint = '/islamic-finance/screening/industry'; }
-      else if (mode === 'financial') { endpoint = '/islamic-finance/screening/financial'; }
+      if (mode === 'industry') { endpoint = '/islamic-finance/screening'; }
+      else if (mode === 'financial') { endpoint = '/islamic-finance/screening'; }
       if (mode !== 'industry') {
         body.total_assets = parseFloat(totalAssets) || 0;
         body.total_debt = parseFloat(totalDebt) || 0;
@@ -625,9 +625,9 @@ function ReferenceTab() {
   const load = async () => {
     try {
       const [h, t, i] = await Promise.all([
-        apiRequest('/islamic-finance/reference/haram-industries'),
-        apiRequest('/islamic-finance/reference/financial-thresholds'),
-        apiRequest('/islamic-finance/reference/shariah-indices'),
+        apiRequest('/islamic-finance/haram-industries'),
+        apiRequest('/islamic-finance/financial-thresholds'),
+        apiRequest('/islamic-finance/shariah-indices'),
       ]);
       setHaramList(h.data || []); setThresholds(t.data || []); setIndices(i.data || []);
     } catch {}
