@@ -27,6 +27,10 @@ from app.db.models.stock_exchange import StockEmitter, StockQuote
 from app.db.models.user import User
 from app.db.models.organization_models import ChartOfAccounts
 from app.db.seeds.chart_of_accounts_seed import NSBU_ACCOUNTS
+from app.db.models.islamic_finance import (
+    IslamicGlossary, HaramIndustryDB, IslamicScreening,
+    SSBMember, SSBFatwa, IslamicContract,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -523,6 +527,66 @@ def seed_demo_data(db: Session) -> dict:
         db.add(ind)
         stats["macro_indicators"] += 1
 
+    # ── 8. Islamic Finance: Glossary ──
+    stats["glossary"] = 0
+    if not db.query(IslamicGlossary).first():
+        glossary = [
+            {"term_arabic": "مرابحة", "transliteration": "Murabaha", "term_ru": "Мурабаха", "definition": "Продажа с наценкой. Банк покупает актив и перепродаёт с известной маржой."},
+            {"term_arabic": "إجارة", "transliteration": "Ijara", "term_ru": "Иджара", "definition": "Исламский лизинг. Аренда с возможным выкупом."},
+            {"term_arabic": "مضاربة", "transliteration": "Mudaraba", "term_ru": "Мудараба", "definition": "Партнёрство: один даёт капитал, другой управляет."},
+            {"term_arabic": "مشاركة", "transliteration": "Musharaka", "term_ru": "Мушарака", "definition": "Совместное вложение и разделение прибыли/убытков."},
+            {"term_arabic": "صكوك", "transliteration": "Sukuk", "term_ru": "Сукук", "definition": "Исламские облигации, обеспеченные реальными активами."},
+            {"term_arabic": "تكافل", "transliteration": "Takaful", "term_ru": "Такафул", "definition": "Исламское страхование на основе взаимопомощи."},
+            {"term_arabic": "ربا", "transliteration": "Riba", "term_ru": "Риба", "definition": "Процент/ростовщичество. Запрещено в исламе."},
+            {"term_arabic": "غرر", "transliteration": "Gharar", "term_ru": "Гарар", "definition": "Чрезмерная неопределённость в сделке."},
+            {"term_arabic": "ميسر", "transliteration": "Maysir", "term_ru": "Майсир", "definition": "Азартные игры/спекуляции. Запрещено."},
+            {"term_arabic": "زكاة", "transliteration": "Zakat", "term_ru": "Закят", "definition": "Обязательный налог 2.5% с имущества выше нисаба."},
+        ]
+        for g in glossary:
+            db.add(IslamicGlossary(**g))
+        stats["glossary"] = len(glossary)
+
+    # ── 9. Islamic Finance: Haram Industries ──
+    stats["haram_industries"] = 0
+    if not db.query(HaramIndustryDB).first():
+        haram = [
+            {"name_ru": "Алкоголь", "name_uz": "Spirtli ichimliklar", "category": "alcohol", "reason": "Производство и продажа алкоголя"},
+            {"name_ru": "Азартные игры", "name_uz": "Qimor", "category": "gambling", "reason": "Казино, букмекерские конторы, лотереи"},
+            {"name_ru": "Свинина", "name_uz": "Choʻchqa mahsulotlari", "category": "pork", "reason": "Производство и торговля свининой"},
+            {"name_ru": "Табак", "name_uz": "Tamaki", "category": "tobacco", "reason": "Табачная продукция и вейпы"},
+            {"name_ru": "Оружие", "name_uz": "Qurol-yarog", "category": "weapons", "reason": "Производство оружия массового поражения"},
+            {"name_ru": "Конвенциональные финансы", "name_uz": "Anʻanaviy moliya", "category": "conventional_finance", "reason": "Процентные банки и страховые"},
+            {"name_ru": "Развлечения 18+", "name_uz": "18+ koʻngilochar", "category": "adult", "reason": "Порнография и сопутствующие"},
+        ]
+        for h in haram:
+            db.add(HaramIndustryDB(**h))
+        stats["haram_industries"] = len(haram)
+
+    # ── 10. Islamic Finance: SSB Members ──
+    stats["ssb_members"] = 0
+    if not db.query(SSBMember).first():
+        members = [
+            {"full_name": "Шейх Мухаммад Таки Усмани", "qualifications": "PhD Islamic Finance, AAOIFI", "is_active": True},
+            {"full_name": "Д-р Абдулла Ибрагимов", "qualifications": "PhD Economics, CIFE", "is_active": True},
+            {"full_name": "Проф. Фарход Каримов", "qualifications": "MBA Islamic Banking", "is_active": True},
+        ]
+        for m in members:
+            db.add(SSBMember(**m))
+        stats["ssb_members"] = len(members)
+
+    # ── 11. Islamic Finance: SSB Fatwas ──
+    stats["ssb_fatwas"] = 0
+    if not db.query(SSBFatwa).first():
+        fatwas = [
+            {"subject": "Сукук аль-Иджара для инфраструктуры", "product_type": "sukuk", "decision": "approved", "reasoning": "Соответствует AAOIFI SS 17", "status": "active"},
+            {"subject": "Мурабаха для автокредитования", "product_type": "murabaha", "decision": "approved", "reasoning": "Соответствует FAS 28", "status": "active"},
+            {"subject": "Такафул страхование жизни", "product_type": "takaful", "decision": "conditional", "reasoning": "Требует разделения фондов", "status": "active"},
+        ]
+        for f in fatwas:
+            db.add(SSBFatwa(**f))
+        stats["ssb_fatwas"] = len(fatwas)
+
+    
     db.commit()
 
     total_portfolios = len(created_portfolios)
