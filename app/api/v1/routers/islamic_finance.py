@@ -418,3 +418,57 @@ def list_p2p(
     if status_filter:
         query = query.filter(IslamicP2PProject.status == status_filter)
     return query.order_by(IslamicP2PProject.id.desc()).all()
+
+
+# ─── Zakat Nisab ──────────────────────────────────────────
+@router.get("/zakat/nisab")
+def get_nisab(currency: str = Query("UZS")):
+    gold_price_usd = 65.0  # per gram approx
+    silver_price_usd = 0.8
+    rates = {"UZS": 12876.54, "USD": 1, "EUR": 0.92, "RUB": 92.5}
+    r = rates.get(currency, 1)
+    return {
+        "success": True,
+        "data": {
+            "nisab_gold": {
+                "grams": 85,
+                "value": round(85 * gold_price_usd * r, 2),
+                "display": f"{round(85 * gold_price_usd * r):,} {currency}",
+            },
+            "nisab_silver": {
+                "grams": 595,
+                "value": round(595 * silver_price_usd * r, 2),
+                "display": f"{round(595 * silver_price_usd * r):,} {currency}",
+            },
+            "currency": currency,
+        },
+    }
+
+# ─── Financial Thresholds (AAOIFI) ───────────────────────
+@router.get("/financial-thresholds")
+def get_financial_thresholds():
+    return {
+        "success": True,
+        "data": [
+            {"name_ru": "Коэффициент долга", "max_percentage": "30%", "standard": "AAOIFI"},
+            {"name_ru": "Процентные доходы", "max_percentage": "30%", "standard": "AAOIFI"},
+            {"name_ru": "Харам-доход", "max_percentage": "5%", "standard": "AAOIFI"},
+            {"name_ru": "Дебиторская задолженность", "max_percentage": "49%", "standard": "AAOIFI"},
+            {"name_ru": "Коэффициент долга", "max_percentage": "33%", "standard": "DJIM"},
+            {"name_ru": "Процентные доходы", "max_percentage": "33%", "standard": "DJIM"},
+        ],
+    }
+
+# ─── Shariah Indices ──────────────────────────────────────
+@router.get("/shariah-indices")
+def get_shariah_indices():
+    return {
+        "success": True,
+        "data": [
+            {"name": "DJIM", "provider": "Dow Jones", "description": "Dow Jones Islamic Market Index"},
+            {"name": "S&P Shariah", "provider": "S&P Global", "description": "S&P 500 Shariah Index"},
+            {"name": "FTSE Shariah", "provider": "FTSE Russell", "description": "FTSE Shariah Global Equity Index"},
+            {"name": "MSCI Islamic", "provider": "MSCI", "description": "MSCI World Islamic Index"},
+        ],
+    }
+
