@@ -135,7 +135,7 @@ function ScreeningTab() {
         body.haram_revenue = parseFloat(haramRevenue) || 0;
       }
       const res = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify(body) });
-      setResult(res.data);
+      setResult(res);
     } catch { setResult({ error: 'Ошибка при скрининге' }); }
     finally { setLoading(false); }
   };
@@ -187,14 +187,14 @@ function ScreeningTab() {
       {result && !result.error && (
         <div style={cardStyle}>
           <h3 style={sectionTitle}>Результат скрининга</h3>
-          {result.overall_status && <StatusBadge status={result.overall_status} />}
-          {result.financial_screening?.checks && (
+          {result.is_compliant ? 'compliant' : 'non_compliant' && <StatusBadge status={result.is_compliant ? 'compliant' : 'non_compliant'} />}
+          {result.standards?.flatMap((s: any) => s.ratios || []) && (
             <div style={{ marginTop: spacing[4] }}>
               <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Финансовые показатели (AAOIFI)</h4>
-              {result.financial_screening.checks.map((c: any, i: number) => (
+              {result.standards?.flatMap((s: any) => s.ratios || []).map((c: any, i: number) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing[3], padding: spacing[3], borderBottom: `1px solid ${semantic.border}` }}>
                   <span>{c.passed ? '✅' : '❌'}</span>
-                  <div><div style={{ fontWeight: typography.fontWeight.semibold }}>{c.name_ru}</div><div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{c.display}</div></div>
+                  <div><div style={{ fontWeight: typography.fontWeight.semibold }}>{c.ratio_name}</div><div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{`${c.value}% / ${c.threshold}%`}</div></div>
                 </div>
               ))}
             </div>
@@ -247,7 +247,7 @@ function ZakatTab() {
           currency, gold_grams: parseFloat(goldGrams) || 0, silver_grams: parseFloat(silverGrams) || 0,
         }),
       });
-      setResult(r.data);
+      setResult(r);
     } catch { setResult({ error: 'Ошибка расчёта' }); }
     finally { setLoading(false); }
   };
@@ -297,11 +297,11 @@ function ZakatTab() {
 
       {result && !result.error && (
         <div style={{ ...cardStyle, textAlign: 'center', marginTop: spacing[4] }}>
-          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: result.meets_nisab ? colors.success[600] : semantic.textSecondary }}>
-            {result.zakat_display}
+          <div style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: result.zakat_amount > 0 ? colors.success[600] : semantic.textSecondary }}>
+            {`${result.zakat_amount?.toLocaleString()} ${result.currency || ''}`}
           </div>
           <div style={{ color: semantic.textSecondary, marginTop: spacing[2] }}>
-            {result.meets_nisab ? 'Закят обязателен' : 'Ниже нисаба — закят не обязателен'}
+            {result.zakat_amount > 0 ? 'Закят обязателен' : 'Ниже нисаба — закят не обязателен'}
           </div>
         </div>
       )}
@@ -391,7 +391,7 @@ function PurificationTab() {
       const r = await apiRequest('/islamic-finance/purification/calculate', {
         method: 'POST', body: JSON.stringify({ total_income: parseFloat(totalIncome) || 0, haram_percentage: parseFloat(haramPct) || 0 }),
       });
-      setResult(r.data); load();
+      setResult(r); load();
     } catch {}
   };
 
