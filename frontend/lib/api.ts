@@ -298,3 +298,85 @@ export const demo = {
   reset: () => apiRequest('/demo/reset', { method: 'POST' }),
   status: () => apiRequest('/demo/status'),
 };
+
+// === Islamic Finance API ===
+export const islamicFinance = {
+  screening: {
+    run: (data: unknown) =>
+      apiRequest('/islamic-finance/screening', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/screening'),
+  },
+  zakat: {
+    calculate: (data: unknown) =>
+      apiRequest('/islamic-finance/zakat', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/zakat'),
+  },
+  purification: {
+    calculate: (data: unknown) =>
+      apiRequest('/islamic-finance/purification', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/purification'),
+  },
+  products: {
+    create: (data: unknown) =>
+      apiRequest('/islamic-finance/products', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/products'),
+  },
+  posc: {
+    create: (data: unknown) =>
+      apiRequest('/islamic-finance/posc', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/posc'),
+  },
+  ssb: {
+    createFatwa: (data: unknown) =>
+      apiRequest('/islamic-finance/fatwas', { method: 'POST', body: JSON.stringify(data) }),
+    listFatwas: () => apiRequest('/islamic-finance/fatwas'),
+    listMembers: () => apiRequest('/islamic-finance/ssb-members'),
+  },
+  glossary: () => apiRequest('/islamic-finance/glossary'),
+  haramIndustries: () => apiRequest('/islamic-finance/haram-industries'),
+  p2p: {
+    create: (data: unknown) =>
+      apiRequest('/islamic-finance/p2p', { method: 'POST', body: JSON.stringify(data) }),
+    list: () => apiRequest('/islamic-finance/p2p'),
+  },
+  nisab: () => apiRequest('/islamic-finance/nisab'),
+  financialThresholds: () => apiRequest('/islamic-finance/financial-thresholds'),
+  shariahIndices: () => apiRequest('/islamic-finance/shariah-indices'),
+};
+
+// === OLAP Analytics API ===
+export const olap = {
+  runEtl: () => apiRequest('/olap/etl-balance', { method: 'POST' }),
+  overview: () => apiRequest('/analytics/olap/overview'),
+  kpi: () => apiRequest('/analytics/olap/kpi'),
+  breakdown: (params?: string) => apiRequest(`/analytics/olap/breakdown${params ? '?' + params : ''}`),
+  timeSeries: (params?: string) => apiRequest(`/analytics/olap/time-series${params ? '?' + params : ''}`),
+  drillDown: (params?: string) => apiRequest(`/analytics/olap/drill-down${params ? '?' + params : ''}`),
+  crossTab: (params?: string) => apiRequest(`/analytics/olap/cross-tab${params ? '?' + params : ''}`),
+  compare: (params?: string) => apiRequest(`/analytics/olap/compare${params ? '?' + params : ''}`),
+  heatmap: () => apiRequest('/analytics/olap/heatmap'),
+  cache: {
+    stats: () => apiRequest('/analytics/olap/cache/stats'),
+    clear: () => apiRequest('/analytics/olap/cache/clear', { method: 'POST' }),
+  },
+};
+
+// === NSBU Balance Import API ===
+export const nsbuImport = {
+  preview: (file: File) => {
+    const fd = new FormData(); fd.append('file', file);
+    return fetch(`/api/v1/import/nsbu-balance/preview`, { method: 'POST', body: fd });
+  },
+  confirm: (data: unknown) =>
+    apiRequest('/import/nsbu-balance/confirm', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// === Risk API ===
+export const risk = {
+  concentration: () => apiRequest('/risk/concentration'),
+  performance: () => apiRequest('/risk/performance'),
+  composite: () => apiRequest('/risk/composite'),
+  recommendations: () => apiRequest('/risk/recommendations'),
+  scoreInvestment: (data: unknown) =>
+    apiRequest('/risk/score-investment', { method: 'POST', body: JSON.stringify(data) }),
+};
