@@ -1,9 +1,8 @@
 /* eslint-disable */
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-
 const API = '/api/v1'; function getAuthHeaders(extra:any={}){const t=typeof window!=='undefined'?localStorage.getItem('token'):null;const h:any={'Content-Type':'application/json',...extra};if(t)h['Authorization']=`Bearer ${t}`;return h;}
-
+function getFileHeaders(){const t=typeof window!=='undefined'?localStorage.getItem('token'):null;return t?{Authorization:`Bearer ${t}`}:{};}
 // -- Types
 interface Account { id:number; code:string; name_ru:string; name_uz?:string; category:string; level:number; parent_code?:string }
 interface BalanceRow { account_code:string; account_name:string; debit:number; credit:number; balance:number }
@@ -12,6 +11,8 @@ interface OrgData {
   registration_date:string; director:string; charter_capital:string;
   charter_currency:string; address:string; mode:string; accounting_currency:string;
 }
+interface NsbuPreviewRow { line_code:string; name_ru:string; col3_begin:number; col4_end:number }
+interface NsbuPreview { rows: NsbuPreviewRow[]; sheet_name:string; total_rows:number; period?:string }
 const OWNERSHIP_FORMS = ["OOO","AO","IP","GUP","SP","ChP"];
 const CURRENCIES = ["UZS","USD","EUR","RUB"];
 const MODES = [
@@ -27,7 +28,7 @@ const CATEGORIES:{[k:string]:{label:string;icon:string;color:string}} = {
 };
 const STEPS = [
   {id:1, title:"\u041e\u0440\u0433\u0430\u043d\u0438\u0437\u0430\u0446\u0438\u044f", desc:"\u0420\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044f \u044e\u0440\u043b\u0438\u0446\u0430"},
-  {id:2, title:"\u0418\u043c\u043f\u043e\u0440\u0442 \u0434\u0430\u043d\u043d\u044b\u0445", desc:"Excel / 1\u0421 / \u0424\u0430\u0439\u043b"},
+  {id:2, title:"\u0418\u043c\u043f\u043e\u0440\u0442 \u0434\u0430\u043d\u043d\u044b\u0445", desc:"Excel / 1\u0421 / NSBU"},
   {id:3, title:"\u0414\u043e\u043b\u0433\u043e\u0441\u0440\u043e\u0447\u043d\u044b\u0435 \u0430\u043a\u0442\u0438\u0432\u044b", desc:"\u0421\u0447\u0435\u0442\u0430 0100-0900"},
   {id:4, title:"\u0422\u0435\u043a\u0443\u0449\u0438\u0435 \u0430\u043a\u0442\u0438\u0432\u044b", desc:"\u0421\u0447\u0435\u0442\u0430 1000-5900"},
   {id:5, title:"\u041e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u0430", desc:"\u0421\u0447\u0435\u0442\u0430 6000-7900"},
@@ -53,6 +54,12 @@ export default function PortfoliosPage(){
   const [importResult,setImportResult]=useState<any>(null);
   const [existingOrgs,setExistingOrgs]=useState<any[]>([]);
   const [error,setError]=useState("");
+  // NSBU states
+  const [nsbuFile,setNsbuFile]=useState<File|null>(null);
+  const [nsbuPreview,setNsbuPreview]=useState<NsbuPreview|null>(null);
+  const [nsbuImportResult,setNsbuImportResult]=useState<any>(null);
+  const [nsbuSheetName,setNsbuSheetName]=useState("");
+  const [importTab,setImportTab]=useState<'excel'|'nsbu'|'1c'|'manual'>('nsbu');
   useEffect(()=>{
     fetch(`${API}/chart-of-accounts`,{headers:getAuthHeaders()}).then(r=>r.json()).then(setAccounts).catch(()=>{});
     fetch(`${API}/organizations`,{headers:getAuthHeaders()}).then(r=>r.json()).then(d=>{if(Array.isArray(d))setExistingOrgs(d)}).catch(()=>{});
@@ -70,7 +77,6 @@ export default function PortfoliosPage(){
     const codes=accountsByCategory(cat).map(a=>a.code);
     return codes.reduce((s,c)=>s+(balanceRows[c]?.balance||0),0);
   };
-  // === FIX BUG 3: Load balance from DB when orgId exists ===
   const loadBalanceFromDB = useCallback(async (oid:number) => {
     try {
       const r = await fetch(`${API}/organizations/${oid}/balance?period_date=${periodDate}`,{headers:getAuthHeaders()});
@@ -110,191 +116,277 @@ export default function PortfoliosPage(){
       setStep(7);
     }catch(e:any){setError(e.message)}finally{setSaving(false)}
   };
-  // === FIX BUG 1: uploadExcel now loads balance into balanceRows after import ===
   const uploadExcel=async()=>{
     if(!orgId||!importFile)return; setSaving(true); setError(""); setImportResult(null);
     const fd=new FormData(); fd.append("file",importFile);
     try{
-      const r=await fetch(`${API}/organizations/${orgId}/import/excel?period_date=${periodDate}`,{method:"POST",body:fd,headers:(()=>{const t=typeof window!=='undefined'?localStorage.getItem('token'):null;return t?{Authorization:`Bearer ${t}`}:{}})()});
+      const r=await fetch(`${API}/organizations/${orgId}/import/excel?period_date=${periodDate}`,{method:"POST",body:fd,headers:getFileHeaders()});
       if(!r.ok) throw new Error((await r.json()).detail||"Import error");
       const result = await r.json();
       setImportResult(result);
-      // === KEY FIX: After successful import, load balance data from DB into balanceRows ===
+      await loadBalanceFromDB(orgId);
+    }catch(e:any){setError(e.message)}finally{setSaving(false)}
+  };
+  // === NSBU Balance Sheet Preview ===
+  const previewNsbu=async()=>{
+    if(!nsbuFile)return; setSaving(true); setError(""); setNsbuPreview(null);
+    const fd=new FormData(); fd.append("file",nsbuFile);
+    if(nsbuSheetName) fd.append("sheet_name",nsbuSheetName);
+    try{
+      const r=await fetch(`${API}/import/balance-nsbu/preview`,{method:"POST",body:fd,headers:getFileHeaders()});
+      if(!r.ok) throw new Error((await r.json()).detail||"Preview error");
+      const data=await r.json();
+      setNsbuPreview(data);
+    }catch(e:any){setError(e.message)}finally{setSaving(false)}
+  };
+  // === NSBU Balance Sheet Import ===
+  const importNsbu=async()=>{
+    if(!orgId||!nsbuFile)return; setSaving(true); setError(""); setNsbuImportResult(null);
+    const fd=new FormData(); fd.append("file",nsbuFile);
+    if(nsbuSheetName) fd.append("sheet_name",nsbuSheetName);
+    try{
+      const url=`${API}/import/balance-nsbu?org_id=${orgId}&period_date=${periodDate}`;
+      const r=await fetch(url,{method:"POST",body:fd,headers:getFileHeaders()});
+      if(!r.ok) throw new Error((await r.json()).detail||"NSBU import error");
+      const result=await r.json();
+      setNsbuImportResult(result);
       await loadBalanceFromDB(orgId);
     }catch(e:any){setError(e.message)}finally{setSaving(false)}
   };
   const fmtNum=(n:number)=>new Intl.NumberFormat("ru-RU",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
   return (
-  <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
-  <div className="max-w-6xl mx-auto">
-  {/* Header */}
-  <div className="mb-8">
-  <h1 className="text-3xl font-bold text-gray-900">Portfolios -- Financial Profile</h1>
-  <p className="text-gray-500 mt-1">Solo / Branch / Holding -- full balance per NSBU Uzbekistan</p>
-  </div>
-  {/* Progress */}
-  <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-2">
-  {STEPS.map((s,i)=>(
-  <React.Fragment key={s.id}>
-  <button onClick={()=>{if(s.id<=step||(orgId&&s.id>1))setStep(s.id)}}
-  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap ${s.id===step?"bg-blue-600 text-white":s.id<step?"bg-blue-100 text-blue-700":"bg-gray-100 text-gray-500"}`}>
-  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${s.id===step?"bg-white text-blue-600":s.id<step?"bg-blue-600 text-white":"bg-gray-300 text-gray-600"}`}>{s.id}</span>
-  {s.title}
-  </button>
-  {i<STEPS.length-1&&<div className="w-4 h-px bg-gray-300"/>}
-  </React.Fragment>
-  ))}
-  </div>
-  {error&&<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
-  {/* STEP 1: Organization */}
-  {step===1&&(
-  <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-  <h2 className="text-xl font-bold text-gray-900 mb-4">Registration</h2>
-  {existingOrgs.length>0&&(
-  <div className="mb-6">
-  <p className="text-sm text-gray-500 mb-2">Existing organizations:</p>
-  <div className="flex flex-wrap gap-2">
-  {existingOrgs.map((o:any)=>(
-  <button key={o.id} onClick={()=>{setOrgId(o.id);loadBalanceFromDB(o.id);setStep(2)}} className="px-3 py-1 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-700 hover:bg-blue-100">{o.name} ({o.mode})</button>
-  ))}
-  </div>
-  </div>
-  )}
-  <p className="text-sm text-gray-500 mb-3">Select mode:</p>
-  <div className="grid grid-cols-3 gap-3">
-  {MODES.map(m=>(
-  <button key={m.value} onClick={()=>setOrg({...org,mode:m.value})} className={`p-4 rounded-lg border text-left ${org.mode===m.value?"border-blue-500 bg-blue-50":"border-gray-200 bg-white hover:border-gray-400"}`}>
-  <div className="font-bold text-lg">{m.label}</div>
-  <div className="text-xs text-gray-500 mt-1">{m.desc}</div>
-  </button>
-  ))}
-  </div>
-  <div className="grid grid-cols-2 gap-4 mt-6">
-  <L label="Name"><T value={org.name} onChange={(e:any)=>setOrg({...org,name:e.target.value})} placeholder="OOO Example"/></L>
-  <L label="INN" tip="9 digits"><T value={org.inn} onChange={(e:any)=>setOrg({...org,inn:e.target.value})} maxLength={9} placeholder="123456789"/></L>
-  <L label="Ownership form"><S value={org.ownership_form} onChange={(e:any)=>setOrg({...org,ownership_form:e.target.value})}>{OWNERSHIP_FORMS.map(f=><option key={f} value={f}>{f}</option>)}</S></L>
-  <L label="OKED" tip="Classifier code"><T value={org.oked} onChange={(e:any)=>setOrg({...org,oked:e.target.value})} placeholder="62.01"/></L>
-  <L label="Director"><T value={org.director} onChange={(e:any)=>setOrg({...org,director:e.target.value})} placeholder="Karimov A.I."/></L>
-  <L label="Registration date"><T type="date" value={org.registration_date} onChange={(e:any)=>setOrg({...org,registration_date:e.target.value})}/></L>
-  <L label="Charter capital"><T type="number" value={org.charter_capital} onChange={(e:any)=>setOrg({...org,charter_capital:e.target.value})} placeholder="100000000"/></L>
-  <L label="Currency"><S value={org.accounting_currency} onChange={(e:any)=>setOrg({...org,accounting_currency:e.target.value})}>{CURRENCIES.map(c=><option key={c} value={c}>{c}</option>)}</S></L>
-  </div>
-  <div className="col-span-2"><L label="Address"><T value={org.address} onChange={(e:any)=>setOrg({...org,address:e.target.value})} placeholder="Tashkent, Navoi 1"/></L></div>
-  <div className="flex justify-between mt-6">
-  <div/>
-  <button onClick={saveOrg} disabled={!org.name||saving} className="px-6 py-2 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Next \u2192"}</button>
-  </div>
-  </div>
-  )}
-  {/* === FIX BUG 2: STEP 2 is now IMPORT (was step 6) === */}
-  {step===2&&(
-  <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-  <h2 className="text-xl font-bold text-gray-900 mb-2">Import Data</h2>
-  <p className="text-sm text-gray-500 mb-4">Import from Excel/CSV first, then review and edit in next steps</p>
-  <div className="grid grid-cols-3 gap-4">
-  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-  <h3 className="font-bold text-gray-900">Excel / CSV</h3>
-  <p className="text-xs text-gray-500 mt-1">Upload trial balance from 1C</p>
-  <input type="file" accept=".xlsx,.csv,.xls" onChange={e=>setImportFile(e.target.files?.[0]||null)} className="mt-3 text-sm"/>
-  {importFile&&<button onClick={uploadExcel} disabled={saving} className="mt-2 px-4 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{saving?"Importing...":"Upload"}</button>}
-  </div>
-  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-  <h3 className="font-bold text-gray-900">1C OData</h3>
-  <p className="text-xs text-gray-500 mt-1">Direct connection to 1C via REST API</p>
-  <button className="mt-3 px-4 py-1 bg-gray-200 text-gray-600 rounded text-sm">Configure</button>
-  </div>
-  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-  <h3 className="font-bold text-gray-900">Manual Entry</h3>
-  <p className="text-xs text-gray-500 mt-1">Fill in balance manually in next steps</p>
-  <p className="mt-3 text-sm text-green-600">{Object.keys(balanceRows).length} accounts filled</p>
-  </div>
-  </div>
-  {importResult&&(
-  <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
-  <p className="font-bold text-green-700">Import complete</p>
-  <p className="text-sm text-green-600">Total: {importResult.total} | Imported: {importResult.imported} | Errors: {importResult.failed}</p>
-  {importResult.errors?.length>0&&<p className="text-sm text-red-600 mt-1">{importResult.errors.join(", ")}</p>}
-  </div>
-  )}
-  <div className="flex justify-between mt-6">
-  <button onClick={()=>setStep(1)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
-  <button onClick={()=>setStep(3)} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Next \u2192</button>
-  </div>
-  </div>
-  )}
-  {/* STEPS 3-6: Balance by category (shifted from 2-5) */}
-  {[3,4,5,6].includes(step)&&(()=>{
-  const catMap:{[k:number]:string}={3:"long_term_assets",4:"current_assets",5:"liabilities",6:"equity"};
-  const cat=catMap[step]; const info=CATEGORIES[cat]; const accs=accountsByCategory(cat); const total=catTotal(cat);
-  return (
-  <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-  <h2 className="text-xl font-bold text-gray-900 mb-2">{info.icon} {info.label}</h2>
-  <p className="text-sm text-gray-500 mb-4">Enter balance for each account</p>
-  <div className="mb-4"><L label="Period date"><T type="date" value={periodDate} onChange={(e:any)=>setPeriodDate(e.target.value)}/></L></div>
-  <table className="w-full text-sm">
-  <thead><tr className="border-b border-gray-200"><th className="text-left py-2 text-gray-600">Code</th><th className="text-left py-2 text-gray-600">Name</th><th className="text-right py-2 text-gray-600">Debit</th><th className="text-right py-2 text-gray-600">Credit</th><th className="text-right py-2 text-gray-600">Balance</th></tr></thead>
-  <tbody>
-  {accs.map(a=>{
-  const row=balanceRows[a.code]||{debit:0,credit:0,balance:0}; const isGroup=a.level===1;
-  return (
-  <tr key={a.code} className={`border-b border-gray-100 ${isGroup?"bg-gray-50 font-semibold":""}`}>
-  <td className="py-2 text-gray-900">{a.code}</td>
-  <td className="py-2 text-gray-700">{a.level>1?" -> ":""}{a.name_ru}</td>
-  <td className="py-2"><input type="number" value={row.debit||""} onChange={e=>updateBalance(a.code,"debit",parseFloat(e.target.value)||0,a.name_ru)} className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-right text-sm" placeholder="0.00"/></td>
-  <td className="py-2"><input type="number" value={row.credit||""} onChange={e=>updateBalance(a.code,"credit",parseFloat(e.target.value)||0,a.name_ru)} className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-right text-sm" placeholder="0.00"/></td>
-  <td className="py-2 text-right font-mono text-gray-900">{fmtNum(row.balance)}</td>
-  </tr>
-  );
-  })}
-  </tbody>
-  <tfoot><tr className="border-t-2 border-gray-300 font-bold"><td colSpan={4} className="py-2 text-gray-900">Total</td><td className="py-2 text-right text-gray-900">{fmtNum(total)}</td></tr></tfoot>
-  </table>
-  <div className="flex justify-between mt-6">
-  <button onClick={()=>setStep(step-1)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
-  <button onClick={()=>step<6?setStep(step+1):saveBalance()} disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">{step<6?"Next \u2192":saving?"Saving...":"Save and verify balance \u2192"}</button>
-  </div>
-  </div>
-  );
-  })()}
-  {/* STEP 7: Summary */}
-  {step===7&&(
-  <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-  <h2 className="text-xl font-bold text-gray-900 mb-4">Balance Summary</h2>
-  {summary?(
-  <>
-  <div className="grid grid-cols-2 gap-6">
-  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-  <h3 className="text-lg font-bold text-blue-700">ASSETS</h3>
-  <p className="text-2xl font-bold text-blue-900 mt-2">{fmtNum(summary.total_assets)}</p>
-  <p className="text-sm text-blue-600 mt-1">Long-term: {fmtNum(summary.long_term_assets)}</p>
-  <p className="text-sm text-blue-600">Current: {fmtNum(summary.current_assets)}</p>
-  </div>
-  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-  <h3 className="text-lg font-bold text-green-700">LIABILITIES + EQUITY</h3>
-  <p className="text-2xl font-bold text-green-900 mt-2">{fmtNum(summary.total_liabilities+summary.total_equity)}</p>
-  <p className="text-sm text-green-600 mt-1">Liabilities: {fmtNum(summary.total_liabilities)}</p>
-  <p className="text-sm text-green-600">Equity: {fmtNum(summary.total_equity)}</p>
-  </div>
-  </div>
-  <div className={`mt-4 p-3 rounded-lg text-center font-bold ${summary.balance_check?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
-  {summary.balance_check?"Balance verified":"Balance does NOT match"}
-  </div>
-  <p className="text-sm text-gray-500 mt-2 text-center">Assets: {fmtNum(summary.total_assets)} | Liabilities+Equity: {fmtNum(summary.total_liabilities+summary.total_equity)} | Date: {summary.period_date}</p>
-  <div className="flex justify-between mt-6">
-  <button onClick={()=>setStep(3)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Edit</button>
-  <div className="flex gap-2">
-  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`,"_blank")}}>Export PDF</button>
-  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`,"_blank")}}>Export Excel</button>
-  <button onClick={()=>{window.location.href="/analytics"}} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Go to Analytics \u2192</button>
-  </div>
-  </div>
-  </>
-  ):(
-  <p className="text-gray-500 text-center py-8">Loading summary...</p>
-  )}
-  </div>
-  )}
-  </div>
-  </div>
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6">
+    <div className="max-w-6xl mx-auto">
+    {/* Header */}
+    <div className="mb-8">
+      <h1 className="text-3xl font-bold text-gray-900">Portfolios -- Financial Profile</h1>
+      <p className="text-gray-500 mt-1">Solo / Branch / Holding -- full balance per NSBU Uzbekistan</p>
+    </div>
+    {/* Progress */}
+    <div className="flex items-center gap-1 mb-6 overflow-x-auto pb-2">
+    {STEPS.map((s,i)=>(
+      <React.Fragment key={s.id}>
+      <button onClick={()=>{if(s.id<=step||(orgId&&s.id>1))setStep(s.id)}}
+        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm whitespace-nowrap ${s.id===step?"bg-blue-600 text-white":s.id<step?"bg-blue-100 text-blue-700":"bg-gray-100 text-gray-500"}`}>
+        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${s.id===step?"bg-white text-blue-600":s.id<step?"bg-blue-600 text-white":"bg-gray-300 text-gray-600"}`}>{s.id}</span>
+        {s.title}
+      </button>
+      {i<STEPS.length-1&&<div className="w-4 h-px bg-gray-300"/>}
+      </React.Fragment>
+    ))}
+    </div>
+    {error&&<div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
+    {/* STEP 1: Organization */}
+    {step===1&&(
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">Registration</h2>
+      {existingOrgs.length>0&&(
+      <div className="mb-6">
+        <p className="text-sm text-gray-500 mb-2">Existing organizations:</p>
+        <div className="flex flex-wrap gap-2">
+        {existingOrgs.map((o:any)=>(
+          <button key={o.id} onClick={()=>{setOrgId(o.id);loadBalanceFromDB(o.id);setStep(2)}} className="px-3 py-1 bg-blue-50 border border-blue-300 rounded-lg text-sm text-blue-700 hover:bg-blue-100">{o.name} ({o.mode})</button>
+        ))}
+        </div>
+      </div>
+      )}
+      <p className="text-sm text-gray-500 mb-3">Select mode:</p>
+      <div className="grid grid-cols-3 gap-3">
+      {MODES.map(m=>(
+        <button key={m.value} onClick={()=>setOrg({...org,mode:m.value})} className={`p-4 rounded-lg border text-left ${org.mode===m.value?"border-blue-500 bg-blue-50":"border-gray-200 bg-white hover:border-gray-400"}`}>
+          <div className="font-bold text-lg">{m.label}</div>
+          <div className="text-xs text-gray-500 mt-1">{m.desc}</div>
+        </button>
+      ))}
+      </div>
+      <div className="grid grid-cols-2 gap-4 mt-6">
+        <L label="Name"><T value={org.name} onChange={(e:any)=>setOrg({...org,name:e.target.value})} placeholder="OOO Example"/></L>
+        <L label="INN" tip="9 digits"><T value={org.inn} onChange={(e:any)=>setOrg({...org,inn:e.target.value})} maxLength={9} placeholder="123456789"/></L>
+        <L label="Ownership form"><S value={org.ownership_form} onChange={(e:any)=>setOrg({...org,ownership_form:e.target.value})}>{OWNERSHIP_FORMS.map(f=><option key={f} value={f}>{f}</option>)}</S></L>
+        <L label="OKED" tip="Classifier code"><T value={org.oked} onChange={(e:any)=>setOrg({...org,oked:e.target.value})} placeholder="62.01"/></L>
+        <L label="Director"><T value={org.director} onChange={(e:any)=>setOrg({...org,director:e.target.value})} placeholder="Karimov A.I."/></L>
+        <L label="Registration date"><T type="date" value={org.registration_date} onChange={(e:any)=>setOrg({...org,registration_date:e.target.value})}/></L>
+        <L label="Charter capital"><T type="number" value={org.charter_capital} onChange={(e:any)=>setOrg({...org,charter_capital:e.target.value})} placeholder="100000000"/></L>
+        <L label="Currency"><S value={org.accounting_currency} onChange={(e:any)=>setOrg({...org,accounting_currency:e.target.value})}>{CURRENCIES.map(c=><option key={c} value={c}>{c}</option>)}</S></L>
+      </div>
+      <div className="col-span-2"><L label="Address"><T value={org.address} onChange={(e:any)=>setOrg({...org,address:e.target.value})} placeholder="Tashkent, Navoi 1"/></L></div>
+      <div className="flex justify-between mt-6">
+        <div/>
+        <button onClick={saveOrg} disabled={!org.name||saving} className="px-6 py-2 bg-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 disabled:opacity-50">{saving?"Saving...":"Next \u2192"}</button>
+      </div>
+    </div>
+    )}
+    {/* STEP 2: Import Data with NSBU support */}
+    {step===2&&(
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <h2 className="text-xl font-bold text-gray-900 mb-2">Import Data</h2>
+      <p className="text-sm text-gray-500 mb-4">Import from NSBU Balance Sheet, Excel/CSV, or enter manually</p>
+      {/* Import tabs */}
+      <div className="flex gap-2 mb-4">
+        {(['nsbu','excel','1c','manual'] as const).map(tab=>(
+          <button key={tab} onClick={()=>setImportTab(tab)} className={`px-4 py-2 rounded-lg text-sm font-medium ${importTab===tab?'bg-blue-600 text-white':'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+            {tab==='nsbu'?'NSBU Balance':tab==='excel'?'Excel/CSV':tab==='1c'?'1C OData':'Manual'}
+          </button>
+        ))}
+      </div>
+      {/* NSBU Balance tab */}
+      {importTab==='nsbu'&&(
+      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <h3 className="font-bold text-blue-900 text-lg">NSBU Balance Sheet Import</h3>
+        <p className="text-xs text-blue-700 mt-1">Upload Uzbekistan NSBU balance sheet (lines 010-780). Supports .xlsx format.</p>
+        <div className="mt-3 flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-blue-800 mb-1">Excel file</label>
+            <input type="file" accept=".xlsx,.xls" onChange={e=>{setNsbuFile(e.target.files?.[0]||null);setNsbuPreview(null);setNsbuImportResult(null)}} className="text-sm"/>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-blue-800 mb-1">Sheet name (optional)</label>
+            <input value={nsbuSheetName} onChange={e=>setNsbuSheetName(e.target.value)} placeholder="auto-detect" className="bg-white border border-blue-300 rounded px-2 py-1 text-sm w-40"/>
+          </div>
+        </div>
+        {nsbuFile&&<div className="mt-3 flex gap-2">
+          <button onClick={previewNsbu} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 disabled:opacity-50">{saving?'Loading...':'Preview'}</button>
+          {nsbuPreview&&<button onClick={importNsbu} disabled={saving||!orgId} className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 disabled:opacity-50">{saving?'Importing...':'Import to Balance'}</button>}
+        </div>}
+        {/* NSBU Preview Table */}
+        {nsbuPreview&&(
+        <div className="mt-4 bg-white rounded-lg border border-blue-200 overflow-auto max-h-96">
+          <p className="p-2 text-sm text-blue-800 font-medium">Preview: {nsbuPreview.total_rows} rows from sheet "{nsbuPreview.sheet_name}"</p>
+          <table className="w-full text-xs">
+            <thead><tr className="bg-blue-100"><th className="px-2 py-1 text-left">Line</th><th className="px-2 py-1 text-left">Name</th><th className="px-2 py-1 text-right">Begin period</th><th className="px-2 py-1 text-right">End period</th></tr></thead>
+            <tbody>
+            {nsbuPreview.rows.map((r,i)=>(
+              <tr key={i} className={i%2===0?'bg-white':'bg-blue-50'}>
+                <td className="px-2 py-1 font-mono">{r.line_code}</td>
+                <td className="px-2 py-1">{r.name_ru}</td>
+                <td className="px-2 py-1 text-right font-mono">{fmtNum(r.col3_begin)}</td>
+                <td className="px-2 py-1 text-right font-mono">{fmtNum(r.col4_end)}</td>
+              </tr>
+            ))}
+            </tbody>
+          </table>
+        </div>
+        )}
+        {nsbuImportResult&&(
+        <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+          <p className="font-bold text-green-700">NSBU Import complete</p>
+          <p className="text-sm text-green-600">Imported: {nsbuImportResult.records_imported} | Skipped: {nsbuImportResult.records_skipped}</p>
+          {nsbuImportResult.errors?.length>0&&<p className="text-sm text-red-600 mt-1">{nsbuImportResult.errors.join(", ")}</p>}
+        </div>
+        )}
+      </div>
+      )}
+      {/* Excel/CSV tab */}
+      {importTab==='excel'&&(
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <h3 className="font-bold text-gray-900">Excel / CSV</h3>
+        <p className="text-xs text-gray-500 mt-1">Upload trial balance from 1C</p>
+        <input type="file" accept=".xlsx,.csv,.xls" onChange={e=>setImportFile(e.target.files?.[0]||null)} className="mt-3 text-sm"/>
+        {importFile&&<button onClick={uploadExcel} disabled={saving} className="mt-2 px-4 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">{saving?"Importing...":"Upload"}</button>}
+      </div>
+      )}
+      {/* 1C tab */}
+      {importTab==='1c'&&(
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <h3 className="font-bold text-gray-900">1C OData</h3>
+        <p className="text-xs text-gray-500 mt-1">Direct connection to 1C via REST API</p>
+        <button className="mt-3 px-4 py-1 bg-gray-200 text-gray-600 rounded text-sm">Configure</button>
+      </div>
+      )}
+      {/* Manual tab */}
+      {importTab==='manual'&&(
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <h3 className="font-bold text-gray-900">Manual Entry</h3>
+        <p className="text-xs text-gray-500 mt-1">Fill in balance manually in next steps</p>
+        <p className="mt-3 text-sm text-green-600">{Object.keys(balanceRows).length} accounts filled</p>
+      </div>
+      )}
+      {importResult&&(
+      <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3">
+        <p className="font-bold text-green-700">Import complete</p>
+        <p className="text-sm text-green-600">Total: {importResult.total} | Imported: {importResult.imported} | Errors: {importResult.failed}</p>
+        {importResult.errors?.length>0&&<p className="text-sm text-red-600 mt-1">{importResult.errors.join(", ")}</p>}
+      </div>
+      )}
+      <div className="flex justify-between mt-6">
+        <button onClick={()=>setStep(1)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
+        <button onClick={()=>setStep(3)} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Next \u2192</button>
+      </div>
+    </div>
+    )}
+    {/* STEPS 3-6: Balance by category */}
+    {[3,4,5,6].includes(step)&&(()=>{
+      const catMap:{[k:number]:string}={3:"long_term_assets",4:"current_assets",5:"liabilities",6:"equity"};
+      const cat=catMap[step]; const info=CATEGORIES[cat]; const accs=accountsByCategory(cat); const total=catTotal(cat);
+      return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900 mb-2">{info.icon} {info.label}</h2>
+        <p className="text-sm text-gray-500 mb-4">Enter balance for each account</p>
+        <div className="mb-4"><L label="Period date"><T type="date" value={periodDate} onChange={(e:any)=>setPeriodDate(e.target.value)}/></L></div>
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-gray-200"><th className="text-left py-2 text-gray-600">Code</th><th className="text-left py-2 text-gray-600">Name</th><th className="text-right py-2 text-gray-600">Debit</th><th className="text-right py-2 text-gray-600">Credit</th><th className="text-right py-2 text-gray-600">Balance</th></tr></thead>
+          <tbody>
+          {accs.map(a=>{
+            const row=balanceRows[a.code]||{debit:0,credit:0,balance:0}; const isGroup=a.level===1;
+            return (
+            <tr key={a.code} className={`border-b border-gray-100 ${isGroup?"bg-gray-50 font-semibold":""}`}>
+              <td className="py-2 text-gray-900">{a.code}</td>
+              <td className="py-2 text-gray-700">{a.level>1?" -> ":""}{a.name_ru}</td>
+              <td className="py-2"><input type="number" value={row.debit||""} onChange={e=>updateBalance(a.code,"debit",parseFloat(e.target.value)||0,a.name_ru)} className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-right text-sm" placeholder="0.00"/></td>
+              <td className="py-2"><input type="number" value={row.credit||""} onChange={e=>updateBalance(a.code,"credit",parseFloat(e.target.value)||0,a.name_ru)} className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-right text-sm" placeholder="0.00"/></td>
+              <td className="py-2 text-right font-mono text-gray-900">{fmtNum(row.balance)}</td>
+            </tr>
+            );
+          })}
+          </tbody>
+          <tfoot><tr className="border-t-2 border-gray-300 font-bold"><td colSpan={4} className="py-2 text-gray-900">Total</td><td className="py-2 text-right text-gray-900">{fmtNum(total)}</td></tr></tfoot>
+        </table>
+        <div className="flex justify-between mt-6">
+          <button onClick={()=>setStep(step-1)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Back</button>
+          <button onClick={()=>step<6?setStep(step+1):saveBalance()} disabled={saving} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50">{step<6?"Next \u2192":saving?"Saving...":"Save and verify balance \u2192"}</button>
+        </div>
+      </div>
+      );
+    })()}
+    {/* STEP 7: Summary */}
+    {step===7&&(
+    <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">Balance Summary</h2>
+      {summary?(
+      <>
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <h3 className="text-lg font-bold text-blue-700">ASSETS</h3>
+          <p className="text-2xl font-bold text-blue-900 mt-2">{fmtNum(summary.total_assets)}</p>
+          <p className="text-sm text-blue-600 mt-1">Long-term: {fmtNum(summary.long_term_assets)}</p>
+          <p className="text-sm text-blue-600">Current: {fmtNum(summary.current_assets)}</p>
+        </div>
+        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+          <h3 className="text-lg font-bold text-green-700">LIABILITIES + EQUITY</h3>
+          <p className="text-2xl font-bold text-green-900 mt-2">{fmtNum(summary.total_liabilities+summary.total_equity)}</p>
+          <p className="text-sm text-green-600 mt-1">Liabilities: {fmtNum(summary.total_liabilities)}</p>
+          <p className="text-sm text-green-600">Equity: {fmtNum(summary.total_equity)}</p>
+        </div>
+      </div>
+      <div className={`mt-4 p-3 rounded-lg text-center font-bold ${summary.balance_check?"bg-green-50 text-green-700 border border-green-200":"bg-red-50 text-red-700 border border-red-200"}`}>
+        {summary.balance_check?"Balance verified":"Balance does NOT match"}
+      </div>
+      <p className="text-sm text-gray-500 mt-2 text-center">Assets: {fmtNum(summary.total_assets)} | Liabilities+Equity: {fmtNum(summary.total_liabilities+summary.total_equity)} | Date: {summary.period_date}</p>
+      <div className="flex justify-between mt-6">
+        <button onClick={()=>setStep(3)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Edit</button>
+        <div className="flex gap-2">
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`,"_blank")}}>Export PDF</button>
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`,"_blank")}}>Export Excel</button>
+          <button onClick={()=>{window.location.href="/analytics"}} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Go to Analytics \u2192</button>
+        </div>
+      </div>
+      </>
+      ):(
+      <p className="text-gray-500 text-center py-8">Loading summary...</p>
+      )}
+    </div>
+    )}
+    </div>
+    </div>
   );
 }
