@@ -255,3 +255,6 @@ app.include_router(ai_provider_health.router, prefix="/api/v1")
 # Phase 5: Demo seed data
 app.include_router(demo_router.router, prefix="/api/v1")
 app.include_router(risk_router, prefix='/api/v1')
+# NSBU Balance Import
+from app.api.v1.routers.import_router import router as nsbu_import_router
+app.include_router(nsbu_import_router, prefix="/api/v1")
