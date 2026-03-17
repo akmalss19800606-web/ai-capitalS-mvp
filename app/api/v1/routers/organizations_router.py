@@ -3,6 +3,8 @@ API Router: Organizations, Balance Entries, Import (1C/Excel/Manual)
 TZ#2 P0-P1 Implementation
 """
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi.responses import StreamingResponse
+import io
 from app.api.v1.deps import get_db
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, and_
@@ -557,3 +559,140 @@ async def import_history(org_id: int, db: Session = Depends(get_db)):
         .limit(50)
     )
     return result.scalars().all()
+
+
+# -- Export: Excel balance -------
+@router.get("/organizations/{org_id}/export/excel")
+async def export_balance_excel(
+    org_id: int,
+    period_date: date = Query(...),
+    db: Session = Depends(get_db)
+):
+    """Export balance to Excel (.xlsx)"""
+    from app.db.models.organization_models import (
+        Organization, BalanceEntry, ChartOfAccounts
+    )
+    import openpyxl
+    from openpyxl.styles import Font, Alignment, Border, Side
+    
+    org = db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    entries = db.execute(
+        select(
+            ChartOfAccounts.code,
+            ChartOfAccounts.name_ru,
+            ChartOfAccounts.category,
+            BalanceEntry.debit,
+            BalanceEntry.credit,
+            BalanceEntry.balance,
+        )
+        .join(ChartOfAccounts, BalanceEntry.account_id == ChartOfAccounts.id)
+        .where(BalanceEntry.organization_id == org_id,
+               BalanceEntry.period_date == period_date)
+        .order_by(ChartOfAccounts.code)
+    ).all()
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Balance"
+    bold = Font(bold=True)
+    thin = Side(style="thin")
+    border = Border(top=thin, left=thin, right=thin, bottom=thin)
+
+    # Header
+    ws.append([f"Organization: {org.name}"])
+    ws.append([f"Period: {period_date.isoformat()}"])
+    ws.append([])
+    headers = ["Code", "Account", "Category", "Debit", "Credit", "Balance"]
+    ws.append(headers)
+    for cell in ws[4]:
+        cell.font = bold
+        cell.border = border
+
+    for e in entries:
+        ws.append([e.code, e.name_ru, e.category, e.debit, e.credit, e.balance])
+        
+    # Column widths
+    ws.column_dimensions['A'].width = 10
+    ws.column_dimensions['B'].width = 40
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 15
+    ws.column_dimensions['F'].width = 15
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    fname = f"balance_{org.name}_{period_date}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+    
+
+# -- Export: PDF balance -------
+@router.get("/organizations/{org_id}/export/pdf")
+async def export_balance_pdf(
+    org_id: int,
+    period_date: date = Query(...),
+    db: Session = Depends(get_db)
+):
+    """Export balance to PDF"""
+    from app.db.models.organization_models import (
+        Organization, BalanceEntry, ChartOfAccounts
+    )
+
+    org = db.get(Organization, org_id)
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+        
+    entries = db.execute(
+        select(
+            ChartOfAccounts.code,
+            ChartOfAccounts.name_ru,
+            ChartOfAccounts.category,
+            BalanceEntry.debit,
+            BalanceEntry.credit,
+            BalanceEntry.balance,
+        )
+        .join(ChartOfAccounts, BalanceEntry.account_id == ChartOfAccounts.id)
+        .where(BalanceEntry.organization_id == org_id,
+               BalanceEntry.period_date == period_date)
+        .order_by(ChartOfAccounts.code)
+    ).all()
+    
+    # Build HTML table for PDF
+    rows_html = ""
+    for e in entries:
+        rows_html += f"<tr><td>{e.code}</td><td>{e.name_ru}</td>"
+        rows_html += f"<td>{e.debit:,.2f}</td><td>{e.credit:,.2f}</td>"
+        rows_html += f"<td>{e.balance:,.2f}</td></tr>"
+
+    html = f"""
+    <html><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial; font-size: 12px; }}
+        h1 {{ font-size: 16px; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #333; padding: 4px 8px; }}
+        th {{ background: #eee; }}
+        .right {{ text-align: right; }}
+    </style></head><body>
+        <h1>Balance: {org.name}</h1>
+    <p>Period: {period_date}</p>
+    <table>
+    <tr><th>Code</th><th>Account</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>
+    {rows_html}
+    </table></body></html>
+    """
+
+    # Return as HTML (browser can print to PDF)
+    return StreamingResponse(
+        io.BytesIO(html.encode("utf-8")),
+        media_type="text/html",
+        headers={"Content-Disposition":
+                 f'attachment; filename="balance_{org.name}_{period_date}.html"'},
+    )
