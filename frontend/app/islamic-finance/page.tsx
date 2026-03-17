@@ -8,6 +8,9 @@ import {
 } from '@/lib/design-tokens';
 import { useLocale } from '@/lib/i18n';
 
+/* Helper: normalize API response */
+const toArray = (r: any): any[] => Array.isArray(r) ? r : (r?.data && Array.isArray(r.data) ? r.data : []);
+
 /* ─── Types ─── */
 interface ScreeningResult { success: boolean; data: unknown; }
 
@@ -315,7 +318,7 @@ function ProductsTab() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    try { const r = await apiRequest('/islamic-finance/products'); setData(r.data || []); } catch {}
+    try { const r = await apiRequest('/islamic-finance/products'); setData(toArray(r)); } catch {}
     setLoading(false);
   };
 
@@ -379,7 +382,7 @@ function PurificationTab() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    try { const r = await apiRequest('/islamic-finance/purification'); setData(r.data || []); } catch {}
+    try { const r = await apiRequest('/islamic-finance/purification'); setData(toArray(r)); } catch {}
     setLoading(false);
   };
 
@@ -429,7 +432,7 @@ function PoSCTab() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    try { const r = await apiRequest('/islamic-finance/posc'); setData(r.data || []); } catch {}
+    try { const r = await apiRequest('/islamic-finance/posc'); setData(toArray(r)); } catch {}
     setLoading(false);
   };
 
@@ -487,7 +490,7 @@ function SSBTab() {
         apiRequest('/islamic-finance/ssb/members'),
         apiRequest('/islamic-finance/ssb/fatwas'),
       ]);
-      setMembers(m.data || []); setFatwas(f.data || []);
+      setMembers(toArray(m)); setFatwas(toArray(f));
     } catch {}
     setLoading(false);
   };
@@ -527,7 +530,7 @@ function GlossaryTab() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    try { const r = await apiRequest('/islamic-finance/glossary'); setData(r.data || []); } catch {}
+    try { const r = await apiRequest('/islamic-finance/glossary'); setData(toArray(r)); } catch {}
     setLoading(false);
   };
 
@@ -560,7 +563,7 @@ function P2PTab() {
 
   useEffect(() => { load(); }, []);
   const load = async () => {
-    try { const r = await apiRequest('/islamic-finance/p2p'); setData(r.data || []); } catch {}
+    try { const r = await apiRequest('/islamic-finance/p2p'); setData(toArray(r)); } catch {}
     setLoading(false);
   };
 
@@ -629,7 +632,7 @@ function ReferenceTab() {
         apiRequest('/islamic-finance/financial-thresholds'),
         apiRequest('/islamic-finance/shariah-indices'),
       ]);
-      setHaramList(h.data || []); setThresholds(t.data || []); setIndices(i.data || []);
+      setHaramList(toArray(h)); setThresholds(toArray(t)); setIndices(toArray(i));
     } catch {}
     setLoading(false);
   };
