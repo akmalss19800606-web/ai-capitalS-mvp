@@ -575,3 +575,100 @@ async def get_1c_endpoints():
             "Используйте POST /import/1c/test для проверки подключения"
         ]
     }
+
+
+
+# ==================== NSBU BALANCE SHEET IMPORT ====================
+
+@router.post("/organizations/{org_id}/import/balance-nsbu")
+async def import_balance_nsbu(
+    org_id: int,
+    file: UploadFile = File(...),
+    sheet_name: Optional[str] = Query(None, description="Sheet name"),
+    db: Session = Depends(get_db)
+):
+    """Import NSBU balance sheet (lines 010-780) from Excel.
+    Parses and saves to balance_entries, returns wizard data."""
+    from app.services.balance_parser import (
+        parse_balance_xlsx, balance_to_entries, balance_to_wizard_data
+    )
+
+    org = db.execute(
+        text("SELECT id FROM organizations WHERE id = :id"), {"id": org_id}
+    ).fetchone()
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    content = await file.read()
+    filename = file.filename or ""
+
+    if not filename.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(400, "Only .xlsx/.xls files supported")
+
+    parsed = parse_balance_xlsx(content, sheet_name)
+
+    if parsed.errors and not parsed.lines:
+        raise HTTPException(400, f"Parse failed: {'; '.join(parsed.errors)}")
+
+    # Save to balance_entries
+    entries = balance_to_entries(parsed, period="end")
+    db.execute(
+        text("DELETE FROM balance_entries WHERE organization_id = :oid"),
+        {"oid": org_id}
+    )
+
+    records_imported = 0
+    save_errors = []
+    for entry in entries:
+        try:
+            db.execute(text("""
+                INSERT INTO balance_entries
+                    (organization_id, account_code, account_name,
+                     debit, credit, balance)
+                VALUES (:oid, :code, :name, :d, :c, :b)
+                ON CONFLICT (organization_id, account_code)
+                DO UPDATE SET
+                    account_name = EXCLUDED.account_name,
+                    debit = EXCLUDED.debit,
+                    credit = EXCLUDED.credit,
+                    balance = EXCLUDED.balance
+            """), {
+                "oid": org_id,
+                "code": entry["account_code"],
+                "name": entry["account_name"],
+                "d": entry["debit"],
+                "c": entry["credit"],
+                "b": entry["balance"],
+            })
+            records_imported += 1
+        except Exception as e:
+            save_errors.append(str(e))
+
+    db.commit()
+
+    wizard_data = balance_to_wizard_data(parsed)
+    wizard_data["import_result"] = {
+        "status": "success",
+        "records_imported": records_imported,
+        "records_skipped": len(save_errors),
+        "errors": save_errors[:5],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+    return wizard_data
+
+
+@router.post("/organizations/{org_id}/import/balance-nsbu/preview")
+async def preview_balance_nsbu(
+    org_id: int,
+    file: UploadFile = File(...),
+    sheet_name: Optional[str] = Query(None),
+):
+    """Preview NSBU balance without saving."""
+    from app.services.balance_parser import (
+        parse_balance_xlsx, balance_to_wizard_data
+    )
+
+    content = await file.read()
+    parsed = parse_balance_xlsx(content, sheet_name)
+    return balance_to_wizard_data(parsed)
