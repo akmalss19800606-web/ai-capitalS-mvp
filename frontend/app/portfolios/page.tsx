@@ -283,8 +283,8 @@ export default function PortfoliosPage(){
   <div className="flex justify-between mt-6">
   <button onClick={()=>setStep(3)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Edit</button>
   <div className="flex gap-2">
-  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Export PDF</button>
-  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Export Excel</button>
+  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`,"_blank")}}>Export PDF</button>
+  <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200" onClick={()=>{window.open(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`,"_blank")}}>Export Excel</button>
   <button onClick={()=>{window.location.href="/analytics"}} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Go to Analytics \u2192</button>
   </div>
   </div>
