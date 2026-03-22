@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api';
@@ -11,20 +11,20 @@ import { useLocale } from '@/lib/i18n';
 /* Helper: normalize API response */
 const toArray = (r: any): any[] => Array.isArray(r) ? r : (r?.data && Array.isArray(r.data) ? r.data : []);
 
-/* ─── Types ─── */
+/* в”Ђв”Ђв”Ђ Types в”Ђв”Ђв”Ђ */
 interface ScreeningResult { success: boolean; data: unknown; }
 
 type TabId = 'screening' | 'zakat' | 'reference' | 'products' | 'purification' | 'posc' | 'ssb' | 'glossary' | 'p2p';
 
-/* ─── Status badge colors ─── */
+/* в”Ђв”Ђв”Ђ Status badge colors в”Ђв”Ђв”Ђ */
 const complianceColors: Record<string, { bg: string; text: string; label: string }> = {
-  compliant:      { bg: colors.success[50],  text: colors.success[700], label: 'Халяль' },
-  non_compliant:  { bg: colors.error[50],    text: colors.error[700],   label: 'Харам' },
-  doubtful:       { bg: colors.warning[50],  text: colors.warning[700], label: 'Сомнительный' },
-  not_screened:   { bg: colors.neutral[100], text: colors.neutral[600], label: 'Не проверено' },
+  compliant:      { bg: colors.success[50],  text: colors.success[700], label: 'РҐР°Р»СЏР»СЊ' },
+  non_compliant:  { bg: colors.error[50],    text: colors.error[700],   label: 'РҐР°СЂР°Рј' },
+  doubtful:       { bg: colors.warning[50],  text: colors.warning[700], label: 'РЎРѕРјРЅРёС‚РµР»СЊРЅС‹Р№' },
+  not_screened:   { bg: colors.neutral[100], text: colors.neutral[600], label: 'РќРµ РїСЂРѕРІРµСЂРµРЅРѕ' },
 };
 
-/* ─── Styles ─── */
+/* в”Ђв”Ђв”Ђ Styles в”Ђв”Ђв”Ђ */
 const cardStyle: React.CSSProperties = { ...componentStyles.card, marginBottom: spacing[5] };
 const inputStyle: React.CSSProperties = {
   ...componentStyles.input, width: '100%', padding: '10px 14px',
@@ -44,7 +44,7 @@ const sectionTitle: React.CSSProperties = {
   color: semantic.textPrimary, marginBottom: spacing[4],
 };
 
-/* ─── Main Component ─── */
+/* в”Ђв”Ђв”Ђ Main Component в”Ђв”Ђв”Ђ */
 export default function IslamicFinancePage() {
   const router = useRouter();
   const { t } = useLocale();
@@ -56,24 +56,24 @@ export default function IslamicFinancePage() {
   }, []);
 
   const tabs: { id: TabId; label: string; icon: string }[] = [
-    { id: 'screening',    label: 'Шариат-скрининг',    icon: '🛡️' },
-    { id: 'zakat',        label: 'Калькулятор закята',  icon: '🧮' },
-    { id: 'products',     label: 'Продукты',           icon: '📦' },
-    { id: 'purification', label: 'Очистка дохода',      icon: '🧹' },
-    { id: 'posc',         label: 'PoSC',                icon: '📋' },
-    { id: 'ssb',          label: 'SSB / Фатвы',         icon: '⚖️' },
-    { id: 'glossary',     label: 'Глоссарий',           icon: '📖' },
-    { id: 'p2p',          label: 'P2P Исламские',       icon: '🤝' },
-    { id: 'reference',    label: 'Справочники',         icon: '📚' },
+    { id: 'screening',    label: 'РЁР°СЂРёР°С‚-СЃРєСЂРёРЅРёРЅРі',    icon: 'рџ›ЎпёЏ' },
+    { id: 'zakat',        label: 'РљР°Р»СЊРєСѓР»СЏС‚РѕСЂ Р·Р°РєСЏС‚Р°',  icon: 'рџ§®' },
+    { id: 'products',     label: 'РџСЂРѕРґСѓРєС‚С‹',           icon: 'рџ“¦' },
+    { id: 'purification', label: 'РћС‡РёСЃС‚РєР° РґРѕС…РѕРґР°',      icon: 'рџ§№' },
+    { id: 'posc',         label: 'PoSC',                icon: 'рџ“‹' },
+    { id: 'ssb',          label: 'SSB / Р¤Р°С‚РІС‹',         icon: 'вљ–пёЏ' },
+    { id: 'glossary',     label: 'Р“Р»РѕСЃСЃР°СЂРёР№',           icon: 'рџ“–' },
+    { id: 'p2p',          label: 'P2P РСЃР»Р°РјСЃРєРёРµ',       icon: 'рџ¤ќ' },
+    { id: 'reference',    label: 'РЎРїСЂР°РІРѕС‡РЅРёРєРё',         icon: 'рџ“љ' },
   ];
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: spacing[6] }}>
       {/* Header */}
       <div style={{ marginBottom: spacing[6], textAlign: 'center' }}>
-        <div style={{ fontSize: '48px', marginBottom: spacing[3] }}>☪</div>
-        <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: semantic.textPrimary, marginBottom: spacing[2] }}>Исламские финансы</h1>
-        <p style={{ color: semantic.textSecondary, fontSize: typography.fontSize.md }}>Шариат-скрининг, закят, продукты, очистка · AAOIFI / DJIM / S&P Shariah</p>
+        <div style={{ fontSize: '48px', marginBottom: spacing[3] }}>вЄ</div>
+        <h1 style={{ fontSize: typography.fontSize['2xl'], fontWeight: typography.fontWeight.bold, color: semantic.textPrimary, marginBottom: spacing[2] }}>РСЃР»Р°РјСЃРєРёРµ С„РёРЅР°РЅСЃС‹</h1>
+        <p style={{ color: semantic.textSecondary, fontSize: typography.fontSize.md }}>РЁР°СЂРёР°С‚-СЃРєСЂРёРЅРёРЅРі, Р·Р°РєСЏС‚, РїСЂРѕРґСѓРєС‚С‹, РѕС‡РёСЃС‚РєР° В· AAOIFI / DJIM / S&P Shariah</p>
       </div>
 
       {/* Tab navigation */}
@@ -136,18 +136,18 @@ function ScreeningTab() {
       }
       const res = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify(body) });
       setResult(res);
-    } catch { setResult({ error: 'Ошибка при скрининге' }); }
+    } catch { setResult({ error: 'РћС€РёР±РєР° РїСЂРё СЃРєСЂРёРЅРёРЅРіРµ' }); }
     finally { setLoading(false); }
   };
 
   return (
     <div>
-      <h3 style={sectionTitle}>Тип скрининга</h3>
+      <h3 style={sectionTitle}>РўРёРї СЃРєСЂРёРЅРёРЅРіР°</h3>
       <div style={{ display: 'flex', gap: spacing[3], flexWrap: 'wrap', marginBottom: spacing[5] }}>
         {[
-          { id: 'full' as const, label: 'Комплексный', desc: 'Отрасль + финансы' },
-          { id: 'industry' as const, label: 'Отраслевой', desc: 'Только харам-индустрии' },
-          { id: 'financial' as const, label: 'Финансовый', desc: 'Пороги AAOIFI' },
+          { id: 'full' as const, label: 'РљРѕРјРїР»РµРєСЃРЅС‹Р№', desc: 'РћС‚СЂР°СЃР»СЊ + С„РёРЅР°РЅСЃС‹' },
+          { id: 'industry' as const, label: 'РћС‚СЂР°СЃР»РµРІРѕР№', desc: 'РўРѕР»СЊРєРѕ С…Р°СЂР°Рј-РёРЅРґСѓСЃС‚СЂРёРё' },
+          { id: 'financial' as const, label: 'Р¤РёРЅР°РЅСЃРѕРІС‹Р№', desc: 'РџРѕСЂРѕРіРё AAOIFI' },
         ].map(m => (
           <div key={m.id} onClick={() => { setMode(m.id); setResult(null); }} style={{
             flex: '1 1 180px', padding: spacing[4], borderRadius: radius.xl,
@@ -161,39 +161,39 @@ function ScreeningTab() {
         ))}
       </div>
 
-      <h3 style={sectionTitle}>Данные компании</h3>
+      <h3 style={sectionTitle}>Р”Р°РЅРЅС‹Рµ РєРѕРјРїР°РЅРёРё</h3>
       <div style={cardStyle}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[4] }}>
           <div style={{ gridColumn: 'span 2' }}>
-            <label style={labelStyle}>Название компании *</label>
+            <label style={labelStyle}>РќР°Р·РІР°РЅРёРµ РєРѕРјРїР°РЅРёРё *</label>
             <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Uzpromstroybank" style={inputStyle} />
           </div>
           {(mode === 'full' || mode === 'industry') && <>
-            <div><label style={labelStyle}>Отрасль</label><input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="Banking" style={inputStyle} /></div>
-            <div><label style={labelStyle}>Описание</label><input value={description} onChange={e => setDescription(e.target.value)} placeholder="Краткое описание" style={inputStyle} /></div>
+            <div><label style={labelStyle}>РћС‚СЂР°СЃР»СЊ</label><input value={industry} onChange={e => setIndustry(e.target.value)} placeholder="Banking" style={inputStyle} /></div>
+            <div><label style={labelStyle}>РћРїРёСЃР°РЅРёРµ</label><input value={description} onChange={e => setDescription(e.target.value)} placeholder="РљСЂР°С‚РєРѕРµ РѕРїРёСЃР°РЅРёРµ" style={inputStyle} /></div>
           </>}
           {(mode === 'full' || mode === 'financial') && <>
-            <div><label style={labelStyle}>Общие активы (USD)</label><input type="number" value={totalAssets} onChange={e => setTotalAssets(e.target.value)} style={inputStyle} /></div>
-            <div><label style={labelStyle}>Общий долг (USD)</label><input type="number" value={totalDebt} onChange={e => setTotalDebt(e.target.value)} style={inputStyle} /></div>
-            <div><label style={labelStyle}>Общий доход (USD)</label><input type="number" value={totalRevenue} onChange={e => setTotalRevenue(e.target.value)} style={inputStyle} /></div>
-            <div><label style={labelStyle}>Харам доход (USD)</label><input type="number" value={haramRevenue} onChange={e => setHaramRevenue(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>РћР±С‰РёРµ Р°РєС‚РёРІС‹ (USD)</label><input type="number" value={totalAssets} onChange={e => setTotalAssets(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>РћР±С‰РёР№ РґРѕР»Рі (USD)</label><input type="number" value={totalDebt} onChange={e => setTotalDebt(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>РћР±С‰РёР№ РґРѕС…РѕРґ (USD)</label><input type="number" value={totalRevenue} onChange={e => setTotalRevenue(e.target.value)} style={inputStyle} /></div>
+            <div><label style={labelStyle}>РҐР°СЂР°Рј РґРѕС…РѕРґ (USD)</label><input type="number" value={haramRevenue} onChange={e => setHaramRevenue(e.target.value)} style={inputStyle} /></div>
           </>}
         </div>
         <button onClick={handleScreening} disabled={loading} style={{ ...btnPrimary, marginTop: spacing[4], opacity: loading ? 0.6 : 1 }}>
-          {loading ? 'Анализ...' : 'Запустить скрининг'}
+          {loading ? 'РђРЅР°Р»РёР·...' : 'Р—Р°РїСѓСЃС‚РёС‚СЊ СЃРєСЂРёРЅРёРЅРі'}
         </button>
       </div>
 
       {result && !result.error && (
         <div style={cardStyle}>
-          <h3 style={sectionTitle}>Результат скрининга</h3>
+          <h3 style={sectionTitle}>Р РµР·СѓР»СЊС‚Р°С‚ СЃРєСЂРёРЅРёРЅРіР°</h3>
           {result.is_compliant ? 'compliant' : 'non_compliant' && <StatusBadge status={result.is_compliant ? 'compliant' : 'non_compliant'} />}
           {result.standards?.flatMap((s: any) => s.ratios || []) && (
             <div style={{ marginTop: spacing[4] }}>
-              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Финансовые показатели (AAOIFI)</h4>
+              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Р¤РёРЅР°РЅСЃРѕРІС‹Рµ РїРѕРєР°Р·Р°С‚РµР»Рё (AAOIFI)</h4>
               {result.standards?.flatMap((s: any) => s.ratios || []).map((c: any, i: number) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: spacing[3], padding: spacing[3], borderBottom: `1px solid ${semantic.border}` }}>
-                  <span>{c.passed ? '✅' : '❌'}</span>
+                  <span>{c.passed ? 'вњ…' : 'вќЊ'}</span>
                   <div><div style={{ fontWeight: typography.fontWeight.semibold }}>{c.ratio_name}</div><div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{`${c.value}% / ${c.threshold}%`}</div></div>
                 </div>
               ))}
@@ -201,8 +201,8 @@ function ScreeningTab() {
           )}
           {result.recommendations?.length > 0 && (
             <div style={{ marginTop: spacing[4] }}>
-              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Рекомендации</h4>
-              {result.recommendations.map((r: string, i: number) => <div key={i} style={{ padding: spacing[2], color: semantic.textSecondary }}>• {r}</div>)}
+              <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Р РµРєРѕРјРµРЅРґР°С†РёРё</h4>
+              {result.recommendations.map((r: string, i: number) => <div key={i} style={{ padding: spacing[2], color: semantic.textSecondary }}>вЂў {r}</div>)}
             </div>
           )}
         </div>
@@ -241,14 +241,14 @@ function ZakatTab() {
     if (loans) liabilities.loans = parseFloat(loans);
     if (debts) liabilities.debts = parseFloat(debts);
     try {
-      const r = await apiRequest('/islamic-finance/zakat/calculate', {
+      const r = await apiRequest('/islamic-finance/zakat', {
         method: 'POST', body: JSON.stringify({
           assets, liabilities: Object.keys(liabilities).length ? liabilities : null,
           currency, gold_grams: parseFloat(goldGrams) || 0, silver_grams: parseFloat(silverGrams) || 0,
         }),
       });
       setResult(r);
-    } catch { setResult({ error: 'Ошибка расчёта' }); }
+    } catch { setResult({ error: 'РћС€РёР±РєР° СЂР°СЃС‡С‘С‚Р°' }); }
     finally { setLoading(false); }
   };
 
@@ -256,13 +256,13 @@ function ZakatTab() {
     <div>
       {nisab && (
         <div style={{ ...cardStyle, display: 'flex', gap: spacing[6], justifyContent: 'center' }}>
-          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>Нисаб (золото 85г)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_gold?.display}</div></div>
-          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>Нисаб (серебро 595г)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_silver?.display}</div></div>
+          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>РќРёСЃР°Р± (Р·РѕР»РѕС‚Рѕ 85Рі)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_gold?.display}</div></div>
+          <div><div style={{ color: semantic.textSecondary, fontSize: typography.fontSize.sm }}>РќРёСЃР°Р± (СЃРµСЂРµР±СЂРѕ 595Рі)</div><div style={{ fontWeight: typography.fontWeight.bold, fontSize: typography.fontSize.lg }}>{nisab.nisab_silver?.display}</div></div>
         </div>
       )}
 
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Расчёт закята</h3>
+        <h3 style={sectionTitle}>Р Р°СЃС‡С‘С‚ Р·Р°РєСЏС‚Р°</h3>
         <div style={{ display: 'flex', gap: spacing[2], marginBottom: spacing[4] }}>
           {['UZS','USD','EUR','RUB'].map(c => (
             <button key={c} onClick={() => setCurrency(c)} style={{
@@ -275,23 +275,23 @@ function ZakatTab() {
           ))}
         </div>
 
-        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>Активы</h4>
+        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md }}>РђРєС‚РёРІС‹</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Наличные ({currency})</label><input type="number" value={cash} onChange={e => setCash(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Инвестиции ({currency})</label><input type="number" value={investments} onChange={e => setInvestments(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Товарные запасы ({currency})</label><input type="number" value={businessInv} onChange={e => setBusinessInv(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Золото (граммы)</label><input type="number" value={goldGrams} onChange={e => setGoldGrams(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Серебро (граммы)</label><input type="number" value={silverGrams} onChange={e => setSilverGrams(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РќР°Р»РёС‡РЅС‹Рµ ({currency})</label><input type="number" value={cash} onChange={e => setCash(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РРЅРІРµСЃС‚РёС†РёРё ({currency})</label><input type="number" value={investments} onChange={e => setInvestments(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РўРѕРІР°СЂРЅС‹Рµ Р·Р°РїР°СЃС‹ ({currency})</label><input type="number" value={businessInv} onChange={e => setBusinessInv(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Р—РѕР»РѕС‚Рѕ (РіСЂР°РјРјС‹)</label><input type="number" value={goldGrams} onChange={e => setGoldGrams(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РЎРµСЂРµР±СЂРѕ (РіСЂР°РјРјС‹)</label><input type="number" value={silverGrams} onChange={e => setSilverGrams(e.target.value)} style={inputStyle} /></div>
         </div>
 
-        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md, marginTop: spacing[4] }}>Обязательства</h4>
+        <h4 style={{ ...sectionTitle, fontSize: typography.fontSize.md, marginTop: spacing[4] }}>РћР±СЏР·Р°С‚РµР»СЊСЃС‚РІР°</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Кредиты ({currency})</label><input type="number" value={loans} onChange={e => setLoans(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Прочие долги ({currency})</label><input type="number" value={debts} onChange={e => setDebts(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РљСЂРµРґРёС‚С‹ ({currency})</label><input type="number" value={loans} onChange={e => setLoans(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РџСЂРѕС‡РёРµ РґРѕР»РіРё ({currency})</label><input type="number" value={debts} onChange={e => setDebts(e.target.value)} style={inputStyle} /></div>
         </div>
 
         <button onClick={calculate} disabled={loading} style={{ ...btnPrimary, marginTop: spacing[4], opacity: loading ? 0.6 : 1 }}>
-          {loading ? 'Расчёт...' : 'Рассчитать закят'}
+          {loading ? 'Р Р°СЃС‡С‘С‚...' : 'Р Р°СЃСЃС‡РёС‚Р°С‚СЊ Р·Р°РєСЏС‚'}
         </button>
       </div>
 
@@ -301,7 +301,7 @@ function ZakatTab() {
             {`${result.zakat_amount?.toLocaleString()} ${result.currency || ''}`}
           </div>
           <div style={{ color: semantic.textSecondary, marginTop: spacing[2] }}>
-            {result.zakat_amount > 0 ? 'Закят обязателен' : 'Ниже нисаба — закят не обязателен'}
+            {result.zakat_amount > 0 ? 'Р—Р°РєСЏС‚ РѕР±СЏР·Р°С‚РµР»РµРЅ' : 'РќРёР¶Рµ РЅРёСЃР°Р±Р° вЂ” Р·Р°РєСЏС‚ РЅРµ РѕР±СЏР·Р°С‚РµР»РµРЅ'}
           </div>
         </div>
       )}
@@ -339,32 +339,32 @@ function ProductsTab() {
   return (
     <div>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Создать продукт</h3>
+        <h3 style={sectionTitle}>РЎРѕР·РґР°С‚СЊ РїСЂРѕРґСѓРєС‚</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Название</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Тип</label>
+          <div><label style={labelStyle}>РќР°Р·РІР°РЅРёРµ</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РўРёРї</label>
             <select value={form.product_type} onChange={e => set('product_type', e.target.value)} style={inputStyle}>
-              <option value="murabaha">Мурабаха</option><option value="ijara">Иджара</option>
-              <option value="musharaka">Мушарака</option><option value="mudaraba">Мудараба</option>
-              <option value="sukuk">Сукук</option><option value="takaful">Такафул</option>
+              <option value="murabaha">РњСѓСЂР°Р±Р°С…Р°</option><option value="ijara">РРґР¶Р°СЂР°</option>
+              <option value="musharaka">РњСѓС€Р°СЂР°РєР°</option><option value="mudaraba">РњСѓРґР°СЂР°Р±Р°</option>
+              <option value="sukuk">РЎСѓРєСѓРє</option><option value="takaful">РўР°РєР°С„СѓР»</option>
             </select>
           </div>
-          <div><label style={labelStyle}>Сумма</label><input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Ставка</label><input type="number" value={form.rate} onChange={e => set('rate', e.target.value)} placeholder="0.05" style={inputStyle} /></div>
-          <div><label style={labelStyle}>Периоды</label><input type="number" value={form.periods} onChange={e => set('periods', e.target.value)} placeholder="12" style={inputStyle} /></div>
+          <div><label style={labelStyle}>РЎСѓРјРјР°</label><input type="number" value={form.amount} onChange={e => set('amount', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РЎС‚Р°РІРєР°</label><input type="number" value={form.rate} onChange={e => set('rate', e.target.value)} placeholder="0.05" style={inputStyle} /></div>
+          <div><label style={labelStyle}>РџРµСЂРёРѕРґС‹</label><input type="number" value={form.periods} onChange={e => set('periods', e.target.value)} placeholder="12" style={inputStyle} /></div>
         </div>
-        <button onClick={onSubmit} style={{ ...btnPrimary, marginTop: spacing[4] }}>Создать</button>
+        <button onClick={onSubmit} style={{ ...btnPrimary, marginTop: spacing[4] }}>РЎРѕР·РґР°С‚СЊ</button>
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
-        data.length === 0 ? <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>Нет продуктов</div> :
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div> :
+        data.length === 0 ? <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>РќРµС‚ РїСЂРѕРґСѓРєС‚РѕРІ</div> :
         data.map((p: any) => (
           <div key={p.id} style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: typography.fontWeight.semibold }}>{p.title || p.product_type}</span>
               <span style={{ fontSize: typography.fontSize.xs, padding: `${spacing[1]} ${spacing[2]}`, borderRadius: radius.lg, backgroundColor: colors.primary[50], color: colors.primary[700] }}>{p.product_type}</span>
             </div>
-            {p.params && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>Сумма: {p.params.amount?.toLocaleString()} | Ставка: {p.params.rate} | Периоды: {p.params.periods}</div>}
+            {p.params && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>РЎСѓРјРјР°: {p.params.amount?.toLocaleString()} | РЎС‚Р°РІРєР°: {p.params.rate} | РџРµСЂРёРѕРґС‹: {p.params.periods}</div>}
           </div>
         ))
       }
@@ -388,7 +388,7 @@ function PurificationTab() {
 
   const calculate = async () => {
     try {
-      const r = await apiRequest('/islamic-finance/purification/calculate', {
+      const r = await apiRequest('/islamic-finance/purification', {
         method: 'POST', body: JSON.stringify({ total_income: parseFloat(totalIncome) || 0, haram_percentage: parseFloat(haramPct) || 0 }),
       });
       setResult(r); load();
@@ -398,24 +398,24 @@ function PurificationTab() {
   return (
     <div>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Расчёт очистки дохода</h3>
+        <h3 style={sectionTitle}>Р Р°СЃС‡С‘С‚ РѕС‡РёСЃС‚РєРё РґРѕС…РѕРґР°</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Общий доход</label><input type="number" value={totalIncome} onChange={e => setTotalIncome(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Доля харам (%)</label><input type="number" value={haramPct} onChange={e => setHaramPct(e.target.value)} placeholder="5" style={inputStyle} /></div>
+          <div><label style={labelStyle}>РћР±С‰РёР№ РґРѕС…РѕРґ</label><input type="number" value={totalIncome} onChange={e => setTotalIncome(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Р”РѕР»СЏ С…Р°СЂР°Рј (%)</label><input type="number" value={haramPct} onChange={e => setHaramPct(e.target.value)} placeholder="5" style={inputStyle} /></div>
         </div>
-        <button onClick={calculate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Рассчитать</button>
+        <button onClick={calculate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Р Р°СЃСЃС‡РёС‚Р°С‚СЊ</button>
         {result && <div style={{ marginTop: spacing[4], padding: spacing[4], backgroundColor: colors.warning[50], borderRadius: radius.lg }}>
-          <div style={{ fontWeight: typography.fontWeight.bold }}>Сумма к очистке: {result.purification_amount_display || result.purification_amount}</div>
-          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>Направить на благотворительность (sadaqah)</div>
+          <div style={{ fontWeight: typography.fontWeight.bold }}>РЎСѓРјРјР° Рє РѕС‡РёСЃС‚РєРµ: {result.purification_amount_display || result.purification_amount}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>РќР°РїСЂР°РІРёС‚СЊ РЅР° Р±Р»Р°РіРѕС‚РІРѕСЂРёС‚РµР»СЊРЅРѕСЃС‚СЊ (sadaqah)</div>
         </div>}
       </div>
 
-      {data.length > 0 && <h3 style={sectionTitle}>История очисток</h3>}
+      {data.length > 0 && <h3 style={sectionTitle}>РСЃС‚РѕСЂРёСЏ РѕС‡РёСЃС‚РѕРє</h3>}
       {data.map((r: any) => (
         <div key={r.id} style={cardStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Доход: {r.total_income?.toLocaleString()}</span>
-            <span style={{ color: colors.warning[600] }}>Очистка: {r.purification_amount?.toLocaleString()}</span>
+            <span>Р”РѕС…РѕРґ: {r.total_income?.toLocaleString()}</span>
+            <span style={{ color: colors.warning[600] }}>РћС‡РёСЃС‚РєР°: {r.purification_amount?.toLocaleString()}</span>
           </div>
         </div>
       ))}
@@ -448,19 +448,19 @@ function PoSCTab() {
   return (
     <div>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Сгенерировать PoSC</h3>
+        <h3 style={sectionTitle}>РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ PoSC</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Название объекта</label><input value={targetName} onChange={e => setTargetName(e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Тип</label>
+          <div><label style={labelStyle}>РќР°Р·РІР°РЅРёРµ РѕР±СЉРµРєС‚Р°</label><input value={targetName} onChange={e => setTargetName(e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РўРёРї</label>
             <select value={targetType} onChange={e => setTargetType(e.target.value)} style={inputStyle}>
-              <option value="product">Продукт</option><option value="portfolio">Портфель</option><option value="company">Компания</option>
+              <option value="product">РџСЂРѕРґСѓРєС‚</option><option value="portfolio">РџРѕСЂС‚С„РµР»СЊ</option><option value="company">РљРѕРјРїР°РЅРёСЏ</option>
             </select>
           </div>
         </div>
-        <button onClick={generate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Сгенерировать</button>
+        <button onClick={generate} style={{ ...btnPrimary, marginTop: spacing[4] }}>РЎРіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ</button>
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div> :
         data.map((r: any) => (
           <div key={r.id} style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: spacing[2] }}>
@@ -468,7 +468,7 @@ function PoSCTab() {
               <StatusBadge status={r.compliance_status || 'not_screened'} />
             </div>
             {r.report_json && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
-              Стандарт: {r.report_json.standard} | Скор: {r.report_json.score}
+              РЎС‚Р°РЅРґР°СЂС‚: {r.report_json.standard} | РЎРєРѕСЂ: {r.report_json.score}
             </div>}
           </div>
         ))
@@ -495,30 +495,30 @@ function SSBTab() {
     setLoading(false);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div>;
 
   return (
     <div>
-      <h3 style={sectionTitle}>Члены Шариатского совета (SSB)</h3>
+      <h3 style={sectionTitle}>Р§Р»РµРЅС‹ РЁР°СЂРёР°С‚СЃРєРѕРіРѕ СЃРѕРІРµС‚Р° (SSB)</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: spacing[3], marginBottom: spacing[6] }}>
         {members.map((m: any) => (
           <div key={m.id} style={cardStyle}>
             <div style={{ fontWeight: typography.fontWeight.semibold }}>{m.full_name}</div>
-            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.title} · {m.specialization}</div>
+            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.title} В· {m.specialization}</div>
           </div>
         ))}
-        {members.length === 0 && <div style={{ color: semantic.textSecondary }}>Нет данных</div>}
+        {members.length === 0 && <div style={{ color: semantic.textSecondary }}>РќРµС‚ РґР°РЅРЅС‹С…</div>}
       </div>
 
-      <h3 style={sectionTitle}>Фатвы</h3>
+      <h3 style={sectionTitle}>Р¤Р°С‚РІС‹</h3>
       {fatwas.map((f: any) => (
         <div key={f.id} style={cardStyle}>
           <div style={{ fontWeight: typography.fontWeight.semibold }}>{f.title}</div>
-          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>{f.topic} · {f.status}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>{f.topic} В· {f.status}</div>
           {f.summary && <div style={{ marginTop: spacing[2], fontSize: typography.fontSize.sm }}>{f.summary}</div>}
         </div>
       ))}
-      {fatwas.length === 0 && <div style={{ ...cardStyle, color: semantic.textSecondary }}>Нет фатв</div>}
+      {fatwas.length === 0 && <div style={{ ...cardStyle, color: semantic.textSecondary }}>РќРµС‚ С„Р°С‚РІ</div>}
     </div>
   );
 }
@@ -534,11 +534,11 @@ function GlossaryTab() {
     setLoading(false);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div>;
 
   return (
     <div>
-      <h3 style={sectionTitle}>Глоссарий исламских финансов</h3>
+      <h3 style={sectionTitle}>Р“Р»РѕСЃСЃР°СЂРёР№ РёСЃР»Р°РјСЃРєРёС… С„РёРЅР°РЅСЃРѕРІ</h3>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
         {data.map((r: any) => (
           <div key={r.id} style={cardStyle}>
@@ -550,7 +550,7 @@ function GlossaryTab() {
           </div>
         ))}
       </div>
-      {data.length === 0 && <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>Глоссарий пуст</div>}
+      {data.length === 0 && <div style={{ ...cardStyle, textAlign: 'center', color: semantic.textSecondary }}>Р“Р»РѕСЃСЃР°СЂРёР№ РїСѓСЃС‚</div>}
     </div>
   );
 }
@@ -584,21 +584,21 @@ function P2PTab() {
   return (
     <div>
       <div style={cardStyle}>
-        <h3 style={sectionTitle}>Создать P2P проект</h3>
+        <h3 style={sectionTitle}>РЎРѕР·РґР°С‚СЊ P2P РїСЂРѕРµРєС‚</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: spacing[3] }}>
-          <div><label style={labelStyle}>Название</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Целевая сумма</label><input type="number" value={form.target_amount} onChange={e => set('target_amount', e.target.value)} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Тип</label>
+          <div><label style={labelStyle}>РќР°Р·РІР°РЅРёРµ</label><input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Р¦РµР»РµРІР°СЏ СЃСѓРјРјР°</label><input type="number" value={form.target_amount} onChange={e => set('target_amount', e.target.value)} style={inputStyle} /></div>
+          <div><label style={labelStyle}>РўРёРї</label>
             <select value={form.product_type} onChange={e => set('product_type', e.target.value)} style={inputStyle}>
-              <option value="mudaraba">Мудараба</option><option value="musharaka">Мушарака</option>
+              <option value="mudaraba">РњСѓРґР°СЂР°Р±Р°</option><option value="musharaka">РњСѓС€Р°СЂР°РєР°</option>
             </select>
           </div>
-          <div><label style={labelStyle}>Пропорция прибыли</label><input value={form.profit_sharing_ratio} onChange={e => set('profit_sharing_ratio', e.target.value)} placeholder="60:40" style={inputStyle} /></div>
+          <div><label style={labelStyle}>РџСЂРѕРїРѕСЂС†РёСЏ РїСЂРёР±С‹Р»Рё</label><input value={form.profit_sharing_ratio} onChange={e => set('profit_sharing_ratio', e.target.value)} placeholder="60:40" style={inputStyle} /></div>
         </div>
-        <button onClick={create} style={{ ...btnPrimary, marginTop: spacing[4] }}>Создать проект</button>
+        <button onClick={create} style={{ ...btnPrimary, marginTop: spacing[4] }}>РЎРѕР·РґР°С‚СЊ РїСЂРѕРµРєС‚</button>
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div> :
+      {loading ? <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div> :
         data.map((p: any) => (
           <div key={p.id} style={cardStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -637,28 +637,28 @@ function ReferenceTab() {
     setLoading(false);
   };
 
-  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Загрузка...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: spacing[6], color: semantic.textSecondary }}>Р—Р°РіСЂСѓР·РєР°...</div>;
 
   return (
     <div>
-      <h3 style={sectionTitle}>Запрещённые отрасли (Харам)</h3>
+      <h3 style={sectionTitle}>Р—Р°РїСЂРµС‰С‘РЅРЅС‹Рµ РѕС‚СЂР°СЃР»Рё (РҐР°СЂР°Рј)</h3>
       <div style={cardStyle}>
         {haramList.map((item: any, i: number) => (
           <div key={i} style={{ padding: spacing[2], borderBottom: i < haramList.length - 1 ? `1px solid ${semantic.border}` : 'none' }}>
-            <span>🚫 {item.name_ru}</span> <span style={{ color: semantic.textSecondary }}>({item.name_en})</span>
+            <span>рџљ« {item.name_ru}</span> <span style={{ color: semantic.textSecondary }}>({item.name_en})</span>
             {item.description && <div style={{ fontSize: typography.fontSize.xs, color: semantic.textSecondary }}>{item.description}</div>}
           </div>
         ))}
-        {haramList.length === 0 && <div style={{ color: semantic.textSecondary }}>Нет данных</div>}
+        {haramList.length === 0 && <div style={{ color: semantic.textSecondary }}>РќРµС‚ РґР°РЅРЅС‹С…</div>}
       </div>
 
-      <h3 style={sectionTitle}>Финансовые пороги AAOIFI</h3>
+      <h3 style={sectionTitle}>Р¤РёРЅР°РЅСЃРѕРІС‹Рµ РїРѕСЂРѕРіРё AAOIFI</h3>
       <div style={cardStyle}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr style={{ borderBottom: `2px solid ${semantic.border}` }}>
-            <th style={{ textAlign: 'left', padding: spacing[2] }}>Критерий</th>
-            <th style={{ textAlign: 'left', padding: spacing[2] }}>Максимум</th>
-            <th style={{ textAlign: 'left', padding: spacing[2] }}>Стандарт</th>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>РљСЂРёС‚РµСЂРёР№</th>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>РњР°РєСЃРёРјСѓРј</th>
+            <th style={{ textAlign: 'left', padding: spacing[2] }}>РЎС‚Р°РЅРґР°СЂС‚</th>
           </tr></thead>
           <tbody>{thresholds.map((t: any, i: number) => (
             <tr key={i} style={{ borderBottom: `1px solid ${semantic.border}` }}>
@@ -670,11 +670,11 @@ function ReferenceTab() {
         </table>
       </div>
 
-      <h3 style={sectionTitle}>Шариатские индексы</h3>
+      <h3 style={sectionTitle}>РЁР°СЂРёР°С‚СЃРєРёРµ РёРЅРґРµРєСЃС‹</h3>
       {indices.map((item: any, i: number) => (
         <div key={i} style={cardStyle}>
           <div style={{ fontWeight: typography.fontWeight.semibold }}>{item.name}</div>
-          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{item.provider} · {item.description}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{item.provider} В· {item.description}</div>
         </div>
       ))}
     </div>
@@ -686,3 +686,6 @@ function StatusBadge({ status }: { status: string }) {
   const s = complianceColors[status] || complianceColors.not_screened;
   return <span style={{ display: 'inline-block', padding: `${spacing[1]} ${spacing[3]}`, borderRadius: radius.lg, backgroundColor: s.bg, color: s.text, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold }}>{s.label}</span>;
 }
+
+
+
