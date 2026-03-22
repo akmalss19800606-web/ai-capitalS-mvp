@@ -389,7 +389,7 @@ function PurificationTab() {
   const calculate = async () => {
     try {
       const r = await apiRequest('/islamic-finance/purification', {
-        method: 'POST', body: JSON.stringify({ total_income: parseFloat(totalIncome) || 0, haram_percentage: parseFloat(haramPct) || 0 }),
+        method: 'POST', body: JSON.stringify({ position_name: 'Manual purification', haram_pct: parseFloat(haramPct) || 0, dividend_amount: parseFloat(totalIncome) || 0, method: 'dividend_cleansing' }),
       });
       setResult(r); load();
     } catch {}
@@ -686,6 +686,8 @@ function StatusBadge({ status }: { status: string }) {
   const s = complianceColors[status] || complianceColors.not_screened;
   return <span style={{ display: 'inline-block', padding: `${spacing[1]} ${spacing[3]}`, borderRadius: radius.lg, backgroundColor: s.bg, color: s.text, fontSize: typography.fontSize.xs, fontWeight: typography.fontWeight.semibold }}>{s.label}</span>;
 }
+
+
 
 
 
