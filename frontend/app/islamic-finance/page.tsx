@@ -405,7 +405,7 @@ function PurificationTab() {
         </div>
         <button onClick={calculate} style={{ ...btnPrimary, marginTop: spacing[4] }}>Р Р°СЃСЃС‡РёС‚Р°С‚СЊ</button>
         {result && <div style={{ marginTop: spacing[4], padding: spacing[4], backgroundColor: colors.warning[50], borderRadius: radius.lg }}>
-          <div style={{ fontWeight: typography.fontWeight.bold }}>РЎСѓРјРјР° Рє РѕС‡РёСЃС‚РєРµ: {result.purification_amount_display || result.purification_amount}</div>
+          <div style={{ fontWeight: typography.fontWeight.bold }}>РЎСѓРјРјР° Рє РѕС‡РёСЃС‚РєРµ: {result.purification_amount}</div>
           <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[2] }}>РќР°РїСЂР°РІРёС‚СЊ РЅР° Р±Р»Р°РіРѕС‚РІРѕСЂРёС‚РµР»СЊРЅРѕСЃС‚СЊ (sadaqah)</div>
         </div>}
       </div>
@@ -467,8 +467,8 @@ function PoSCTab() {
               <span style={{ fontWeight: typography.fontWeight.semibold }}>{r.target_name}</span>
               <StatusBadge status={r.compliance_status || 'not_screened'} />
             </div>
-            {r.report_json && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
-              РЎС‚Р°РЅРґР°СЂС‚: {r.report_json.standard} | РЎРєРѕСЂ: {r.report_json.score}
+            {r.score && <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>
+              РЎС‚Р°РЅРґР°СЂС‚: {r.status} | РЎРєРѕСЂ: {r.score}
             </div>}
           </div>
         ))
@@ -504,7 +504,7 @@ function SSBTab() {
         {members.map((m: any) => (
           <div key={m.id} style={cardStyle}>
             <div style={{ fontWeight: typography.fontWeight.semibold }}>{m.full_name}</div>
-            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.title} В· {m.specialization}</div>
+            <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary }}>{m.qualifications} В· {(m.is_active ? 'Active' : 'Inactive')}</div>
           </div>
         ))}
         {members.length === 0 && <div style={{ color: semantic.textSecondary }}>РќРµС‚ РґР°РЅРЅС‹С…</div>}
@@ -513,9 +513,9 @@ function SSBTab() {
       <h3 style={sectionTitle}>Р¤Р°С‚РІС‹</h3>
       {fatwas.map((f: any) => (
         <div key={f.id} style={cardStyle}>
-          <div style={{ fontWeight: typography.fontWeight.semibold }}>{f.title}</div>
-          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>{f.topic} В· {f.status}</div>
-          {f.summary && <div style={{ marginTop: spacing[2], fontSize: typography.fontSize.sm }}>{f.summary}</div>}
+          <div style={{ fontWeight: typography.fontWeight.semibold }}>{f.subject}</div>
+          <div style={{ fontSize: typography.fontSize.sm, color: semantic.textSecondary, marginTop: spacing[1] }}>{f.product_type} В· {f.decision}</div>
+          {f.reasoning && <div style={{ marginTop: spacing[2], fontSize: typography.fontSize.sm }}>{f.reasoning}</div>}
         </div>
       ))}
       {fatwas.length === 0 && <div style={{ ...cardStyle, color: semantic.textSecondary }}>РќРµС‚ С„Р°С‚РІ</div>}
@@ -645,8 +645,8 @@ function ReferenceTab() {
       <div style={cardStyle}>
         {haramList.map((item: any, i: number) => (
           <div key={i} style={{ padding: spacing[2], borderBottom: i < haramList.length - 1 ? `1px solid ${semantic.border}` : 'none' }}>
-            <span>рџљ« {item.name_ru}</span> <span style={{ color: semantic.textSecondary }}>({item.name_en})</span>
-            {item.description && <div style={{ fontSize: typography.fontSize.xs, color: semantic.textSecondary }}>{item.description}</div>}
+            <span>рџљ« {item.name_ru}</span> <span style={{ color: semantic.textSecondary }}>({item.name_uz})</span>
+            {item.reason && <div style={{ fontSize: typography.fontSize.xs, color: semantic.textSecondary }}>{item.reason}</div>}
           </div>
         ))}
         {haramList.length === 0 && <div style={{ color: semantic.textSecondary }}>РќРµС‚ РґР°РЅРЅС‹С…</div>}
