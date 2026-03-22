@@ -124,16 +124,16 @@ function ScreeningTab() {
     if (!companyName) return;
     setLoading(true); setResult(null);
     try {
-      let endpoint = '/islamic-finance/screening';
-      const body: any = { company_name: companyName, industry, description };
-      if (mode === 'industry') { endpoint = '/islamic-finance/screening'; }
-      else if (mode === 'financial') { endpoint = '/islamic-finance/screening'; }
-      if (mode !== 'industry') {
-        body.total_assets = parseFloat(totalAssets) || 0;
-        body.total_debt = parseFloat(totalDebt) || 0;
-        body.total_revenue = parseFloat(totalRevenue) || 0;
-        body.haram_revenue = parseFloat(haramRevenue) || 0;
-      }
+      const endpoint = '/islamic-finance/screening';
+      const body: any = {
+        company_name: companyName, ticker: '', standard: 'ALL',
+        total_assets: parseFloat(totalAssets) || 0,
+        total_debt: parseFloat(totalDebt) || 0,
+        total_revenue: parseFloat(totalRevenue) || 0,
+        haram_revenue: parseFloat(haramRevenue) || 0,
+        market_cap: parseFloat(totalAssets) || 0,
+        interest_bearing_securities: 0, cash_and_interest: 0, receivables: 0,
+      };
       const res = await apiRequest(endpoint, { method: 'POST', body: JSON.stringify(body) });
       setResult(res);
     } catch { setResult({ error: 'РћС€РёР±РєР° РїСЂРё СЃРєСЂРёРЅРёРЅРіРµ' }); }
