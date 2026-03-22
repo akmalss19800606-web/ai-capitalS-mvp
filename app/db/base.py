@@ -71,3 +71,8 @@ from app.db.models.islamic_finance import (
 from app.db.models.organization_models import (
     Organization, ChartOfAccounts, BalanceEntry, ImportSession,
 )
+# === Islamic Finance Stage 1 ===
+from app.db.models.islamic_stage1 import (
+    IslamicProfile, ZakatCalculationV2, IslamicGlossaryTerm,
+    ShariahScreeningCompany, ShariahScreeningResult, IslamicReferenceRegistry,
+)
