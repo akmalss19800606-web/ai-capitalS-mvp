@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { GlossaryTerm } from "./api";
 import StandardRefBadge from "./StandardRefBadge";
+import { C } from "./IslamicFinanceLayout";
 
 interface Props {
   term: GlossaryTerm;
@@ -21,36 +22,33 @@ export default function GlossaryTooltip({ term, children }: Props) {
   }, []);
 
   return (
-    <span ref={ref} className="relative inline-block">
+    <span ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <span
         onClick={() => setOpen((v) => !v)}
-        className="cursor-pointer border-b border-dashed border-emerald-500 text-emerald-700 hover:text-emerald-900 transition-colors"
+        style={{
+          cursor: "pointer", borderBottom: "1px dashed",
+          borderColor: C.primary, color: C.primary,
+          transition: "color 0.15s",
+        }}
       >
         {children}
       </span>
       {open && (
-        <div className="absolute z-50 left-0 top-full mt-2 w-72 rounded-2xl border border-gray-100 bg-white shadow-xl p-4">
-          <div className="flex items-start justify-between gap-2 mb-2">
+        <div style={{
+          position: "absolute", zIndex: 50, left: 0, top: "100%",
+          marginTop: 8, width: 288, borderRadius: 16,
+          border: `1px solid ${C.border}`, background: C.card,
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)", padding: 16,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">{term.term_ru}</p>
-              {term.term_ar && (
-                <p className="text-sm text-gray-400" dir="rtl">{term.term_ar}</p>
-              )}
-              {term.transliteration && (
-                <p className="text-xs text-gray-400 italic">{term.transliteration}</p>
-              )}
+              <p style={{ fontWeight: 600, fontSize: 14, color: C.text }}>{term.term_ru}</p>
+              <p style={{ fontSize: 16, color: C.primary, fontFamily: "serif" }}>{term.term_arabic}</p>
             </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="text-gray-300 hover:text-gray-500 text-lg leading-none shrink-0"
-            >×</button>
+            <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: C.muted }}>✕</button>
           </div>
-          <p className="text-xs text-gray-600 leading-relaxed">{term.definition_ru}</p>
-          {term.standard_ref && (
-            <div className="mt-3">
-              <StandardRefBadge code={term.standard_ref} org={term.standard_org} />
-            </div>
-          )}
+          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, marginBottom: 8 }}>{term.definition}</p>
+          {term.aaoifi_ref && <StandardRefBadge standard={term.aaoifi_ref} />}
         </div>
       )}
     </span>
