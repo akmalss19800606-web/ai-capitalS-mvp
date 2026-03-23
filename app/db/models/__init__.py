@@ -21,3 +21,5 @@ from app.db.models.islamic_finance import (
     IslamicContract, PoSCReport, SSBFatwa, SSBMember,
     IslamicGlossary, HaramIndustryDB, IslamicP2PProject,
 )
+
+from app.db.models.islamic_stage2 import IslamicProductCatalog, IncomePurificationCase, CompanyImportBatch

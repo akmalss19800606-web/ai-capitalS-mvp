@@ -269,3 +269,9 @@ app.include_router(screening_router,        prefix="/api/v1/islamic/screening", 
 app.include_router(glossary_router,         prefix="/api/v1/islamic/glossary",   tags=["Islamic: Glossary"])
 app.include_router(islamic_profile_router,  prefix="/api/v1/islamic/profile",    tags=["Islamic: Profile"])
 app.include_router(islamic_reference_router,prefix="/api/v1/islamic/references", tags=["Islamic: References"])
+from app.api.v1.routers.islamic_products_router import router as islamic_products_router
+from app.api.v1.routers.purification_router import router as purification_router
+from app.api.v1.routers.company_admin_router import router as company_admin_router
+app.include_router(islamic_products_router,  prefix="/api/v1",                         tags=["Islamic: Products"])
+app.include_router(purification_router,      prefix="/api/v1",                         tags=["Islamic: Purification"])
+app.include_router(company_admin_router,     prefix="/api/v1",                         tags=["Islamic: Admin"])
