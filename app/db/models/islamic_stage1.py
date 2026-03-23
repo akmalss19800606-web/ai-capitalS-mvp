@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Numeric, Boolean, Date, Text, ForeignKey, UniqueConstraint, CheckConstraint
+from sqlalchemy import Column, String, Numeric, Boolean, Date, Text, Integer, ForeignKey, UniqueConstraint, CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy import DateTime
 from sqlalchemy.orm import relationship
@@ -10,7 +10,7 @@ class IslamicProfile(Base):
     __tablename__ = "islamic_profile"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     mode = Column(String(20), nullable=False, default="individual")
     default_currency = Column(String(3), nullable=False, default="UZS")
     language = Column(String(5), nullable=False, default="ru")
@@ -98,7 +98,7 @@ class ShariahScreeningResult(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id = Column(UUID(as_uuid=True), ForeignKey("shariah_screening_company.id"))
-    requested_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    requested_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     analysis_date = Column(Date, nullable=False)
     score = Column(Numeric(3, 1), nullable=False)
     status = Column(String(20), nullable=False)
