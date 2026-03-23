@@ -171,6 +171,76 @@ export interface P2PInvestment {
   created_at: string;
   status: "active" | "completed" | "cancelled";
 }
+// --- Products Types ---
+export interface IslamicProduct {
+  id: string;
+  slug: string;
+  name_ru: string;
+  name_ar?: string;
+  transliteration?: string;
+  product_type: string;
+  category: string;
+  description_ru?: string;
+  risk_level?: string;
+  aaoifi_ref?: string;
+}
+// --- PoSC Types ---
+export interface PoSCCertificate {
+  id: string;
+  company_name: string;
+  certificate_number: string;
+  issue_date: string;
+  expiry_date: string;
+  status: "active" | "expired" | "revoked";
+  hash: string;
+  standard_applied: string;
+  score: number;
+  issued_by: string;
+}
+// --- Sukuk Types ---
+export interface SukukItem {
+  id: number;
+  name: string;
+  name_ar?: string;
+  sukuk_type: "ijara" | "mudaraba" | "musharaka" | "murabaha" | "wakala" | "hybrid";
+  issuer: string;
+  nominal_value: number;
+  currency: string;
+  expected_return_pct: number;
+  maturity_date: string;
+  rating?: string;
+  shariah_status: "compliant" | "pending" | "noncompliant";
+  status: "active" | "matured" | "defaulted";
+  created_at: string;
+}
+// --- Takaful Types ---
+export interface TakafulPlan {
+  id: number;
+  name: string;
+  takaful_type: "general" | "family" | "health" | "motor" | "property";
+  provider: string;
+  coverage_amount: number;
+  monthly_contribution: number;
+  currency: string;
+  description?: string;
+  shariah_status: "compliant" | "pending";
+  status: "active" | "inactive";
+  created_at: string;
+}
+// --- Waqf Types ---
+export interface WaqfProject {
+  id: number;
+  title: string;
+  waqf_type: "cash" | "property" | "shares" | "educational" | "health";
+  description: string;
+  target_amount: number;
+  raised_amount: number;
+  currency: string;
+  beneficiaries: string;
+  status: "active" | "completed" | "draft";
+  progress_pct: number;
+  created_at: string;
+}
 // --- API calls ---
 export const islamicApi = {
   getNisab: () => get<NisabData>("/api/v1/islamic/zakat/nisab"),
@@ -222,4 +292,5 @@ export const islamicApi = {
   investP2P: (data: { project_id: number; amount: number; currency: string }) =>
     post<P2PInvestment>("/api/v1/islamic/p2p/invest", data),
   getP2PInvestments: () => get<P2PInvestment[]>("/api/v1/islamic/p2p/investments"),
+  
 };
