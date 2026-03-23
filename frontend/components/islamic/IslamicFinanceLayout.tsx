@@ -31,6 +31,9 @@ const NAV_ITEMS = [
     { href: "/islamic-finance/p2p", label: "P2P Проекты", icon: "🤝" },
   { href: "/islamic-finance/glossary", label: "Глоссарий", icon: "📖" },
   { href: "/islamic-finance/references", label: "Стандарты", icon: "📜" },
+    { href: "/islamic-finance/sukuk", label: "Сукук", icon: "📊" },
+  { href: "/islamic-finance/takaful", label: "Такафул", icon: "🛡️" },
+  { href: "/islamic-finance/waqf", label: "Вакф", icon: "🏛️" },
     { href: "/islamic-finance/profile", label: "Профиль", icon: "⚙️" },
 ];
 
