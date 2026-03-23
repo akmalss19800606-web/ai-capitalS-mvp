@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { islamicApi, ZakatResult } from "./api";
 import ZakatResultCard from "./ZakatResultCard";
+import { C } from "./IslamicFinanceLayout";
 
 const ASSET_CATEGORIES = [
   { key: "cash",        label: "💵 Наличные и банковские счета" },
@@ -29,54 +30,49 @@ export default function ZakatCalculatorForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    setResult(null);
-
+    setLoading(true); setError(""); setResult(null);
     const assetList = ASSET_CATEGORIES
       .filter(c => assets[c.key] && Number(assets[c.key]) > 0)
       .map(c => ({ category: c.key, amount_uzs: Number(assets[c.key]) }));
-
     if (assetList.length === 0) {
       setError("Введите хотя бы одну категорию активов");
-      setLoading(false);
-      return;
+      setLoading(false); return;
     }
-
     try {
       const res = await islamicApi.calculateZakat({
-        zakat_type: zakatType,
-        assets: assetList,
+        zakat_type: zakatType, assets: assetList,
         liabilities_uzs: Number(liabilities) || 0,
         mode: localStorage.getItem("islamic_mode") || "individual",
       });
       setResult(res);
-    } catch (e: any) {
+    } catch {
       setError("Ошибка расчёта. Проверьте авторизацию.");
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  const inputStyle = {
+    width: "100%", padding: "10px 12px", borderRadius: 8,
+    border: `1px solid ${C.border}`, fontSize: 14, boxSizing: "border-box" as const,
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-5">
-        <h2 className="text-lg font-semibold text-gray-800">🕌 Калькулятор закята</h2>
-
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Тип закята */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Тип закята</label>
-          <div className="grid grid-cols-2 gap-2">
+          <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>Тип закята</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {ZAKAT_TYPES.map(t => (
               <button
-                key={t.key}
-                type="button"
+                key={t.key} type="button"
                 onClick={() => setZakatType(t.key)}
-                className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
-                  zakatType === t.key
-                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                    : "border-gray-200 text-gray-600 hover:border-emerald-200"
-                }`}
+                style={{
+                  padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                  border: `1px solid ${zakatType === t.key ? C.primary : C.border}`,
+                  background: zakatType === t.key ? C.infoBg : C.card,
+                  color: zakatType === t.key ? C.primary : C.muted,
+                  cursor: "pointer", transition: "all 0.2s",
+                }}
               >
                 {t.label}
               </button>
@@ -86,18 +82,16 @@ export default function ZakatCalculatorForm() {
 
         {/* Активы */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Активы (в UZS)</label>
-          <div className="space-y-2">
+          <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>Активы (в UZS)</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {ASSET_CATEGORIES.map(c => (
-              <div key={c.key} className="flex items-center gap-3">
-                <span className="w-48 text-sm text-gray-600 shrink-0">{c.label}</span>
+              <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ width: 200, fontSize: 13, color: C.muted, flexShrink: 0 }}>{c.label}</span>
                 <input
-                  type="number"
-                  min="0"
-                  placeholder="0"
+                  type="number" min="0" placeholder="0"
                   value={assets[c.key] || ""}
                   onChange={e => setAssets(prev => ({ ...prev, [c.key]: e.target.value }))}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                  style={{ ...inputStyle, flex: 1 }}
                 />
               </div>
             ))}
@@ -106,23 +100,26 @@ export default function ZakatCalculatorForm() {
 
         {/* Обязательства */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Обязательства (долги, в UZS)</label>
+          <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 8 }}>Обязательства (долги, в UZS)</label>
           <input
-            type="number"
-            min="0"
-            placeholder="0"
+            type="number" min="0" placeholder="0"
             value={liabilities}
             onChange={e => setLiabilities(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            style={inputStyle}
           />
         </div>
 
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && (
+          <p style={{ fontSize: 13, color: C.error, background: C.errorBg, padding: "8px 12px", borderRadius: 8 }}>{error}</p>
+        )}
 
         <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          type="submit" disabled={loading}
+          style={{
+            width: "100%", padding: "12px 16px", borderRadius: 8,
+            background: loading ? C.muted : C.primary, color: "#fff",
+            border: "none", fontSize: 14, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer",
+          }}
         >
           {loading ? "Рассчитываю..." : "Рассчитать закят"}
         </button>
