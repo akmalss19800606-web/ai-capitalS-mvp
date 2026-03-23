@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { islamicApi, CompanyItem } from "./api";
+import { C } from "./IslamicFinanceLayout";
 
 interface Props {
   onSelect: (company: CompanyItem | null) => void;
@@ -34,25 +35,31 @@ export default function CompanySearchInput({ onSelect }: Props) {
   }, [query, marketType]);
 
   return (
-    <div ref={ref} className="space-y-2">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ position: "relative", flex: 1 }}>
           <input
             type="text"
             placeholder="Поиск по названию или тикеру..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onFocus={() => results.length > 0 && setOpen(true)}
-            className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+            style={{
+              width: "100%", padding: "10px 16px", borderRadius: 8,
+              border: `1px solid ${C.border}`, fontSize: 14, boxSizing: "border-box",
+            }}
           />
           {loading && (
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">⏳</span>
+            <span style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", fontSize: 12, color: C.muted }}>⏳</span>
           )}
         </div>
         <select
           value={marketType}
           onChange={e => setMarketType(e.target.value)}
-          className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:border-emerald-400 focus:outline-none"
+          style={{
+            padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.border}`,
+            fontSize: 14, background: C.card,
+          }}
         >
           <option value="">Все площадки</option>
           <option value="uzse">UzSE</option>
@@ -62,22 +69,31 @@ export default function CompanySearchInput({ onSelect }: Props) {
       </div>
 
       {open && results.length > 0 && (
-        <div className="rounded-xl border border-gray-100 bg-white shadow-lg overflow-hidden z-10">
+        <div style={{
+          border: `1px solid ${C.border}`, borderRadius: 8, background: C.card,
+          maxHeight: 320, overflowY: "auto", boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        }}>
           {results.slice(0, 8).map(c => (
             <button
               key={c.id}
               onClick={() => { onSelect(c); setQuery(c.name_ru); setOpen(false); }}
-              className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors border-b border-gray-50 last:border-0"
+              style={{
+                width: "100%", textAlign: "left", padding: "12px 16px",
+                borderBottom: `1px solid ${C.bg}`, background: "transparent",
+                border: "none", cursor: "pointer", display: "block",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = C.infoBg)}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-800">{c.name_ru}</p>
-                  {c.name_en && <p className="text-xs text-gray-400">{c.name_en}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  {c.ticker && <span className="text-xs font-mono bg-gray-100 px-1.5 py-0.5 rounded">{c.ticker}</span>}
-                  <span className="text-xs text-gray-400 uppercase">{c.market_type}</span>
-                </div>
+              <div style={{ fontWeight: 500, color: C.text, fontSize: 14 }}>{c.name_ru}</div>
+              {c.name_en && <div style={{ fontSize: 12, color: C.muted }}>{c.name_en}</div>}
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                {c.ticker && (
+                  <span style={{ fontSize: 11, fontFamily: "monospace", background: C.infoBg, color: C.primary, padding: "1px 6px", borderRadius: 4 }}>
+                    {c.ticker}
+                  </span>
+                )}
+                <span style={{ fontSize: 11, color: C.muted }}>{c.market_type}</span>
               </div>
             </button>
           ))}
