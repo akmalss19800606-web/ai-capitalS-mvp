@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi, SukukItem as ApiSukuk } from "@/components/islamic/api";
 
 interface SukukItem {
   id: number;
@@ -30,7 +31,23 @@ const typeLabels: Record<string, string> = {
 export default function SukukPage() {
   const router = useRouter();
   const [filter, setFilter] = useState<string>("all");
-  const filtered = filter === "all" ? MOCK_SUKUK : MOCK_SUKUK.filter(s => s.type === filter);
+    const [sukuk, setSukuk] = useState<SukukItem[]>(MOCK_SUKUK);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    islamicApi.getSukukList(filter !== "all" ? filter : undefined)
+      .then(data => {
+        const mapped = data.map((s: ApiSukuk) => ({
+          id: s.id, name: s.name, type: s.sukuk_type as SukukItem["type"],
+          issuer: s.issuer, nominal: s.nominal_value, currency: s.currency,
+          coupon_rate: s.expected_return_pct, maturity_date: s.maturity_date,
+          rating: s.rating || "", status: s.status as SukukItem["status"],
+        }));
+        if (mapped.length > 0) setSukuk(mapped);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [filter]);
+  const filtered = filter === "all" ? sukuk : sukuk.filter(s => s.type === filter);
 
   const fmt = (n: number) => n.toLocaleString("ru-RU");
   const statusStyle = (s: string) => ({
