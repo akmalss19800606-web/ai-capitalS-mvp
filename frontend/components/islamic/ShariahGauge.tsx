@@ -35,11 +35,11 @@ export default function ShariahGauge({ score, size = 200, label }: ShariahGaugeP
   };
 
   const getLabel = (s: number) => {
-    if (s >= 4.5) return "\u041e\u0442\u043b\u0438\u0447\u043d\u043e";
-    if (s >= 4) return "\u0425\u043e\u0440\u043e\u0448\u043e";
-    if (s >= 3) return "\u0414\u043e\u043f\u0443\u0441\u0442\u0438\u043c\u043e";
-    if (s >= 2) return "\u041f\u043e\u0434 \u0432\u043e\u043f\u0440\u043e\u0441\u043e\u043c";
-    return "\u041d\u0435 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0443\u0435\u0442";
+    if (s >= 4.5) return "Отлично";
+    if (s >= 4) return "Хорошо";
+    if (s >= 3) return "Допустимо";
+    if (s >= 2) return "Под вопросом";
+    return "Не соответствует";
   };
 
   const color = getColor(clampedScore);
@@ -63,21 +63,21 @@ export default function ShariahGauge({ score, size = 200, label }: ShariahGaugeP
         {/* Needle dot */}
         <circle cx={nx} cy={ny} r={strokeW * 0.6} fill={color} />
         {/* Score text */}
-        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={size * 0.18} fontWeight="700" fill={color}>
+        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={size * 0.16} fontWeight={700} fill={color}>
           {clampedScore.toFixed(1)}
         </text>
-        <text x={cx} y={cy + size * 0.1} textAnchor="middle" fontSize={size * 0.07} fill={C.muted}>
-          {"\u0438\u0437 5.0"}
+        <text x={cx} y={cy + size * 0.09} textAnchor="middle" fontSize={size * 0.07} fill={C.muted}>
+          {"из 5.0"}
         </text>
       </svg>
-      <div style={{ marginTop: 4, fontSize: size * 0.07, fontWeight: 600, color, textAlign: "center" }}>
+      <div style={{ fontSize: size * 0.08, fontWeight: 600, color, marginTop: 4 }}>
         {statusLabel}
       </div>
       {/* Scale labels */}
-      <div style={{ display: "flex", justifyContent: "space-between", width: size * 0.8, marginTop: 2 }}>
-        <span style={{ fontSize: 10, color: C.error }}>0</span>
-        <span style={{ fontSize: 10, color: C.warning }}>2.5</span>
-        <span style={{ fontSize: 10, color: C.success }}>5</span>
+      <div style={{ display: "flex", justifyContent: "space-between", width: size * 0.7, marginTop: 2 }}>
+        <span style={{ fontSize: size * 0.055, color: C.muted }}>0</span>
+        <span style={{ fontSize: size * 0.055, color: C.muted }}>2.5</span>
+        <span style={{ fontSize: size * 0.055, color: C.muted }}>5</span>
       </div>
     </div>
   );
