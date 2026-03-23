@@ -1,30 +1,24 @@
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
 function authHeaders(): HeadersInit {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : { "Content-Type": "application/json" };
 }
-
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { headers: authHeaders() });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { method: "POST", headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-
 async function put<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
-
 // --- Types ---
-
 export interface NisabData {
   nisab_gold_grams: number;
   gold_price_uzs: number;
@@ -34,12 +28,10 @@ export interface NisabData {
   rate_date: string;
   source: string;
 }
-
 export interface ZakatAssetItem {
   category: string;
   amount_uzs: number;
 }
-
 export interface ZakatResult {
   calculation_date: string;
   assets_total_uzs: number;
@@ -54,7 +46,6 @@ export interface ZakatResult {
   explanation: string;
   record_id?: string;
 }
-
 export interface ZakatHistoryItem {
   id: string;
   calculation_date: string;
@@ -65,7 +56,6 @@ export interface ZakatHistoryItem {
   is_zakat_due: boolean;
   created_at: string;
 }
-
 export interface CompanyItem {
   id: string;
   name_ru: string;
@@ -75,7 +65,6 @@ export interface CompanyItem {
   sector?: string;
   is_active: boolean;
 }
-
 export interface ScreeningResult {
   id: string;
   company_name: string;
@@ -90,7 +79,6 @@ export interface ScreeningResult {
   debt_ratio?: number;
   interest_income_pct?: number;
 }
-
 export interface GlossaryTerm {
   id: string;
   slug: string;
@@ -102,7 +90,6 @@ export interface GlossaryTerm {
   standard_ref?: string;
   standard_org?: string;
 }
-
 export interface ReferenceItem {
   id: string;
   registry_type: string;
@@ -112,7 +99,6 @@ export interface ReferenceItem {
   description_ru?: string;
   topic?: string;
 }
-
 export interface IslamicProfile {
   id: string;
   user_id: string;
@@ -121,7 +107,6 @@ export interface IslamicProfile {
   language: string;
   jurisdiction: string;
 }
-
 export interface PurificationRequest {
   portfolio_id?: number;
   position_name: string;
@@ -130,7 +115,6 @@ export interface PurificationRequest {
   method: string;
   notes?: string;
 }
-
 export interface PurificationResult {
   id: number;
   portfolio_id?: number;
@@ -142,15 +126,57 @@ export interface PurificationResult {
   notes?: string;
   created_at: string;
 }
-
+// --- SSB Types ---
+export interface SSBMember {
+  id: number;
+  name: string;
+  name_ar: string;
+  role: string;
+  specialization: string;
+  experience: string;
+  is_active: boolean;
+}
+export interface Fatwa {
+  id: number;
+  number: string;
+  title: string;
+  date: string;
+  category: string;
+  status: "active" | "revised" | "superseded";
+  summary: string;
+  issued_by: string;
+}
+// --- P2P Types ---
+export interface P2PProject {
+  id: number;
+  title: string;
+  type: "mudaraba" | "musharaka" | "murabaha" | "ijara";
+  description: string;
+  target_amount: number;
+  raised_amount: number;
+  currency: string;
+  expected_return_pct: number;
+  duration_months: number;
+  risk_level: "low" | "medium" | "high";
+  shariah_status: "compliant" | "pending";
+  status: "active" | "funded" | "closed" | "draft";
+  created_at: string;
+  deadline?: string;
+}
+export interface P2PInvestment {
+  id: number;
+  project_id: number;
+  amount: number;
+  currency: string;
+  created_at: string;
+  status: "active" | "completed" | "cancelled";
+}
 // --- API calls ---
-
 export const islamicApi = {
   getNisab: () => get<NisabData>("/api/v1/islamic/zakat/nisab"),
   calculateZakat: (data: { zakat_type: string; assets: Record<string, string> | ZakatAssetItem[]; liabilities?: string | number; liabilities_uzs?: number; mode?: string }) =>
     post<ZakatResult>("/api/v1/islamic/zakat/calculate", data),
   getZakatHistory: () => get<ZakatHistoryItem[]>("/api/v1/islamic/zakat/history"),
-
   getCompanies: (search?: string, market_type?: string) => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
@@ -160,11 +186,9 @@ export const islamicApi = {
   screenCompany: (data: { company_name?: string; company_id?: string; haram_revenue_pct?: number; debt_ratio?: number; interest_income_pct?: number; mode?: string }) =>
     post<ScreeningResult>("/api/v1/islamic/screening/screen", data),
   getScreeningResults: () => get<ScreeningResult[]>("/api/v1/islamic/screening/results"),
-
   calculatePurification: (data: PurificationRequest) =>
     post<PurificationResult>("/api/v1/islamic-finance/purification", data),
   getPurificationHistory: () => get<PurificationResult[]>("/api/v1/islamic-finance/purification"),
-
   getGlossary: (category?: string, search?: string) => {
     const params = new URLSearchParams();
     if (category) params.set("category", category);
@@ -179,4 +203,23 @@ export const islamicApi = {
   getProfile: () => get<IslamicProfile>("/api/v1/islamic/profile"),
   updateProfile: (data: { mode: string; default_currency: string; language: string }) =>
     put<IslamicProfile>("/api/v1/islamic/profile", data),
+  // SSB API
+  getSSBMembers: () => get<SSBMember[]>("/api/v1/islamic/ssb/members"),
+  getFatwas: (category?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (category) params.set("category", category);
+    if (status) params.set("status", status);
+    return get<Fatwa[]>(`/api/v1/islamic/ssb/fatwas?${params}`);
+  },
+  // P2P API
+  getP2PProjects: (type?: string, status?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    if (status) params.set("status", status);
+    return get<P2PProject[]>(`/api/v1/islamic/p2p/projects?${params}`);
+  },
+  getP2PProject: (id: number) => get<P2PProject>(`/api/v1/islamic/p2p/projects/${id}`),
+  investP2P: (data: { project_id: number; amount: number; currency: string }) =>
+    post<P2PInvestment>("/api/v1/islamic/p2p/invest", data),
+  getP2PInvestments: () => get<P2PInvestment[]>("/api/v1/islamic/p2p/investments"),
 };
