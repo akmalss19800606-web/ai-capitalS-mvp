@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { islamicApi, NisabData } from "./api";
 import CurrencyDisplay from "./CurrencyDisplay";
+import { C } from "./IslamicFinanceLayout";
 
 export default function NisabCard() {
   const [data, setData] = useState<NisabData | null>(null);
@@ -14,46 +15,37 @@ export default function NisabCard() {
   }, []);
 
   if (loading) return (
-    <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm animate-pulse">
-      <div className="h-4 bg-gray-100 rounded w-1/3 mb-3" />
-      <div className="h-8 bg-gray-100 rounded w-2/3" />
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+      <div style={{ height: 16, background: "#f3f4f6", borderRadius: 8, width: "33%", marginBottom: 12 }} />
+      <div style={{ height: 32, background: "#f3f4f6", borderRadius: 8, width: "66%" }} />
     </div>
   );
 
   if (!data) return null;
 
   return (
-    <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
-      <div className="flex items-start justify-between">
+    <div style={{
+      background: "linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%)",
+      borderRadius: 16,
+      border: `1px solid ${C.border}`,
+      padding: 24,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+    }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide mb-1">
+          <p style={{ fontSize: 11, fontWeight: 500, color: C.primary, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>
             Нисаб сегодня · AAOIFI (85г золота)
           </p>
-          <div className="text-2xl font-bold text-gray-900">
+          <div style={{ fontSize: 22, fontWeight: 700, color: C.text }}>
             <CurrencyDisplay uzs={data.nisab_uzs} usd={data.nisab_usd} />
           </div>
         </div>
-        <div className="text-3xl">🕌</div>
+        <div style={{ fontSize: 28 }}>🕌</div>
       </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl bg-white border border-emerald-100 p-3">
-          <p className="text-xs text-gray-500 mb-0.5">Цена золота (1г)</p>
-          <p className="font-semibold text-gray-800">
-            {new Intl.NumberFormat("ru-RU").format(data.gold_price_uzs)} UZS
-          </p>
-        </div>
-        <div className="rounded-xl bg-white border border-emerald-100 p-3">
-          <p className="text-xs text-gray-500 mb-0.5">Курс USD/UZS</p>
-          <p className="font-semibold text-gray-800">
-            {new Intl.NumberFormat("ru-RU").format(data.exchange_rate_uzs)}
-          </p>
-        </div>
+      <div style={{ marginTop: 16, display: "flex", gap: 16, fontSize: 12, color: C.muted }}>
+        <span>Золото: {new Intl.NumberFormat("ru-RU").format(data.gold_price_per_gram_uzs)} UZS/г</span>
+        <span>Обновлено: {new Date(data.updated_at).toLocaleDateString("ru-RU")}</span>
       </div>
-
-      <p className="mt-3 text-xs text-gray-400">
-        Данные на {data.rate_date} · источник: {data.source}
-      </p>
     </div>
   );
 }
