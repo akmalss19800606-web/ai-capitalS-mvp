@@ -1,5 +1,6 @@
 "use client";
 import { useRef } from "react";
+import { C } from "./IslamicFinanceLayout";
 
 const CATEGORIES = [
   { key: "", label: "Все" },
@@ -24,40 +25,42 @@ export default function GlossarySearchFilter({
   const inputRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ position: "relative" }}>
+        <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
         <input
           ref={inputRef}
           type="text"
           placeholder="Поиск термина на русском или транслитерацией..."
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 pl-9 pr-10 py-2.5 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400 bg-white"
+          style={{
+            width: "100%", padding: "10px 12px 10px 36px", borderRadius: 12,
+            border: `1px solid ${C.border}`, fontSize: 14, color: C.text,
+            background: C.card, outline: "none",
+          }}
         />
-        {search && (
-          <button
-            onClick={() => { onSearchChange(""); inputRef.current?.focus(); }}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg"
-          >×</button>
-        )}
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {CATEGORIES.map((c) => (
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+        {CATEGORIES.map((cat) => (
           <button
-            key={c.key}
-            onClick={() => onCategoryChange(c.key)}
-            className={
-              "px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors " +
-              (category === c.key
-                ? "bg-emerald-600 text-white border-emerald-600"
-                : "bg-white text-gray-600 border-gray-200 hover:border-emerald-300 hover:text-emerald-700")
-            }
-          >{c.label}</button>
+            key={cat.key}
+            onClick={() => onCategoryChange(cat.key)}
+            style={{
+              padding: "6px 14px", borderRadius: 20, fontSize: 12, fontWeight: 500,
+              border: `1px solid ${category === cat.key ? C.primary : C.border}`,
+              background: category === cat.key ? C.primary : C.card,
+              color: category === cat.key ? "#fff" : C.text,
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+          >
+            {cat.label}
+          </button>
         ))}
         {totalCount !== undefined && (
-          <span className="ml-auto text-xs text-gray-400">
-            {totalCount} {totalCount === 1 ? "термин" : totalCount < 5 ? "термина" : "терминов"}
+          <span style={{ fontSize: 12, color: C.muted, marginLeft: 8 }}>
+            {totalCount} терминов
           </span>
         )}
       </div>
