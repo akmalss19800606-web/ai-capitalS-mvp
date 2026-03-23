@@ -19,7 +19,7 @@ export default function ShariahStatusBadge({ status, score, size = "md" }: Props
       <span>{cfg.icon}</span>
       <span>{cfg.label}</span>
       {score !== undefined && (
-        <span className="ml-1 opacity-70">{score.toFixed(1)}/5</span>
+        <span className="ml-1 opacity-70">{Number(score).toFixed(1)}/5</span>
       )}
     </span>
   );

@@ -6,7 +6,7 @@ import StandardRefBadge from "./StandardRefBadge";
 interface Props { result: ScreeningResult; }
 
 const SCORE_COLOR = (s: number) =>
-  s >= 4 ? "text-emerald-600" : s >= 2.5 ? "text-amber-600" : "text-red-600";
+  Number(s) >= 4 ? "text-emerald-600" : Number(s) >= 2.5 ? "text-amber-600" : "text-red-600";
 
 export default function ScreeningResultCard({ result }: Props) {
   return (
@@ -20,7 +20,7 @@ export default function ScreeningResultCard({ result }: Props) {
           </div>
         </div>
         <div className={`text-4xl font-bold ${SCORE_COLOR(result.score)}`}>
-          {result.score.toFixed(1)}
+          {Number(result.score).toFixed(1)}
         </div>
       </div>
 
