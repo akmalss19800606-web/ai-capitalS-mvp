@@ -1,0 +1,152 @@
+[
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "SS No. 62",
+    "name_ru": "Шариатский стандарт AAOIFI № 62 — Скрининг ценных бумаг",
+    "name_en": "AAOIFI Sharia Standard No. 62 – Sharia-Compliant Securities Screening",
+    "description_ru": "Определяет критерии халяльного скрининга публичных компаний: допустимая доля харам-доходов не более 5%, долговая нагрузка не более 33% активов, исключение запрещённых отраслей. Содержит методологию расчёта очищения доходов. Различает структуры asset-based и asset-backed.",
+    "topic": "screening",
+    "document_ref": "https://aaoifi.com/ss-no-62",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "GS-1 (2024)",
+    "name_ru": "Руководящий стандарт AAOIFI GS-1 (ред. 2024) — Шариатский надзор",
+    "name_en": "AAOIFI Governance Standard GS-1 (2024) – Sharia Supervisory Board",
+    "description_ru": "Регулирует состав, независимость и функции Шариатского наблюдательного совета (ССБ): минимум 3 учёных, независимость от менеджмента, обязательный аудит шариатского соответствия. Пересмотрен в 2024 году.",
+    "topic": "governance",
+    "document_ref": "https://aaoifi.com/gs-1",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "GS-9",
+    "name_ru": "Руководящий стандарт AAOIFI GS-9 — Внутренний шариатский аудит",
+    "name_en": "AAOIFI Governance Standard GS-9 – Internal Sharia Audit",
+    "description_ru": "Устанавливает требования к внутреннему аудиту шариатского соответствия в исламских финансовых институтах. Определяет роль внутреннего аудитора, методологию проверки и порядок отчётности перед ССБ.",
+    "topic": "audit",
+    "document_ref": "https://aaoifi.com/gs-9",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "GS-11",
+    "name_ru": "Руководящий стандарт AAOIFI GS-11 — Политика вознаграждения",
+    "name_en": "AAOIFI Governance Standard GS-11 – Remuneration Policy",
+    "description_ru": "Регулирует политику вознаграждения сотрудников исламских финансовых институтов в соответствии с принципами шариата. Запрещает схемы стимулирования, поощряющие принятие избыточного риска.",
+    "topic": "governance",
+    "document_ref": "https://aaoifi.com/gs-11",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "GS-18",
+    "name_ru": "Руководящий стандарт AAOIFI GS-18 — Раскрытие информации",
+    "name_en": "AAOIFI Governance Standard GS-18 – Disclosure and Transparency",
+    "description_ru": "Определяет минимальные требования к раскрытию информации о шариатском соответствии продуктов, мнении ССБ и результатах шариатского аудита.",
+    "topic": "disclosure",
+    "document_ref": "https://aaoifi.com/gs-18",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "FAS No. 32",
+    "name_ru": "Финансовый стандарт AAOIFI FAS 32 — Иджара",
+    "name_en": "AAOIFI Financial Accounting Standard No. 32 – Ijarah",
+    "description_ru": "Устанавливает правила бухгалтерского учёта и отражения в отчётности операций иджары (исламской аренды) и её разновидностей.",
+    "topic": "accounting",
+    "document_ref": "https://aaoifi.com/fas-32",
+    "is_active": true
+  },
+  {
+    "registry_type": "aaoifi_standard",
+    "code": "SS No. 26",
+    "name_ru": "Шариатский стандарт AAOIFI № 26 — Такафул",
+    "name_en": "AAOIFI Sharia Standard No. 26 – Islamic Insurance (Takaful)",
+    "description_ru": "Регулирует структуры и условия договоров такафула (исламского страхования): модели мудараба, вакала и их комбинации.",
+    "topic": "insurance",
+    "document_ref": "https://aaoifi.com/ss-no-26",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-1",
+    "name_ru": "Стандарт IFSB-1 — Пруденциальные требования к достаточности капитала",
+    "name_en": "IFSB-1 – Capital Adequacy Standard for Institutions Offering Islamic Financial Services",
+    "description_ru": "Устанавливает минимальные требования к достаточности капитала исламских финансовых институтов. Используется как основа порога долговой нагрузки (33%) при шариатском скрининге.",
+    "topic": "capital_adequacy",
+    "document_ref": "https://ifsb.org/ifsb-1",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-3",
+    "name_ru": "Стандарт IFSB-3 — Корпоративное управление",
+    "name_en": "IFSB-3 – Guiding Principles on Corporate Governance for IIFS",
+    "description_ru": "Определяет принципы корпоративного управления для исламских финансовых институтов: роль совета директоров, права акционеров, функции ССБ, прозрачность отчётности.",
+    "topic": "governance",
+    "document_ref": "https://ifsb.org/ifsb-3",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-8",
+    "name_ru": "Стандарт IFSB-8 — Корпоративное управление Такафул-организаций",
+    "name_en": "IFSB-8 – Guiding Principles on Governance for Takaful Undertakings",
+    "description_ru": "Руководящие принципы корпоративного управления для такафул-организаций: структура участия страхователей, взаимодействие с ССБ и требования к раскрытию информации.",
+    "topic": "insurance_governance",
+    "document_ref": "https://ifsb.org/ifsb-8",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-22",
+    "name_ru": "Стандарт IFSB-22 — Базовые принципы регулирования исламских финансов",
+    "name_en": "IFSB-22 – Core Principles for Islamic Finance Regulation (Banking Segment)",
+    "description_ru": "Определяет основные принципы регулирования исламских банков: лицензирование, надзор, управление рисками, достаточность капитала.",
+    "topic": "regulation",
+    "document_ref": "https://ifsb.org/ifsb-22",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-30",
+    "name_ru": "Стандарт IFSB-30 — Цифровые финансовые услуги и DLT",
+    "name_en": "IFSB-30 – Exposure Draft on DLT and Digital Financial Services in Islamic Finance",
+    "description_ru": "Руководящие принципы применения технологии распределённого реестра (DLT, блокчейн) в исламских финансах: смарт-контракты, цифровые сукуки.",
+    "topic": "fintech",
+    "document_ref": "https://ifsb.org/ifsb-30",
+    "is_active": true
+  },
+  {
+    "registry_type": "ifsb_standard",
+    "code": "IFSB-31",
+    "name_ru": "Стандарт IFSB-31 — Криптоактивы в исламских финансах",
+    "name_en": "IFSB-31 – Regulatory and Supervisory Issues Pertaining to Crypto-Assets in Islamic Finance",
+    "description_ru": "Анализирует шариатские и регуляторные аспекты криптоактивов: их классификацию, применимость исламских контрактов к токенизированным активам.",
+    "topic": "crypto",
+    "document_ref": "https://ifsb.org/ifsb-31",
+    "is_active": true
+  },
+  {
+    "registry_type": "local_regulation",
+    "code": "CBU-IF-2024",
+    "name_ru": "Положение ЦБ Узбекистана об исламском банкинге (2024)",
+    "name_en": "Central Bank of Uzbekistan – Islamic Banking Regulation 2024",
+    "description_ru": "Нормативный акт ЦБ РУз, регулирующий лицензирование и деятельность исламских окон в традиционных банках. Устанавливает требования к капиталу, ССБ и отчётности.",
+    "topic": "local_regulation",
+    "document_ref": "https://cbu.uz",
+    "is_active": true
+  },
+  {
+    "registry_type": "exchange",
+    "code": "UZSE-2024",
+    "name_ru": "Узбекская республиканская фондовая биржа — Правила листинга 2024",
+    "name_en": "Uzbek Republican Stock Exchange – Listing Rules 2024",
+    "description_ru": "Правила допуска ценных бумаг к торгам на UZSE. Содержат требования к раскрытию финансовой информации, корпоративному управлению и порядку проведения сделок.",
+    "topic": "exchange_rules",
+    "document_ref": "https://uzse.uz",
+    "is_active": true
+  }
+]
