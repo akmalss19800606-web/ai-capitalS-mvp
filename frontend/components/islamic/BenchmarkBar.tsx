@@ -55,7 +55,7 @@ export default function BenchmarkBar({ items }: Props) {
               />
             </div>
             <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>
-              \u043b\u0438\u043c\u0438\u0442: {item.limit}{item.unit || "%"}
+              лимит: {item.limit}{item.unit || "%"}
             </div>
           </div>
         );
