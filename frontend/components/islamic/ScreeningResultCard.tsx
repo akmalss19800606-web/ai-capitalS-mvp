@@ -3,6 +3,7 @@ import { ScreeningResult } from "./api";
 import ShariahStatusBadge from "./ShariahStatusBadge";
 import StandardRefBadge from "./StandardRefBadge";
 import ShariahGauge from "./ShariahGauge";
+import ShariahRadarChart from "./ShariahRadarChart";
 import { C } from "./IslamicFinanceLayout";
 
 interface Props { result: ScreeningResult; }
@@ -11,6 +12,14 @@ const SCORE_COLOR = (s: number) =>
   Number(s) >= 4 ? "#2563eb" : Number(s) >= 2.5 ? "#d97706" : "#dc2626";
 
 export default function ScreeningResultCard({ result }: Props) {
+  const radarMetrics = [
+    { label: "\u0425\u0430\u0440\u0430\u043c", value: Number(result.haram_revenue_pct) || 0, max: 10 },
+    { label: "\u0414\u043e\u043b\u0433", value: Number(result.debt_ratio) || 0, max: 66 },
+    { label: "% \u0434\u043e\u0445\u043e\u0434", value: Number(result.interest_income_pct) || 0, max: 10 },
+    { label: "\u0421\u043a\u043e\u0440\u0438\u043d\u0433", value: Number(result.score) || 0, max: 5 },
+    { label: "\u0427\u0438\u0441\u0442\u043e\u0442\u0430", value: Math.max(0, 5 - (Number(result.haram_revenue_pct) || 0)), max: 5 },
+  ];
+
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${C.border}`, background: C.card, padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
       {/* Header row */}
@@ -45,6 +54,12 @@ export default function ScreeningResultCard({ result }: Props) {
             </div>
           );
         })}
+      </div>
+
+      {/* Radar chart */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>\ud83d\udcca \u0420\u0430\u0434\u0430\u0440 \u043f\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u0435\u0439</div>
+        <ShariahRadarChart metrics={radarMetrics} size={240} />
       </div>
 
       {/* Recommendations */}
