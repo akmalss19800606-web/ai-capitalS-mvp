@@ -1,21 +1,20 @@
 "use client";
 import IslamicFinanceLayout from "@/components/islamic/IslamicFinanceLayout";
 import { C } from "@/components/islamic/IslamicFinanceLayout";
-import { HintBox } from "@/components/islamic/IslamicFinanceUI";
 
 const STATS = [
-  { icon: "\u262A\uFE0F", label: "\u0421\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u044b", value: "15", sub: "AAOIFI + IFSB" },
-  { icon: "\uD83D\uDCCB", label: "\u0422\u0435\u0440\u043c\u0438\u043d\u043e\u0432", value: "30+", sub: "\u0413\u043b\u043e\u0441\u0441\u0430\u0440\u0438\u0439" },
-  { icon: "\uD83D\uDD0D", label: "\u0421\u043a\u0440\u0438\u043d\u0438\u043d\u0433", value: "SS No.62", sub: "AAOIFI" },
-  { icon: "\uD83D\uDD4C", label: "\u0417\u0430\u043a\u044f\u0442", value: "\u041d\u0438\u0441\u0430\u0431", sub: "UZS/USD" },
-  { icon: "\uD83C\uDF0D", label: "\u042e\u0440\u0438\u0441\u0434\u0438\u043a\u0446\u0438\u044f", value: "UZ", sub: "\u0423\u0437\u0431\u0435\u043a\u0438\u0441\u0442\u0430\u043d" },
+  { icon: "☪️", label: "Стандарты и нормативы", value: "15", sub: "AAOIFI + IFSB" },
+  { icon: "📋", label: "Рыночные скрининги", value: "30+", sub: "Глобальные и локальные индексы" },
+  { icon: "🔍", label: "Стандарт скрининга", value: "SS No.62", sub: "AAOIFI" },
+  { icon: "💰", label: "Закят и налоги", value: "Нисаб подсчёт", sub: "UZS/USD" },
+  { icon: "🌍", label: "Курс валюты", value: "UZ", sub: "Узбекистан сум/доллар" },
 ];
 
 const TOOLS = [
-  { icon: "\uD83D\uDD4C", title: "\u0417\u0430\u043a\u044f\u0442", desc: "\u0420\u0430\u0441\u0447\u0451\u0442 \u043e\u0431\u044f\u0437\u0430\u0442\u0435\u043b\u044c\u043d\u043e\u0433\u043e \u043e\u0447\u0438\u0449\u0435\u043d\u0438\u044f \u0438\u043c\u0443\u0449\u0435\u0441\u0442\u0432\u0430 \u043f\u043e \u043d\u0438\u0441\u0430\u0431\u0443", href: "/islamic-finance/zakat" },
-  { icon: "\uD83D\uDD0D", title: "\u0421\u043a\u0440\u0438\u043d\u0438\u043d\u0433", desc: "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043a\u043e\u043c\u043f\u0430\u043d\u0438\u0439 \u043f\u043e \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u0443 AAOIFI SS No. 62", href: "/islamic-finance/screening" },
-  { icon: "\uD83D\uDCD6", title: "\u0413\u043b\u043e\u0441\u0441\u0430\u0440\u0438\u0439", desc: "30+ \u0442\u0435\u0440\u043c\u0438\u043d\u043e\u0432 \u0438\u0441\u043b\u0430\u043c\u0441\u043a\u0438\u0445 \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432 \u0441 \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u044f\u043c\u0438", href: "/islamic-finance/glossary" },
-  { icon: "\uD83D\uDCDC", title: "\u0421\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u044b", desc: "AAOIFI \u0438 IFSB \u2014 15 \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u043e\u0432 \u0441 \u043e\u043f\u0438\u0441\u0430\u043d\u0438\u0435\u043c", href: "/islamic-finance/references" },
+  { icon: "💰", title: "Закят-калькулятор", desc: "Расчёт обязательных выплат на основе нисаб и активов", href: "/islamic-finance/zakat" },
+  { icon: "🔍", title: "Скрининг компаний", desc: "Проверка соответствия шариату по AAOIFI SS No. 62", href: "/islamic-finance/screening" },
+  { icon: "📖", title: "Глоссарий и справочник", desc: "30+ терминов исламских финансов с арабской транслитерацией", href: "/islamic-finance/glossary" },
+  { icon: "📜", title: "Стандарты и нормативы", desc: "AAOIFI и IFSB — 15 основных стандартов и нормативных документов исламских финансов", href: "/islamic-finance/references" },
 ];
 
 export default function IslamicFinancePage() {
@@ -23,9 +22,9 @@ export default function IslamicFinancePage() {
 
   return (
     <IslamicFinanceLayout
-      title={"\u0418\u0441\u043b\u0430\u043c\u0441\u043a\u0438\u0435 \u0444\u0438\u043d\u0430\u043d\u0441\u044b"}
-      titleIcon={"\u262A\uFE0F"}
-      subtitle={"\u0418\u043d\u0441\u0442\u0440\u0443\u043c\u0435\u043d\u0442\u044b \u0434\u043b\u044f \u0440\u0430\u0441\u0447\u0451\u0442\u043e\u0432 \u0438 \u0430\u043d\u0430\u043b\u0438\u0437\u0430 \u0432 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0438\u0438 \u0441 \u043d\u043e\u0440\u043c\u0430\u043c\u0438 \u0448\u0430\u0440\u0438\u0430\u0442\u0430 \u00b7 \u0421\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u044b AAOIFI \u0438 IFSB \u00b7 \u0423\u0437\u0431\u0435\u043a\u0438\u0441\u0442\u0430\u043d (UZS)"}
+      title="Исламские финансы — Рынок Узбекистана"
+      titleIcon="☪️"
+      subtitle="Исламские финансовые инструменты для рынка Узбекистана — инвестиции, скрининг, закят и очистка по стандартам AAOIFI и IFSB. Нисаб, курс золота, конвертация в сум/доллар (UZS)"
       indicators={indicators}
     >
       {/* Tools Grid */}
@@ -51,13 +50,6 @@ export default function IslamicFinancePage() {
             </div>
           </a>
         ))}
-      </div>
-
-      {/* Info */}
-      <div style={{ marginTop: 20 }}>
-        <HintBox type="info">
-          {"\u0412\u0441\u0435 \u0440\u0430\u0441\u0447\u0451\u0442\u044b \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0443\u044e\u0442 \u0441\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u0430\u043c AAOIFI \u0438 IFSB. \u0414\u0430\u043d\u043d\u044b\u0435 \u0430\u0434\u0430\u043f\u0442\u0438\u0440\u043e\u0432\u0430\u043d\u044b \u0434\u043b\u044f \u0440\u044b\u043d\u043a\u0430 \u0423\u0437\u0431\u0435\u043a\u0438\u0441\u0442\u0430\u043d\u0430."}
-        </HintBox>
       </div>
     </IslamicFinanceLayout>
   );
