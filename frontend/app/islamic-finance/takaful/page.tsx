@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi, TakafulPlan as ApiTakaful } from "@/components/islamic/api";
 
 interface TakafulPlan {
   id: number;
@@ -31,7 +32,15 @@ const typeLabels: Record<string, { label: string; icon: string }> = {
 export default function TakafulPage() {
   const [filter, setFilter] = useState<string>("all");
   const [calc, setCalc] = useState({ amount: "", months: "12" });
-  const filtered = filter === "all" ? MOCK_PLANS : MOCK_PLANS.filter(p => p.type === filter);
+    const [plans, setPlans] = useState<TakafulPlan[]>(MOCK_PLANS);
+  const [apiLoading, setApiLoading] = useState(true);
+  useEffect(() => {
+    islamicApi.getTakafulPlans(filter !== "all" ? filter : undefined)
+      .then(data => { if (data.length > 0) setPlans(data.map((t: ApiTakaful) => ({ id: t.id, name: t.name, type: t.takaful_type as TakafulPlan["type"], provider: t.provider, monthly_contribution: t.monthly_contribution, coverage_amount: t.coverage_amount, currency: t.currency, shariah_compliant: t.shariah_status === "compliant", surplus_sharing: 0, description: t.description || "" }))); })
+      .catch(() => {})
+      .finally(() => setApiLoading(false));
+  }, [filter]);
+    const filtered = filter === "all" ? plans : plans.filter(p => p.type === filter);
   const fmt = (n: number) => n.toLocaleString("ru-RU");
 
   return (
