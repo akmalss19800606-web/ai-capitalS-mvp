@@ -23,7 +23,7 @@ async function put<T>(path: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// --- Types ---
 
 export interface NisabData {
   nisab_gold_grams: number;
@@ -85,6 +85,7 @@ export interface ScreeningResult {
   standard_applied: string;
   analysis_date: string;
   recommendation: string;
+  recommendations?: string[];
   haram_revenue_pct?: number;
   debt_ratio?: number;
   interest_income_pct?: number;
@@ -121,14 +122,33 @@ export interface IslamicProfile {
   jurisdiction: string;
 }
 
-// ─── API calls ────────────────────────────────────────────────────────────────
+export interface PurificationRequest {
+  portfolio_id?: number;
+  position_name: string;
+  haram_pct: number;
+  dividend_amount: number;
+  method: string;
+  notes?: string;
+}
+
+export interface PurificationResult {
+  id: number;
+  portfolio_id?: number;
+  position_name: string;
+  haram_pct: number;
+  dividend_amount: number;
+  purification_amount: number;
+  method: string;
+  notes?: string;
+  created_at: string;
+}
+
+// --- API calls ---
 
 export const islamicApi = {
   getNisab: () => get<NisabData>("/api/v1/islamic/zakat/nisab"),
-
-  calculateZakat: (data: { zakat_type: string; assets: ZakatAssetItem[]; liabilities_uzs: number; mode?: string }) =>
+  calculateZakat: (data: { zakat_type: string; assets: Record<string, string> | ZakatAssetItem[]; liabilities?: string | number; liabilities_uzs?: number; mode?: string }) =>
     post<ZakatResult>("/api/v1/islamic/zakat/calculate", data),
-
   getZakatHistory: () => get<ZakatHistoryItem[]>("/api/v1/islamic/zakat/history"),
 
   getCompanies: (search?: string, market_type?: string) => {
@@ -137,11 +157,13 @@ export const islamicApi = {
     if (market_type) params.set("market_type", market_type);
     return get<CompanyItem[]>(`/api/v1/islamic/screening/companies?${params}`);
   },
-
   screenCompany: (data: { company_name?: string; company_id?: string; haram_revenue_pct?: number; debt_ratio?: number; interest_income_pct?: number; mode?: string }) =>
     post<ScreeningResult>("/api/v1/islamic/screening/screen", data),
-
   getScreeningResults: () => get<ScreeningResult[]>("/api/v1/islamic/screening/results"),
+
+  calculatePurification: (data: PurificationRequest) =>
+    post<PurificationResult>("/api/v1/islamic-finance/purification", data),
+  getPurificationHistory: () => get<PurificationResult[]>("/api/v1/islamic-finance/purification"),
 
   getGlossary: (category?: string, search?: string) => {
     const params = new URLSearchParams();
@@ -149,14 +171,11 @@ export const islamicApi = {
     if (search) params.set("search", search);
     return get<GlossaryTerm[]>(`/api/v1/islamic/glossary?${params}`);
   },
-
   getGlossaryTerm: (slug: string) => get<GlossaryTerm>(`/api/v1/islamic/glossary/${slug}`),
-
   getStandards: (org?: string) => {
     const params = org ? `?org=${org}` : "";
     return get<ReferenceItem[]>(`/api/v1/islamic/references/standards${params}`);
   },
-
   getProfile: () => get<IslamicProfile>("/api/v1/islamic/profile"),
   updateProfile: (data: { mode: string; default_currency: string; language: string }) =>
     put<IslamicProfile>("/api/v1/islamic/profile", data),
