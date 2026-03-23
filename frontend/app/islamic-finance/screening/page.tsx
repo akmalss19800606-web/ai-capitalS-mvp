@@ -3,7 +3,7 @@ import { useState } from "react";
 import CompanySearchInput from "@/components/islamic/CompanySearchInput";
 import ScreeningResultCard from "@/components/islamic/ScreeningResultCard";
 import { islamicApi, CompanyItem, ScreeningResult } from "@/components/islamic/api";
-import Link from "next/link";
+import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
 
 export default function ScreeningPage() {
   const [selectedCompany, setSelectedCompany] = useState<CompanyItem | null>(null);
@@ -34,57 +34,70 @@ export default function ScreeningPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 text-white px-6 py-8">
-        <div className="max-w-3xl mx-auto">
-          <Link href="/islamic-finance" className="text-emerald-300 text-sm hover:text-white mb-3 inline-block">
-            Исламские финансы
-          </Link>
-          <h1 className="text-2xl font-bold">Шариатский скрининг</h1>
-          <p className="text-emerald-200 text-sm mt-1">AAOIFI SS No. 62 · оценка 0–5</p>
-        </div>
-      </div>
+    <IslamicFinanceLayout
+      title="Шариатский скрининг"
+      titleIcon="🔍"
+      subtitle="AAOIFI SS No. 62 · оценка 0–5"
+      tipText="Выберите компанию и укажите финансовые показатели для проверки соответствия шариату"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 24 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 16 }}>{"Параметры скрининга"}</h2>
 
-      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm space-y-5">
-          <h2 className="text-base font-semibold text-gray-800">Параметры скрининга</h2>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Компания (UzSE / ЦКТСБ)</label>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", fontWeight: 600, marginBottom: 6, color: C.text, fontSize: 14 }}>{"Компания (UzSE / ЦКТСБ)"}</label>
             <CompanySearchInput onSelect={setSelectedCompany} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Харам-выручка (%)</label>
-              <input type="number" min="0" max="100" step="0.1" placeholder="0–5"
-                value={haramPct} onChange={e => setHaramPct(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6, color: C.text, fontSize: 14 }}>{"Харам-выручка (%)"}</label>
+              <input
+                type="number" value={haramPct} onChange={(e) => setHaramPct(e.target.value)}
+                placeholder="0–5"
+                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+              />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Долговая нагрузка (%)</label>
-              <input type="number" min="0" max="100" step="0.1" placeholder="0–33"
-                value={debtRatio} onChange={e => setDebtRatio(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6, color: C.text, fontSize: 14 }}>{"Долговая нагрузка (%)"}</label>
+              <input
+                type="number" value={debtRatio} onChange={(e) => setDebtRatio(e.target.value)}
+                placeholder="0–33"
+                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+              />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Процентный доход (%)</label>
-              <input type="number" min="0" max="100" step="0.1" placeholder="0–5"
-                value={interestPct} onChange={e => setInterestPct(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
+              <label style={{ display: "block", fontWeight: 600, marginBottom: 6, color: C.text, fontSize: 14 }}>{"Процентный доход относительно общего дохода (%)"}</label>
+              <input
+                type="number" value={interestPct} onChange={(e) => setInterestPct(e.target.value)}
+                placeholder="0–5"
+                style={{ width: "100%", padding: "10px 12px", border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, boxSizing: "border-box" }}
+              />
             </div>
           </div>
 
-          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
-
-          <button onClick={handleScreen} disabled={loading}
-            className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-            {loading ? "Анализирую..." : "Провести скрининг"}
+          <button
+            onClick={handleScreen}
+            disabled={loading}
+            style={{
+              padding: "12px 32px", borderRadius: 8, border: "none",
+              background: loading ? C.muted : C.primary, color: "#fff",
+              cursor: loading ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 600,
+              marginTop: 20,
+            }}
+          >
+            {loading ? "Анализирую..." : "🔍 Провести скрининг"}
           </button>
         </div>
 
+        {error && (
+          <div style={{ padding: 12, background: C.errorBg, borderRadius: 8, border: `1px solid ${C.error}`, color: C.error, fontSize: 14 }}>
+            {error}
+          </div>
+        )}
+
         {result && <ScreeningResultCard result={result} />}
       </div>
-    </div>
+    </IslamicFinanceLayout>
   );
 }
