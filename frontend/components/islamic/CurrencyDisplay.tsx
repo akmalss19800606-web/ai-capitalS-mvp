@@ -1,3 +1,5 @@
+import { C } from "./IslamicFinanceLayout";
+
 interface Props {
   uzs: number;
   usd?: number;
@@ -9,9 +11,15 @@ export default function CurrencyDisplay({ uzs, usd, className = "" }: Props) {
   const fmtUSD = usd !== undefined ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(usd) : null;
 
   return (
-    <span className={`inline-flex flex-col ${className}`}>
-      <span className="font-semibold">{fmtUZS} <span className="text-xs text-gray-500">UZS</span></span>
-      {fmtUSD && <span className="text-xs text-gray-400">≈ {fmtUSD}</span>}
+    <span style={{ display: "inline-flex", flexDirection: "column", gap: 2 }}>
+      <span style={{ fontWeight: 600, fontSize: 14, color: C.text }}>
+        {fmtUZS} <span style={{ fontSize: 11, color: C.muted }}>UZS</span>
+      </span>
+      {fmtUSD && (
+        <span style={{ fontSize: 12, color: C.muted }}>
+                    ≈ {fmtUSD}
+        </span>
+      )}
     </span>
   );
 }
