@@ -1,5 +1,7 @@
 "use client";
 import { useState, ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export const C = {
   bg: "#f8f8fc",
@@ -17,6 +19,16 @@ export const C = {
   errorBg: "#fef2f2",
   infoBg: "#eff6ff",
 };
+
+const NAV_ITEMS = [
+  { href: "/islamic-finance", label: "\u0413\u043b\u0430\u0432\u043d\u0430\u044f", icon: "\ud83c\udf19" },
+  { href: "/islamic-finance/screening", label: "\u0421\u043a\u0440\u0438\u043d\u0438\u043d\u0433", icon: "\ud83d\udd0d" },
+  { href: "/islamic-finance/zakat", label: "\u0417\u0430\u043a\u044f\u0442", icon: "\ud83d\udcb0" },
+  { href: "/islamic-finance/purification", label: "\u0422\u0430\u0437\u043a\u0438\u044f", icon: "\ud83e\uddfc" },
+  { href: "/islamic-finance/products", label: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u044b", icon: "\ud83d\udce6" },
+  { href: "/islamic-finance/glossary", label: "\u0413\u043b\u043e\u0441\u0441\u0430\u0440\u0438\u0439", icon: "\ud83d\udcd6" },
+  { href: "/islamic-finance/references", label: "\u0421\u0442\u0430\u043d\u0434\u0430\u0440\u0442\u044b", icon: "\ud83d\udcdc" },
+];
 
 export interface MacroIndicator {
   label: string;
@@ -53,6 +65,7 @@ export default function IslamicFinanceLayout({
   tipText,
   children,
 }: IslamicFinanceLayoutProps) {
+  const pathname = usePathname();
   const [qaQuestion, setQaQuestion] = useState("");
   const [qaAnswer, setQaAnswer] = useState<any>(null);
   const [qaLoading, setQaLoading] = useState(false);
@@ -73,11 +86,16 @@ export default function IslamicFinanceLayout({
     }
   }
 
+  const isActive = (href: string) => {
+    if (href === "/islamic-finance") return pathname === "/islamic-finance";
+    return pathname.startsWith(href);
+  };
+
   return (
     <div style={{ minHeight: "100vh", background: C.bg, padding: "2rem 1rem" }}>
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
         {/* Header */}
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 8 }}>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 700, color: C.text, margin: 0 }}>
             {titleIcon} {title}
           </h1>
@@ -86,11 +104,36 @@ export default function IslamicFinanceLayout({
           )}
         </div>
 
+        {/* SubNav */}
+        <nav style={{
+          display: "flex", gap: 4, marginBottom: 20, padding: "4px",
+          background: C.card, borderRadius: 12, border: `1px solid ${C.border}`,
+          overflowX: "auto", flexWrap: "nowrap",
+        }}>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link key={item.href} href={item.href} style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "8px 14px", borderRadius: 8,
+                fontSize: 13, fontWeight: active ? 600 : 400,
+                color: active ? "#fff" : C.muted,
+                background: active ? C.primary : "transparent",
+                textDecoration: "none", whiteSpace: "nowrap",
+                transition: "all 0.2s",
+              }}>
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
         {/* Quick Ask */}
         {quickAskEnabled && onQuickAsk && (
           <div style={{ marginBottom: 20, padding: 20, background: C.card, borderRadius: 12, border: `1px solid ${C.border}` }}>
             <h3 style={{ margin: "0 0 12px", fontSize: 16, color: C.text }}>
-              {"\uD83D\uDCAC"} Quick Ask {"\u2014"} {"\u0431\u044b\u0441\u0442\u0440\u044b\u0439 \u0432\u043e\u043f\u0440\u043e\u0441"}
+              {"\ud83d\udcac"} Quick Ask {"\u2014"} {"\u0431\u044b\u0441\u0442\u0440\u044b\u0439 \u0432\u043e\u043f\u0440\u043e\u0441"}
             </h3>
             <p style={{ margin: "0 0 12px", fontSize: 13, color: C.muted }}>
               {"\u0417\u0430\u0434\u0430\u0439\u0442\u0435 \u043b\u044e\u0431\u043e\u0439 \u0432\u043e\u043f\u0440\u043e\u0441 \u2014 AI \u043e\u0442\u0432\u0435\u0442\u0438\u0442 \u0441 \u0446\u0438\u0444\u0440\u0430\u043c\u0438 \u0438 \u0444\u0430\u043a\u0442\u0430\u043c\u0438"}
@@ -112,7 +155,7 @@ export default function IslamicFinanceLayout({
                   cursor: qaLoading ? "not-allowed" : "pointer", fontSize: 14, fontWeight: 600, whiteSpace: "nowrap"
                 }}
               >
-                {qaLoading ? "AI \u0434\u0443\u043c\u0430\u0435\u0442..." : "\uD83D\uDD0D \u0421\u043f\u0440\u043e\u0441\u0438\u0442\u044c"}
+                {qaLoading ? "AI \u0434\u0443\u043c\u0430\u0435\u0442..." : "\ud83d\udd0d \u0421\u043f\u0440\u043e\u0441\u0438\u0442\u044c"}
               </button>
             </div>
             {qaError && (
@@ -173,7 +216,7 @@ export default function IslamicFinanceLayout({
         {/* Tip */}
         {tipText && (
           <div style={{ padding: 10, background: C.infoBg, borderRadius: 8, border: "1px solid #bae6fd", marginBottom: 16 }}>
-            <p style={{ margin: 0, fontSize: 13, color: "#0369a1" }}>{"\uD83D\uDCA1"} {tipText}</p>
+            <p style={{ margin: 0, fontSize: 13, color: "#0369a1" }}>{"\ud83d\udca1"} {tipText}</p>
           </div>
         )}
 
