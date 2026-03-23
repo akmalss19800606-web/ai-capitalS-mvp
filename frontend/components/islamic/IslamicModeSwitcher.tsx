@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { islamicApi } from "./api";
+import { C } from "./IslamicFinanceLayout";
 
 export default function IslamicModeSwitcher() {
   const [mode, setMode] = useState<"individual" | "professional">("individual");
@@ -19,16 +20,20 @@ export default function IslamicModeSwitcher() {
   };
 
   return (
-    <div className="inline-flex rounded-lg border border-emerald-200 bg-white overflow-hidden text-sm font-medium shadow-sm">
+    <div style={{
+      display: "inline-flex", borderRadius: 8, border: `1px solid ${C.border}`,
+      background: C.card, overflow: "hidden", fontSize: 13, fontWeight: 500,
+    }}>
       {(["individual", "professional"] as const).map((m) => (
         <button
           key={m}
           onClick={() => toggle(m)}
-          className={`px-4 py-2 transition-colors ${
-            mode === m
-              ? "bg-emerald-600 text-white"
-              : "text-gray-600 hover:bg-emerald-50"
-          }`}
+          style={{
+            padding: "8px 16px", border: "none", cursor: "pointer",
+            transition: "all 0.2s",
+            background: mode === m ? C.primary : "transparent",
+            color: mode === m ? "#fff" : C.muted,
+          }}
         >
           {m === "individual" ? "👤 Физлицо" : "🏢 Профессионал"}
         </button>
