@@ -28,7 +28,7 @@ const CHECKLIST_ITEMS = [
   { key: "noGharar", label: "Отсутствие гарар (чрезмерной неопределённости)" },
   { key: "noMaysir", label: "Отсутствие майсир (азартных элементов)" },
   { key: "noHaram", label: "Отсутствие харам-деятельности (алкоголь, табак, оружие)" },
-  { key: "halal"}, label: "Халяльный источник дохода" },
+    { key: "halal", label: "Халяльный источник дохода" },
   { key: "zakatCompliance", label: "Соблюдение обязанности по закяту" },
   { key: "aaoifiCompliance", label: "Соответствие стандартам AAOIFI" },
 ];
