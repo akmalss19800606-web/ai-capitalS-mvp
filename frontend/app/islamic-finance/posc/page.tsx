@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi, PoSCCertificate } from "@/components/islamic/api";
 
 interface PoscFormData {
   companyName: string;
@@ -51,6 +52,14 @@ export default function PoscPage() {
   const allChecked = CHECKLIST_ITEMS.every(i => checklist[i.key]);
   const canGenerate = form.companyName && form.activityType && form.screeningScore && allChecked
     && form.purificationDone && form.zakatPaid && form.ssbApproval;
+    const [certificates, setCertificates] = useState<PoSCCertificate[]>([]);
+  const [certsLoading, setCertsLoading] = useState(true);
+  useEffect(() => {
+    islamicApi.getPoSCCertificates()
+      .then(setCertificates)
+      .catch(() => setCertificates([]))
+      .finally(() => setCertsLoading(false));
+  }, [generated]);
 
   const handleGenerate = () => {
     const num = `POSC-${Date.now().toString(36).toUpperCase()}`;
@@ -192,6 +201,31 @@ export default function PoscPage() {
           </button>
         </div>
       )}
+          {/* Certificate History */}
+      <div style={{ marginTop: 32, background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: C.text, marginBottom: 16 }}>
+          📋 История сертификатов
+        </h3>
+        {certsLoading ? (
+          <p style={{ color: C.muted, fontSize: 13 }}>Загрузка...</p>
+        ) : certificates.length === 0 ? (
+          <p style={{ color: C.muted, fontSize: 13 }}>Нет выданных сертификатов</p>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {certificates.map(cert => (
+              <div key={cert.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, fontSize: 13 }}>
+                <div>
+                  <span style={{ fontWeight: 600, color: C.text }}>{cert.company_name}</span>
+                  <span style={{ color: C.muted, marginLeft: 8 }}>{cert.certificate_number}</span>
+                </div>
+                <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: cert.status === "active" ? C.successBg : C.warningBg, color: cert.status === "active" ? C.success : C.warning }}>
+                  {cert.status === "active" ? "Активен" : cert.status === "expired" ? "Истёк" : "Отозван"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </IslamicFinanceLayout>
   );
 }
