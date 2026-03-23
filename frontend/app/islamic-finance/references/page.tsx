@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { islamicApi, ReferenceItem } from "@/components/islamic/api";
 import StandardRefBadge from "@/components/islamic/StandardRefBadge";
-import Link from "next/link";
+import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
 
 const ORG_FILTERS = [
   { key: "", label: "Все" },
@@ -27,28 +27,25 @@ export default function ReferencesPage() {
     type === "aaoifi_standard" ? "AAOIFI" : type === "ifsb_standard" ? "IFSB" : "Местный";
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-br from-emerald-700 to-emerald-900 text-white px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <Link href="/islamic-finance" className="text-emerald-300 text-sm hover:text-white mb-3 inline-block">
-            Исламские финансы
-          </Link>
-          <h1 className="text-2xl font-bold">Стандарты AAOIFI и IFSB</h1>
-          <p className="text-emerald-200 text-sm mt-1">Нормативная база исламских финансов</p>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="flex gap-2 mb-6">
+    <IslamicFinanceLayout
+      title="Стандарты AAOIFI и IFSB"
+      titleIcon="📜"
+      subtitle="Нормативная база исламских финансов"
+      tipText="Фильтруйте стандарты по организации для быстрого поиска нужного документа"
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {ORG_FILTERS.map(f => (
             <button
               key={f.key}
               onClick={() => setOrg(f.key)}
-              className={"px-4 py-2 rounded-xl text-sm font-medium border transition-colors " + (
-                org === f.key
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-emerald-300"
-              )}
+              style={{
+                padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 500,
+                border: `1px solid ${org === f.key ? C.primary : C.border}`,
+                background: org === f.key ? C.primary : C.card,
+                color: org === f.key ? "#fff" : C.muted,
+                cursor: "pointer", transition: "all 0.2s",
+              }}
             >
               {f.label}
             </button>
@@ -56,37 +53,35 @@ export default function ReferencesPage() {
         </div>
 
         {loading ? (
-          <div className="space-y-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-2xl bg-gray-100" />
+              <div key={i} style={{ height: 80, borderRadius: 12, background: C.border, animation: "pulse 1.5s infinite" }} />
             ))}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {items.map(item => (
-              <div key={item.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:border-emerald-200 transition-colors">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <StandardRefBadge code={item.code} org={orgLabel(item.registry_type)} />
-                      {item.topic && (
-                        <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">{item.topic}</span>
-                      )}
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-900">{item.name_ru}</h3>
-                    {item.description_ru && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description_ru}</p>
-                    )}
-                  </div>
-                </div>
+              <div key={item.id} style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20 }}>
+                {item.topic && (
+                  <span style={{
+                    display: "inline-block", padding: "2px 10px", borderRadius: 6,
+                    background: C.infoBg, color: C.primary, fontSize: 12, fontWeight: 500, marginBottom: 8,
+                  }}>
+                    {item.topic}
+                  </span>
+                )}
+                <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>{item.name_ru}</h3>
+                {item.description_ru && (
+                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>{item.description_ru}</p>
+                )}
               </div>
             ))}
             {items.length === 0 && (
-              <p className="text-center text-sm text-gray-400 py-12">Стандарты не найдены</p>
+              <p style={{ color: C.muted, fontSize: 14 }}>Стандарты не найдены</p>
             )}
           </div>
         )}
       </div>
-    </div>
+    </IslamicFinanceLayout>
   );
 }
