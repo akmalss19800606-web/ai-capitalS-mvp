@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi, WaqfProject as ApiWaqf } from "@/components/islamic/api";
 
 interface WaqfProject {
   id: number;
@@ -31,11 +32,17 @@ const typeLabels: Record<string, { label: string; icon: string }> = {
 
 export default function WaqfPage() {
   const [filter, setFilter] = useState<string>("all");
-  const filtered = filter === "all" ? MOCK_WAQF : MOCK_WAQF.filter(w => w.type === filter);
+    const [projects, setProjects] = useState<WaqfProject[]>(MOCK_WAQF);
+  useEffect(() => {
+    islamicApi.getWaqfProjects(filter !== "all" ? filter : undefined)
+      .then(data => { if (data.length > 0) setProjects(data.map((w: ApiWaqf) => ({ id: w.id, name: w.title, type: w.waqf_type as WaqfProject["type"], location: "", target_amount: w.target_amount, raised_amount: w.raised_amount, currency: w.currency, status: w.status as WaqfProject["status"], beneficiaries: 0, description: w.description }))); })
+      .catch(() => {});
+  }, [filter]);
+    const filtered = filter === "all" ? projects : projects.filter(w => w.type === filter);
   const fmt = (n: number) => n.toLocaleString("ru-RU");
 
-  const totalRaised = MOCK_WAQF.reduce((s, w) => s + w.raised_amount, 0);
-  const totalBenef = MOCK_WAQF.reduce((s, w) => s + w.beneficiaries, 0);
+    const totalRaised = projects.reduce((s, w) => s + w.raised_amount, 0);
+    const totalBenef = projects.reduce((s, w) => s + w.beneficiaries, 0);
 
   return (
     <IslamicFinanceLayout>
