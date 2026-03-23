@@ -2,19 +2,8 @@
 import { useEffect, useState, useMemo } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
 import CurrencyDisplay from "@/components/islamic/CurrencyDisplay";
+import { islamicApi, IslamicProduct } from "@/components/islamic/api";
 
-interface IslamicProduct {
-  id: string;
-  slug: string;
-  name_ru: string;
-  name_ar?: string;
-  transliteration?: string;
-  product_type: string;
-  category: string;
-  description_ru?: string;
-  risk_level?: string;
-  aaoifi_ref?: string;
-}
 
 const CATEGORY_LABELS: Record<string, string> = {
   debt: "Долговые", equity: "Долевые", lease: "Аренда",
@@ -37,11 +26,7 @@ export default function ProductsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    fetch(`/api/v1/islamic/products${category ? `?category=${category}` : ""}`, { headers })
-      .then(r => r.ok ? r.json() : [])
+        islamicApi.getProducts(category || undefined)
       .then(setProducts)
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
