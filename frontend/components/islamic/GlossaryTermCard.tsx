@@ -1,6 +1,7 @@
 import { GlossaryTerm } from "./api";
 import StandardRefBadge from "./StandardRefBadge";
 import Link from "next/link";
+import { C } from "./IslamicFinanceLayout";
 
 interface Props { term: GlossaryTerm; compact?: boolean; }
 
@@ -12,28 +13,36 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default function GlossaryTermCard({ term, compact = false }: Props) {
   return (
     <Link href={`/islamic-finance/glossary/${term.slug}`}>
-      <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm hover:border-emerald-200 hover:shadow-md transition-all cursor-pointer">
-        <div className="flex items-start justify-between gap-3 mb-2">
+      <div style={{
+        borderRadius: 12, border: `1px solid ${C.border}`, background: C.card,
+        padding: 20, cursor: "pointer", transition: "all 0.2s",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 8 }}>
           <div>
-            <h3 className="font-semibold text-gray-900">{term.term_ru}</h3>
+            <h3 style={{ fontWeight: 600, color: C.text }}>{term.term_ru}</h3>
             {term.term_ar && (
-              <p className="text-base text-gray-400" dir="rtl">{term.term_ar}</p>
+              <p style={{ fontSize: 15, color: C.muted }} dir="rtl">{term.term_ar}</p>
             )}
             {term.transliteration && (
-              <p className="text-xs text-gray-400 italic">{term.transliteration}</p>
+              <p style={{ fontSize: 12, color: C.muted, fontStyle: "italic" }}>{term.transliteration}</p>
             )}
           </div>
-          <span className="shrink-0 rounded-full bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 border border-emerald-100">
+          <span style={{
+            flexShrink: 0, borderRadius: 999, background: C.infoBg, color: C.primary,
+            fontSize: 11, padding: "2px 8px", border: `1px solid ${C.border}`, fontWeight: 500,
+          }}>
             {CATEGORY_LABELS[term.category] || term.category}
           </span>
         </div>
 
         {!compact && (
-          <p className="text-sm text-gray-600 line-clamp-2 mt-2">{term.definition_ru}</p>
+          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginTop: 8 }}>
+            {term.definition_ru}
+          </p>
         )}
 
         {term.standard_ref && (
-          <div className="mt-3">
+          <div style={{ marginTop: 12 }}>
             <StandardRefBadge code={term.standard_ref} org={term.standard_org} />
           </div>
         )}
