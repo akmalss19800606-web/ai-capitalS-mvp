@@ -14,7 +14,7 @@ const TOOLS = [
   { icon: '🕌', title: 'Закят', desc: 'Расчёт обязательного очищения имущества по нисабу', href: '/islamic-finance/zakat', color: 'text-green-600' },
   { icon: '🔍', title: 'Скрининг', desc: 'Проверка компаний по стандарту AAOIFI SS No. 62', href: '/islamic-finance/screening', color: 'text-blue-600' },
   { icon: '📖', title: 'Глоссарий', desc: '30+ терминов исламских финансов с определениями', href: '/islamic-finance/glossary', color: 'text-purple-600' },
-  { icon: '📜', title: 'Стандарты', desc: 'AAOIFI и IFSB — 15 стандартов с описанием', href: '/islamic-finance/standards', color: 'text-orange-600' },
+  { icon: '📜', title: 'Стандарты', desc: 'AAOIFI и IFSB — 15 стандартов с описанием', href: '/islamic-finance/references', color: 'text-orange-600' },
 ]
 
 export default function IslamicFinancePage() {
