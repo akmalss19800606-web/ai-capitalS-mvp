@@ -27,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/islamic-finance/purification", label: "Тазкия", icon: "🧼" },
   { href: "/islamic-finance/products", label: "Продукты", icon: "📦" },
     { href: "/islamic-finance/posc", label: "Сертификат PoSC", icon: "📜" },
+    { href: "/islamic-finance/ssb", label: "SSB / Фатвы", icon: "📚" },
   { href: "/islamic-finance/glossary", label: "Глоссарий", icon: "📖" },
   { href: "/islamic-finance/references", label: "Стандарты", icon: "📜" },
 ];
