@@ -15,6 +15,11 @@ const TOOLS = [
   { icon: "🔍", title: "Скрининг компаний", desc: "Проверка соответствия шариату по AAOIFI SS No. 62", href: "/islamic-finance/screening" },
   { icon: "📖", title: "Глоссарий и справочник", desc: "30+ терминов исламских финансов с арабской транслитерацией", href: "/islamic-finance/glossary" },
   { icon: "📜", title: "Стандарты и нормативы", desc: "AAOIFI и IFSB — 15 основных стандартов и нормативных документов исламских финансов", href: "/islamic-finance/references" },
+    { icon: "📦", title: "Исламские продукты", desc: "Мурабаха, иджара, мушарака, мудараба, сукук и такафул", href: "/islamic-finance/products" },
+  { icon: "💸", title: "Очистка дохода", desc: "Расчёт тазкия (очистки харам-компонента) по AAOIFI SS", href: "/islamic-finance/purification" },
+  { icon: "📜", title: "Сертификат PoSC", desc: "Генерация Proof of Shariah Compliance для компаний", href: "/islamic-finance/posc" },
+  { icon: "📚", title: "SSB / Фатвы", desc: "Шариатский совет и реестр фатв по исламским финансам", href: "/islamic-finance/ssb" },
+  { icon: "🤝", title: "P2P Проекты", desc: "P2P-финансирование по моделям Мудараба и Мушарака без риба", href: "/islamic-finance/p2p" },
 ];
 
 export default function IslamicFinancePage() {
@@ -28,7 +33,7 @@ export default function IslamicFinancePage() {
       indicators={indicators}
     >
       {/* Tools Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
         {TOOLS.map((tool) => (
           <a
             key={tool.title}
