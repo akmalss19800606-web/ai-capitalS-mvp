@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi } from "@/components/islamic/api";
 
 interface SSBMember {
   id: number;
@@ -48,9 +49,15 @@ const statusColors: Record<string, { bg: string; text: string; label: string }> 
 export default function SsbPage() {
   const [tab, setTab] = useState<"members" | "fatwas">("members");
   const [category, setCategory] = useState("Все");
+    const [members, setMembers] = useState<SSBMember[]>(SSB_MEMBERS);
+  const [fatwas, setFatwas] = useState<Fatwa[]>(FATWAS);
+  useEffect(() => {
+    islamicApi.getSSBMembers().then(data => { if (data.length > 0) setMembers(data.map(m => ({ id: m.id, name: m.name, nameAr: m.name_ar, role: m.role, specialization: m.specialization, experience: m.experience }))); }).catch(() => {});
+    islamicApi.getFatwas(category !== "Все" ? category : undefined).then(data => { if (data.length > 0) setFatwas(data.map(f => ({ id: f.id, number: f.number, title: f.title, date: f.date, category: f.category, status: f.status, summary: f.summary, issuedBy: f.issued_by }))); }).catch(() => {});
+  }, [category]);
   const [expandedFatwa, setExpandedFatwa] = useState<number | null>(null);
 
-  const filteredFatwas = category === "Все" ? FATWAS : FATWAS.filter(f => f.category === category);
+    const filteredFatwas = category === "Все" ? fatwas : fatwas.filter(f => f.category === category);
 
   return (
     <IslamicFinanceLayout
@@ -72,7 +79,7 @@ export default function SsbPage() {
 
       {tab === "members" ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {SSB_MEMBERS.map(m => (
+                      {members.map(m => (
             <div key={m.id} style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, padding: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                 <div>
