@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { islamicApi, ZakatHistoryItem } from "./api";
-import ShariahStatusBadge from "./ShariahStatusBadge";
+import { C } from "./IslamicFinanceLayout";
 
 export default function ZakatHistoryTable() {
   const [history, setHistory] = useState<ZakatHistoryItem[]>([]);
@@ -14,41 +14,54 @@ export default function ZakatHistoryTable() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="h-20 animate-pulse bg-gray-50 rounded-2xl" />;
+  if (loading) return <div style={{ height: 80, background: "#f3f4f6", borderRadius: 16, animation: "pulse 2s infinite" }} />;
   if (history.length === 0) return (
-    <p className="text-sm text-gray-400 text-center py-6">История расчётов пуста</p>
+    <p style={{ fontSize: 13, color: C.muted, textAlign: "center", padding: 24 }}>История расчётов пуста</p>
   );
 
   const fmt = (n: number) => new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 0 }).format(n);
 
+  const thStyle: React.CSSProperties = {
+    padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 500,
+    color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em",
+    borderBottom: `1px solid ${C.border}`, background: "#f9fafb",
+  };
+  const tdStyle: React.CSSProperties = {
+    padding: "10px 12px", fontSize: 13, color: C.text,
+    borderBottom: `1px solid ${C.border}`,
+  };
+
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="font-semibold text-gray-800">История расчётов</h3>
+    <div style={{ background: C.card, borderRadius: 16, border: `1px solid ${C.border}`, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+      <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.border}` }}>
+        <h3 style={{ fontWeight: 600, fontSize: 15, color: C.text }}>История расчётов</h3>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
+          <thead>
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Дата</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Тип</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Активы (UZS)</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Закят (UZS)</th>
-              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500">Статус</th>
+              <th style={thStyle}>Дата</th>
+              <th style={thStyle}>Активы</th>
+              <th style={thStyle}>Закат</th>
+              <th style={thStyle}>Статус</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-50">
-            {history.map(h => (
-              <tr key={h.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 text-gray-600">{h.calculation_date}</td>
-                <td className="px-4 py-3 text-gray-700 capitalize">{h.zakat_type}</td>
-                <td className="px-4 py-3 text-right text-gray-700">{fmt(h.assets_total_uzs)}</td>
-                <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmt(h.zakat_due_uzs)}</td>
-                <td className="px-4 py-3 text-center">
-                  <ShariahStatusBadge
-                    status={h.is_zakat_due ? "compliant" : "noncompliant"}
-                    size="sm"
-                  />
+          <tbody>
+            {history.map((item, i) => (
+              <tr key={i} style={{ background: i % 2 === 0 ? C.card : "#f9fafb" }}>
+                <td style={tdStyle}>{new Date(item.created_at).toLocaleDateString("ru-RU")}</td>
+                <td style={tdStyle}>{fmt(item.assets_total_uzs)} UZS</td>
+                <td style={{ ...tdStyle, fontWeight: 600, color: item.is_zakat_due ? C.primary : C.muted }}>
+                  {item.is_zakat_due ? `${fmt(item.zakat_due_uzs)} UZS` : "—"}
+                </td>
+                <td style={tdStyle}>
+                  <span style={{
+                    display: "inline-block", padding: "2px 8px", borderRadius: 8, fontSize: 11, fontWeight: 500,
+                    background: item.is_zakat_due ? "#ecfdf5" : "#f3f4f6",
+                    color: item.is_zakat_due ? C.primary : C.muted,
+                  }}>
+                    {item.is_zakat_due ? "Обязателен" : "Не обязателен"}
+                  </span>
                 </td>
               </tr>
             ))}
