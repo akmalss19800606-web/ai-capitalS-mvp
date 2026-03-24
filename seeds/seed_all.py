@@ -12,9 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal, engine, Base
-from app.db.models.islamic_finance import IslamicGlossary, HaramIndustryDB
 from app.db.models.islamic_products import IslamicProduct
-from app.db.models.posc_rules import PoSCRule
+from app.db.models.posc_rules import PoSCRuleSeed
 from app.db.models.recommendation_rules import ProductRecommendationRule
 
 SEEDS_DIR = Path(__file__).resolve().parent
@@ -48,9 +47,9 @@ def seed_islamic_products(db: Session):
 def seed_posc_rules(db: Session):
     data = load_json("posc_rules.json")
     for item in data:
-        exists = db.query(PoSCRule).filter_by(rule_id=item["id"]).first()
+        exists = db.query(PoSCRuleSeed).filter_by(rule_id=item["id"]).first()
         if not exists:
-            db.add(PoSCRule(
+            db.add(PoSCRuleSeed(
                 rule_id=item["id"],
                 rule_name=item["rule_name"],
                 category=item["category"],
@@ -81,24 +80,6 @@ def seed_recommendation_rules(db: Session):
     print(f"Seeded {len(data)} recommendation rules")
 
 
-def seed_glossary(db: Session):
-    data = load_json("islamic_glossary_terms.json")
-    for item in data:
-        exists = db.query(IslamicGlossary).filter_by(term_arabic=item.get("term_arabic", "")).first()
-        if not exists:
-            db.add(IslamicGlossary(
-                term_arabic=item.get("term_arabic", ""),
-                transliteration=item.get("transliteration", ""),
-                term_ru=item.get("term_ru", ""),
-                term_uz=item.get("term_uz", ""),
-                definition=item.get("definition", ""),
-                aaoifi_ref=item.get("aaoifi_ref", ""),
-                daleel=item.get("daleel", "")
-            ))
-    db.commit()
-    print(f"Seeded {len(data)} glossary terms")
-
-
 def seed_all():
     """Run all seed functions."""
     Base.metadata.create_all(bind=engine)
@@ -108,7 +89,6 @@ def seed_all():
         seed_islamic_products(db)
         seed_posc_rules(db)
         seed_recommendation_rules(db)
-        seed_glossary(db)
         print("All seeds completed successfully!")
     except Exception as e:
         db.rollback()
