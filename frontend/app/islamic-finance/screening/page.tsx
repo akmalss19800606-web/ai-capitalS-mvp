@@ -220,6 +220,7 @@ export default function ScreeningPage() {
             </div>
           )}
         </div>
+              )}
 
               {/* Portfolio Tab */}
         {tab === "portfolio" && (
@@ -257,7 +258,6 @@ export default function ScreeningPage() {
             )}
           </div>
         )}
-      )}
-    </IslamicFinanceLayout>
-  );
-}
+      </IslamicFinanceLayout>
+    );
+  }
