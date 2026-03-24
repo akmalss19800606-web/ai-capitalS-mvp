@@ -28,7 +28,7 @@ function newItem(id: string): BatchItem {
 }
 
 export default function ScreeningPage() {
-    const [tab, setTab] = useState<"single" | "batch" | "portfolio">("single");
+  const [tab, setTab] = useState<"single" | "batch" | "portfolio">("single");
 
   // Single screening state
   const [selectedCompany, setSelectedCompany] = useState<CompanyItem | null>(null);
@@ -42,7 +42,8 @@ export default function ScreeningPage() {
   // Batch state
   const [batchItems, setBatchItems] = useState<BatchItem[]>([newItem("1"), newItem("2")]);
   const [batchRunning, setBatchRunning] = useState(false);
-    // Portfolio screening state
+
+  // Portfolio screening state
   const [portfolioResults, setPortfolioResults] = useState<ScreeningResult[]>([]);
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const runPortfolioScreening = async () => {
@@ -67,9 +68,8 @@ export default function ScreeningPage() {
         mode: getMode(),
       });
       setResult(res);
-    } catch {
-      setError("Ошибка скрининга. Проверьте авторизацию.");
-    } finally { setLoading(false); }
+    } catch { setError("Ошибка скрининга. Проверьте авторизацию."); }
+    finally { setLoading(false); }
   };
 
   const updateBatchItem = (id: string, patch: Partial<BatchItem>) => {
@@ -106,97 +106,84 @@ export default function ScreeningPage() {
   return (
     <IslamicFinanceLayout>
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 0, borderBottom: `1px solid ${C.border}`, marginBottom: 24 }}>
-          {(["single", "batch", "portfolio"] as const).map(t => (
+      <div style={{ display: "flex", borderBottom: `1px solid ${C.border}`, marginBottom: 24 }}>
+        {(["single", "batch", "portfolio"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
-            padding: "8px 20px", border: "none", background: "none",
-            fontSize: 14, fontWeight: tab === t ? 700 : 400,
-            color: tab === t ? C.primary : C.muted,
+            padding: "8px 20px", border: "none", background: "none", fontSize: 14,
+            fontWeight: tab === t ? 700 : 400, color: tab === t ? C.primary : C.muted,
             borderBottom: tab === t ? `2px solid ${C.primary}` : "2px solid transparent",
             marginBottom: -2, cursor: "pointer",
           }}>
-                          {t === "single" ? "🔍 Одиночный" : t === "batch" ? "📋 Батч (сравнение)" : "📊 Портфель"}
+            {t === "single" ? "🔍 Одиночный" : t === "batch" ? "📋 Батч (сравнение)" : "📊 Портфель"}
           </button>
         ))}
       </div>
 
       {tab === "single" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 6 }}>Компания (UzSE / ЦКТСБ)</div>
-            <CompanySearchInput onSelect={c => setSelectedCompany(c)} />
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, color: C.text, display: "block", marginBottom: 6 }}>Компания (UzSE / ЦКТСБ)</label>
+            <CompanySearchInput onSelect={(c: CompanyItem) => setSelectedCompany(c)} />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Харам-выручка (%)</div>
+              <label style={{ fontSize: 12, color: C.muted }}>Харам-выручка (%)</label>
               <input type="number" value={haramPct} onChange={e => setHaramPct(e.target.value)} placeholder="0–5" style={inputStyle} />
             </div>
             <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Долговая нагрузка (%)</div>
+              <label style={{ fontSize: 12, color: C.muted }}>Долговая нагрузка (%)</label>
               <input type="number" value={debtRatio} onChange={e => setDebtRatio(e.target.value)} placeholder="0–33" style={inputStyle} />
             </div>
             <div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>Процентный доход (%)</div>
+              <label style={{ fontSize: 12, color: C.muted }}>Процентный доход (%)</label>
               <input type="number" value={interestPct} onChange={e => setInterestPct(e.target.value)} placeholder="0–5" style={inputStyle} />
             </div>
           </div>
-          <button onClick={handleScreen} disabled={loading} style={{
-            padding: "12px 24px", borderRadius: 8, border: "none",
-            background: loading ? C.muted : C.primary, color: "#fff",
-            fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", width: "100%",
-          }}>
+          <button onClick={handleScreen} disabled={loading || !selectedCompany} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: loading ? C.muted : C.primary, color: "#fff", fontWeight: 600, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", width: "100%", marginBottom: 16 }}>
             {loading ? "Анализирую..." : "🔍 Провести скрининг"}
           </button>
-          {error && <div style={{ color: C.error, fontSize: 13 }}>{error}</div>}
+          {error && <p style={{ color: C.error, fontSize: 13 }}>{error}</p>}
           {result && <ScreeningResultCard result={result} />}
         </div>
       )}
 
       {tab === "batch" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ fontSize: 13, color: C.muted }}>Добавьте компании для пакетной проверки и сравнения результатов</div>
+        <div>
+          <p style={{ color: C.muted, fontSize: 13, marginBottom: 16 }}>Добавьте компании для пакетной проверки и сравнения результатов</p>
           {batchItems.map((item, idx) => (
-            <div key={item.id} style={{ padding: 16, border: `1px solid ${C.border}`, borderRadius: 10, background: C.card }}>
+            <div key={item.id} style={{ padding: 16, border: `1px solid ${C.border}`, borderRadius: 8, marginBottom: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Компания {idx + 1}</span>
+                <span style={{ fontWeight: 600, fontSize: 13 }}>Компания {idx + 1}</span>
                 {batchItems.length > 2 && (
                   <button onClick={() => setBatchItems(prev => prev.filter(i => i.id !== item.id))} style={{ background: "none", border: "none", color: C.error, cursor: "pointer", fontSize: 18 }}>×</button>
                 )}
               </div>
-              <CompanySearchInput onSelect={c => updateBatchItem(item.id, { company: c })} />
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginTop: 8 }}>
+              <CompanySearchInput onSelect={(c: CompanyItem) => updateBatchItem(item.id, { company: c })} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 8 }}>
                 <input type="number" placeholder="Харам %" value={item.haramPct} onChange={e => updateBatchItem(item.id, { haramPct: e.target.value })} style={inputStyle} />
                 <input type="number" placeholder="Долг %" value={item.debtRatio} onChange={e => updateBatchItem(item.id, { debtRatio: e.target.value })} style={inputStyle} />
                 <input type="number" placeholder="Процент %" value={item.interestPct} onChange={e => updateBatchItem(item.id, { interestPct: e.target.value })} style={inputStyle} />
               </div>
-              {item.loading && <div style={{ color: C.muted, fontSize: 12, marginTop: 6 }}>Анализирую...</div>}
-              {item.error && <div style={{ color: C.error, fontSize: 12, marginTop: 6 }}>{item.error}</div>}
+              {item.loading && <p style={{ color: C.muted, fontSize: 12, marginTop: 8 }}>Анализирую...</p>}
+              {item.error && <p style={{ color: C.error, fontSize: 12, marginTop: 8 }}>{item.error}</p>}
               {item.result && (
                 <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontWeight: 700, color: scoreColor(Number(item.result.score)) }}>{item.result.score?.toFixed(1)}</span>
-                  <ShariahStatusBadge status={item.result.status} score={item.result.score} />
-                  <span style={{ fontSize: 12, color: C.muted }}>{item.result.company_name}</span>
+                  <span style={{ fontWeight: 700, color: scoreColor(item.result.score) }}>{item.result.score?.toFixed(1)}</span>
+                  <ShariahStatusBadge status={item.result!.status} score={item.result!.score} />
+                  <span>{item.result.company_name}</span>
                 </div>
               )}
             </div>
           ))}
-          <div style={{ display: "flex", gap: 12 }}>
-            <button onClick={() => setBatchItems(prev => [...prev, newItem(String(Date.now()))])} style={{
-              padding: "10px 20px", borderRadius: 8, border: `1px solid ${C.primary}`,
-              background: "white", color: C.primary, fontWeight: 600, fontSize: 14, cursor: "pointer",
-            }}>+ Добавить компанию</button>
-            <button onClick={runBatch} disabled={batchRunning || !batchItems.some(i => i.company)} style={{
-              padding: "10px 24px", borderRadius: 8, border: "none",
-              background: batchRunning ? C.muted : C.primary, color: "#fff",
-              fontWeight: 600, fontSize: 14, cursor: batchRunning ? "not-allowed" : "pointer",
-            }}>
+          <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+            <button onClick={() => setBatchItems(prev => [...prev, newItem(String(Date.now()))])} style={{ padding: "10px 20px", borderRadius: 8, border: `1px solid ${C.primary}`, background: "white", color: C.primary, fontWeight: 600, fontSize: 14, cursor: "pointer" }}>+ Добавить компанию</button>
+            <button onClick={runBatch} disabled={batchRunning || !batchItems.some(i => i.company)} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: batchRunning ? C.muted : C.primary, color: "#fff", fontWeight: 600, fontSize: 14, cursor: batchRunning ? "not-allowed" : "pointer" }}>
               {batchRunning ? "Проверяю..." : "▶ Запустить батч"}
             </button>
           </div>
-
           {batchItems.some(i => i.result) && (
-            <div style={{ marginTop: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 12 }}>📊 Сравнение результатов</h3>
+            <div style={{ marginTop: 24 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>📊 Сравнение результатов</h3>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr>
@@ -220,44 +207,44 @@ export default function ScreeningPage() {
             </div>
           )}
         </div>
-              )}
+      )}
 
-              {/* Portfolio Tab */}
-        {tab === "portfolio" && (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text }}>📊 Массовый скрининг портфеля</h3>
-              <button onClick={() => { runPortfolioScreening(); }} style={{ padding: "8px 16px", background: C.primary, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
-                {portfolioLoading ? "Загрузка..." : "🔄 Запустить скрининг"}
-              </button>
-            </div>
-            {portfolioResults.length === 0 && !portfolioLoading && (
-              <p style={{ color: C.muted, fontSize: 13 }}>Нажмите "Запустить скрининг" для проверки всех компаний портфеля.</p>
-            )}
-            {portfolioResults.length > 0 && (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr>
-                    {["Компания", "Скор 0-5", "Статус", "Харам %", "Долг %"].map(h => (
-                      <th key={h} style={{ textAlign: "left", padding: 8, borderBottom: `1px solid ${C.border}`, color: C.muted }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {portfolioResults.map((r, i) => (
-                    <tr key={i}>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.company_name}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: scoreColor(Number(r.score)) }}>{r.score}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}><ShariahStatusBadge status={r.status} score={(r as any).score} /></td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.haram_revenue_pct ?? "-"}</td>
-                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.debt_ratio ?? "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+      {/* Portfolio Tab */}
+      {tab === "portfolio" && (
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text }}>📊 Массовый скрининг портфеля</h3>
+            <button onClick={() => { runPortfolioScreening(); }} style={{ padding: "8px 16px", background: C.primary, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
+              {portfolioLoading ? "Загрузка..." : "🔄 Запустить скрининг"}
+            </button>
           </div>
-        )}
-      </IslamicFinanceLayout>
-    );
-  }
+          {portfolioResults.length === 0 && !portfolioLoading && (
+            <p style={{ color: C.muted, fontSize: 13 }}>Нажмите "Запустить скрининг" для проверки всех компаний портфеля.</p>
+          )}
+          {portfolioResults.length > 0 && (
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr>
+                  {["Компания", "Скор 0-5", "Статус", "Харам %", "Долг %"].map(h => (
+                    <th key={h} style={{ textAlign: "left", padding: 8, borderBottom: `1px solid ${C.border}`, color: C.muted }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {portfolioResults.map((r, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.company_name}</td>
+                    <td style={{ padding: 8, borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: scoreColor(Number(r.score)) }}>{r.score}</td>
+                    <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}><ShariahStatusBadge status={r.status} score={(r as any).score} /></td>
+                    <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.haram_revenue_pct ?? "-"}</td>
+                    <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.debt_ratio ?? "-"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </IslamicFinanceLayout>
+  );
+}
