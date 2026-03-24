@@ -1,0 +1,112 @@
+[
+  {
+    "id": "posc_001",
+    "rule_name": "Prohibition of Riba (Interest)",
+    "category": "financial_prohibition",
+    "description": "All forms of interest-based transactions are prohibited. Returns must come from real economic activity.",
+    "severity": "critical",
+    "applicable_products": ["all"],
+    "references": ["Quran 2:275", "Quran 3:130"]
+  },
+  {
+    "id": "posc_002",
+    "rule_name": "Prohibition of Gharar (Excessive Uncertainty)",
+    "category": "financial_prohibition",
+    "description": "Contracts must have clear terms, known price, and defined deliverables. Excessive uncertainty invalidates contracts.",
+    "severity": "critical",
+    "applicable_products": ["all"],
+    "references": ["Sahih Muslim 1513"]
+  },
+  {
+    "id": "posc_003",
+    "rule_name": "Prohibition of Maysir (Gambling)",
+    "category": "financial_prohibition",
+    "description": "Speculative transactions resembling gambling are forbidden. Investment must be based on real assets.",
+    "severity": "critical",
+    "applicable_products": ["all"],
+    "references": ["Quran 5:90"]
+  },
+  {
+    "id": "posc_004",
+    "rule_name": "Asset-Backing Requirement",
+    "category": "structural_requirement",
+    "description": "All financial products must be backed by tangible assets or real economic activity.",
+    "severity": "high",
+    "applicable_products": ["sukuk", "equity_fund", "reit"],
+    "references": ["AAOIFI Shariah Standard 17"]
+  },
+  {
+    "id": "posc_005",
+    "rule_name": "Profit-Loss Sharing Principle",
+    "category": "structural_requirement",
+    "description": "Partners must share both profits and losses. Guaranteed returns on capital are not permissible.",
+    "severity": "high",
+    "applicable_products": ["mudarabah", "musharakah"],
+    "references": ["AAOIFI Shariah Standard 13"]
+  },
+  {
+    "id": "posc_006",
+    "rule_name": "Halal Business Activity Screen",
+    "category": "screening",
+    "description": "Investee companies must derive primary revenue from halal activities. Haram sectors include alcohol, tobacco, gambling, pork, and conventional finance.",
+    "severity": "critical",
+    "applicable_products": ["equity_fund", "etf"],
+    "references": ["AAOIFI Shariah Standard 21"]
+  },
+  {
+    "id": "posc_007",
+    "rule_name": "Debt Ratio Screen",
+    "category": "screening",
+    "description": "Total debt to total assets ratio must not exceed 33%. Companies with excessive leverage are non-compliant.",
+    "severity": "high",
+    "applicable_products": ["equity_fund", "etf"],
+    "references": ["AAOIFI Shariah Standard 21"],
+    "threshold": 0.33
+  },
+  {
+    "id": "posc_008",
+    "rule_name": "Interest Income Screen",
+    "category": "screening",
+    "description": "Interest income must not exceed 5% of total revenue. Non-permissible income must be purified.",
+    "severity": "high",
+    "applicable_products": ["equity_fund", "etf"],
+    "references": ["AAOIFI Shariah Standard 21"],
+    "threshold": 0.05
+  },
+  {
+    "id": "posc_009",
+    "rule_name": "Shariah Board Approval",
+    "category": "governance",
+    "description": "All Islamic financial products must be reviewed and approved by a qualified Shariah Supervisory Board.",
+    "severity": "critical",
+    "applicable_products": ["all"],
+    "references": ["AAOIFI Governance Standard 1"]
+  },
+  {
+    "id": "posc_010",
+    "rule_name": "Purification of Non-Compliant Income",
+    "category": "operational",
+    "description": "Any incidental non-permissible income must be calculated and donated to charity as purification.",
+    "severity": "medium",
+    "applicable_products": ["equity_fund", "etf", "reit"],
+    "references": ["AAOIFI Shariah Standard 21"]
+  },
+  {
+    "id": "posc_011",
+    "rule_name": "Transparency and Disclosure",
+    "category": "governance",
+    "description": "Full disclosure of product structure, risks, fees, and Shariah compliance status must be provided to investors.",
+    "severity": "high",
+    "applicable_products": ["all"],
+    "references": ["AAOIFI Governance Standard 7"]
+  },
+  {
+    "id": "posc_012",
+    "rule_name": "Periodic Shariah Audit",
+    "category": "governance",
+    "description": "Regular Shariah audits must be conducted to ensure ongoing compliance of all products and operations.",
+    "severity": "high",
+    "applicable_products": ["all"],
+    "references": ["AAOIFI Governance Standard 2"]
+  }
+]
