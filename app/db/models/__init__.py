@@ -29,3 +29,9 @@ from app.db.models.islamic_stage3 import (
     PoSCRule, PoSCCase, PoSCFinding,
     SSBReviewQueue, IslamicAuditorRegistry, P2PIslamicProject,
 )
+
+
+# Islamic Finance Seed Reference Data
+from app.db.models.islamic_products import IslamicProduct
+from app.db.models.posc_rules import PoSCRuleSeed
+from app.db.models.recommendation_rules import ProductRecommendationRule
