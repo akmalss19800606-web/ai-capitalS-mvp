@@ -1,0 +1,15 @@
+[
+  {"goal": "purchase", "tenure": "short", "risk": "low", "product": "murabaha"},
+  {"goal": "purchase", "tenure": "medium", "risk": "low", "product": "murabaha"},
+  {"goal": "purchase", "tenure": "long", "risk": "medium", "product": "ijara-tamlik"},
+  {"goal": "purchase", "tenure": "long", "risk": "high", "product": "musharaka"},
+  {"goal": "investment", "tenure": "long", "risk": "high", "product": "musharaka"},
+  {"goal": "investment", "tenure": "medium", "risk": "medium", "product": "mudaraba"},
+  {"goal": "investment", "tenure": "short", "risk": "low", "product": "sukuk"},
+  {"goal": "investment", "tenure": "long", "risk": "low", "product": "sukuk"},
+  {"goal": "trade", "tenure": "short", "risk": "low", "product": "salam"},
+  {"goal": "trade", "tenure": "medium", "risk": "medium", "product": "istisna"},
+  {"goal": "leasing", "tenure": "any", "risk": "any", "product": "ijara"},
+  {"goal": "social", "tenure": "any", "risk": "any", "product": "waqf"},
+  {"goal": "insurance", "tenure": "short", "risk": "low", "product": "takaful"}
+]
