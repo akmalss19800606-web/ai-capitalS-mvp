@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
+import { islamicApi, P2PProject as ApiP2P } from "@/components/islamic/api";
 
 type ProjectType = "mudaraba" | "musharaka";
 type ProjectStatus = "active" | "funded" | "closed";
@@ -46,9 +47,15 @@ function formatUZS(n: number) {
 export default function P2PPage() {
   const [filter, setFilter] = useState<"all" | ProjectType | ProjectStatus>("all");
   const [selected, setSelected] = useState<P2PProject | null>(null);
+    const [projects, setProjects] = useState<P2PProject[]>(PROJECTS);
+  useEffect(() => {
+    islamicApi.getP2PProjects(filter !== "all" ? filter : undefined)
+      .then(data => { if (data.length > 0) setProjects(data.map((p: ApiP2P) => ({ id: p.id, title: p.title, type: p.type as ProjectType, sector: "", targetAmount: p.target_amount, raisedAmount: p.raised_amount, investors: 0, minInvestment: 0, expectedReturn: p.expected_return_pct + "%", duration: p.duration_months + " мес.", status: p.status as ProjectStatus, description: p.description, shariahApproved: p.shariah_status === "compliant" }))); })
+      .catch(() => {});
+  }, [filter]);
 
-  const filtered = filter === "all" ? PROJECTS
-    : PROJECTS.filter(p => p.type === filter || p.status === filter);
+    const filtered = filter === "all" ? projects
+    : projects.filter(p => p.type === filter || p.status === filter);
 
   return (
     <IslamicFinanceLayout
