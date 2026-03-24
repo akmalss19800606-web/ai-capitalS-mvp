@@ -28,7 +28,7 @@ function newItem(id: string): BatchItem {
 }
 
 export default function ScreeningPage() {
-  const [tab, setTab] = useState<"single" | "batch">("single");
+    const [tab, setTab] = useState<"single" | "batch" | "portfolio">("single");
 
   // Single screening state
   const [selectedCompany, setSelectedCompany] = useState<CompanyItem | null>(null);
@@ -42,6 +42,15 @@ export default function ScreeningPage() {
   // Batch state
   const [batchItems, setBatchItems] = useState<BatchItem[]>([newItem("1"), newItem("2")]);
   const [batchRunning, setBatchRunning] = useState(false);
+    // Portfolio screening state
+  const [portfolioResults, setPortfolioResults] = useState<ScreeningResult[]>([]);
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const runPortfolioScreening = async () => {
+    setPortfolioLoading(true);
+    try { const results = await islamicApi.getScreeningResults(); setPortfolioResults(results); }
+    catch { setPortfolioResults([]); }
+    setPortfolioLoading(false);
+  };
 
   const getMode = () =>
     (typeof window !== "undefined" && localStorage.getItem("islamic_mode")) || "individual";
@@ -98,7 +107,7 @@ export default function ScreeningPage() {
     <IslamicFinanceLayout>
       {/* Tabs */}
       <div style={{ display: "flex", gap: 0, borderBottom: `1px solid ${C.border}`, marginBottom: 24 }}>
-        {(["single", "batch"] as const).map(t => (
+          {(["single", "batch", "portfolio"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: "8px 20px", border: "none", background: "none",
             fontSize: 14, fontWeight: tab === t ? 700 : 400,
@@ -106,7 +115,7 @@ export default function ScreeningPage() {
             borderBottom: tab === t ? `2px solid ${C.primary}` : "2px solid transparent",
             marginBottom: -2, cursor: "pointer",
           }}>
-            {t === "single" ? "🔍 Одиночный" : "📋 Батч (сравнение)"}
+                          {t === "single" ? "🔍 Одиночный" : t === "batch" ? "📋 Батч (сравнение)" : "📊 Портфель"}
           </button>
         ))}
       </div>
@@ -211,6 +220,43 @@ export default function ScreeningPage() {
             </div>
           )}
         </div>
+
+              {/* Portfolio Tab */}
+        {tab === "portfolio" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: C.text }}>📊 Массовый скрининг портфеля</h3>
+              <button onClick={() => { runPortfolioScreening(); }} style={{ padding: "8px 16px", background: C.primary, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
+                {portfolioLoading ? "Загрузка..." : "🔄 Запустить скрининг"}
+              </button>
+            </div>
+            {portfolioResults.length === 0 && !portfolioLoading && (
+              <p style={{ color: C.muted, fontSize: 13 }}>Нажмите "Запустить скрининг" для проверки всех компаний портфеля.</p>
+            )}
+            {portfolioResults.length > 0 && (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {["Компания", "Скор 0-5", "Статус", "Харам %", "Долг %"].map(h => (
+                      <th key={h} style={{ textAlign: "left", padding: 8, borderBottom: `1px solid ${C.border}`, color: C.muted }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {portfolioResults.map((r, i) => (
+                    <tr key={i}>
+                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.company_name}</td>
+                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: scoreColor(Number(r.score)) }}>{r.score}</td>
+                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}><ShariahStatusBadge status={r.status} score={(r as any).score} /></td>
+                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.haram_revenue_pct ?? "-"}</td>
+                      <td style={{ padding: 8, borderBottom: `1px solid ${C.border}` }}>{r.debt_ratio ?? "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
       )}
     </IslamicFinanceLayout>
   );
