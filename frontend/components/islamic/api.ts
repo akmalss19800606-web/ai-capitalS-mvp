@@ -293,4 +293,25 @@ export const islamicApi = {
     post<P2PInvestment>("/api/v1/islamic/p2p/invest", data),
   getP2PInvestments: () => get<P2PInvestment[]>("/api/v1/islamic/p2p/investments"),
   
+  // Sukuk API
+  getSukukList: (type?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    return get<SukukItem[]>(`/api/v1/islamic/sukuk?${params}`);
+  },
+
+  // Takaful API
+  getTakafulPlans: (type?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    return get<TakafulPlan[]>(`/api/v1/islamic/takaful?${params}`);
+  },
+
+  // Waqf API
+  getWaqfProjects: (type?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    return get<WaqfProject[]>(`/api/v1/islamic/waqf?${params}`);
+  },
+  
 };
