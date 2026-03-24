@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 
 from app.db.models.islamic_products import IslamicProduct
-from app.db.models.posc_rules import PoSCRule
+from app.db.models.posc_rules import PoSCRuleSeed
 from app.db.models.recommendation_rules import ProductRecommendationRule
 
 
@@ -24,20 +24,20 @@ def get_islamic_products_by_category(db: Session, category: str) -> List[Islamic
 
 
 # --- PoSC Rules ---
-def get_all_posc_rules(db: Session) -> List[PoSCRule]:
-    return db.query(PoSCRule).all()
+def get_all_posc_rules(db: Session) -> List[PoSCRuleSeed]:
+    return db.query(PoSCRuleSeed).all()
 
 
-def get_posc_rule_by_id(db: Session, rule_id: str) -> Optional[PoSCRule]:
-    return db.query(PoSCRule).filter(PoSCRule.rule_id == rule_id).first()
+def get_posc_rule_by_id(db: Session, rule_id: str) -> Optional[PoSCRuleSeed]:
+    return db.query(PoSCRuleSeed).filter(PoSCRuleSeed.rule_id == rule_id).first()
 
 
-def get_posc_rules_by_category(db: Session, category: str) -> List[PoSCRule]:
-    return db.query(PoSCRule).filter(PoSCRule.category == category).all()
+def get_posc_rules_by_category(db: Session, category: str) -> List[PoSCRuleSeed]:
+    return db.query(PoSCRuleSeed).filter(PoSCRuleSeed.category == category).all()
 
 
-def get_posc_rules_by_severity(db: Session, severity: str) -> List[PoSCRule]:
-    return db.query(PoSCRule).filter(PoSCRule.severity == severity).all()
+def get_posc_rules_by_severity(db: Session, severity: str) -> List[PoSCRuleSeed]:
+    return db.query(PoSCRuleSeed).filter(PoSCRuleSeed.severity == severity).all()
 
 
 # --- Recommendation Rules ---
