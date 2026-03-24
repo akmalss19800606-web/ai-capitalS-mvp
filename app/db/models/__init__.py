@@ -23,3 +23,9 @@ from app.db.models.islamic_finance import (
 )
 
 from app.db.models.islamic_stage2 import IslamicProductCatalog, IncomePurificationCase, CompanyImportBatch
+
+# Islamic Finance Stage 3 Models
+from app.db.models.islamic_stage3 import (
+    PoSCRule, PoSCCase, PoSCFinding,
+    SSBReviewQueue, IslamicAuditorRegistry, P2PIslamicProject,
+)
