@@ -28,6 +28,7 @@ from app.db.models.islamic_stage2 import IslamicProductCatalog, IncomePurificati
 from app.db.models.islamic_stage3 import (
     PoSCRule, PoSCCase, PoSCFinding,
     SSBReviewQueue, IslamicAuditorRegistry, P2PIslamicProject,
+    SukukIssuance, TakafulPlan, WaqfProject,
 )
 
 
