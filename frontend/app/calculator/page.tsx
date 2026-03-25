@@ -171,11 +171,11 @@ function CalculatorProPageInner() {
   const authHeader = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' })
 
     // Business Cases state
-  const [bcForm, setBcForm] = useState({ project_name: '', investment_amount: 0, expected_revenue: 0, period_years: 5, industry: '', description: '' })
+  const [bcForm, setBcForm] = useState<BusinessCaseForm>({ projectname: '', industry: '', region: '', legalform: '', projectstage: '', initialinvestmentmln: '', equitysharepct: '', debtsharepct: '', interestratepct: '', discountratepct: '', annualrevenuemln: '', annualcostsmln: '', revenuegrowthpct: '', projectyears: '', taxratepct: '', risklevel: '', marketcompetition: '', hasstatesupport: false, exportsharepct: '', additionalnotes: '' })
   const [bcResult, setBcResult] = useState<any>(null)
   const [bcLoading, setBcLoading] = useState(false)
   // XAI state
-  const [xaiForm, setXaiForm] = useState({ model_name: 'dcf', input_data: {}, analysis_type: 'shap' })
+  const [xaiForm, setXaiForm] = useState({ companyName: '', sector: '', industry: '', region: '', investmentAmount: '', period: '', analysisType: 'shap' })
   const [xaiResult, setXaiResult] = useState<any>(null)
   const [xaiLoading, setXaiLoading] = useState(false)
   useEffect(() => {
