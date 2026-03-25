@@ -28,6 +28,24 @@ interface WACCParams {
   size_premium: number; cost_of_debt: number; tax_rate: number
 }
 
+// ── Business Case Types ──
+interface BusinessCaseForm {
+  projectname: string; industry: string; region: string; legalform: string
+  projectstage: string; initialinvestmentmln: string; equitysharepct: string
+  debtsharepct: string; interestratepct: string; discountratepct: string
+  annualrevenuemln: string; annualcostsmln: string; revenuegrowthpct: string
+  projectyears: string; taxratepct: string; risklevel: string
+  marketcompetition: string; hasstatesupport: boolean; exportsharepct: string
+  additionalnotes: string
+}
+interface BusinessCaseResult {
+  status: string; projectname: string; industry: string; region: string
+  npvmln: number; irrpct: number | null; profitabilityindex: number
+  paybackyears: number | null; discountratepct: number
+  initialinvestmentmln: number; projectyears: number
+  isviable: boolean; recommendation: string; cashflows: number[]
+}
+
 const DEFAULT_DCF: DCFParams = {
   initial_investment: 100000, currency: 'USD', horizon_years: 5,
   cash_flow_mode: 'auto', revenue_year1: 120000, revenue_growth_rate: 15,
