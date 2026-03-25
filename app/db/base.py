@@ -76,3 +76,10 @@ from app.db.models.islamic_stage1 import (
     IslamicProfile, ZakatCalculationV2, IslamicGlossaryTerm,
     ShariahScreeningCompany, ShariahScreeningResult, IslamicReferenceRegistry,
 )
+
+# === Islamic Finance Stage 2 ===
+from app.db.models.islamic_stage2 import (
+    IslamicProductCatalog,
+    IncomePurificationCase,
+    CompanyImportBatch,
+)
