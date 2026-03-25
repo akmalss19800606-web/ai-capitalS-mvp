@@ -333,5 +333,29 @@ export const islamicApi = {
   // Waqf Stats API
   getWaqfStats: () =>
     get<{ total_projects: number; total_target: number; total_raised: number; active_projects: number; completed_projects: number; total_beneficiaries: number }>("/api/v1/islamic/waqf/stats"),
-  
+
+
+    // Education API
+  getStandards: (org?: string, category?: string) => {
+    const params = new URLSearchParams();
+    if (org) params.set("org", org);
+    if (category) params.set("category", category);
+    return get<unknown[]>(`/api/v1/islamic/education/standards?${params}`);
+  },
+  getCourses: (level?: string) => {
+    const params = new URLSearchParams();
+    if (level) params.set("level", level);
+    return get<unknown[]>(`/api/v1/islamic/education/courses?${params}`);
+  },
+  getEducationStats: () =>
+    get<{ total_standards: number; aaoifi_count: number; ifsb_count: number; total_courses: number; total_modules: number; total_hours: number }>("/api/v1/islamic/education/stats"),
+
+  // Indices API
+  getIndices: () => get<unknown[]>("/api/v1/islamic/indices/"),
+  getIndexHistory: (indexId: string, days?: number) => {
+    const params = days ? `?days=${days}` : "";
+    return get<unknown>(`/api/v1/islamic/indices/${indexId}/history${params}`);
+  },
+  assessRisk: (data: { portfolio_value: number; shariah_compliant_pct: number }) =>
+    post<{ portfolio_value: number; shariah_compliant_pct: number; risk_score: number; risk_level: string; recommendations: string[] }>("/api/v1/islamic/indices/risk-assessment", data),
 };
