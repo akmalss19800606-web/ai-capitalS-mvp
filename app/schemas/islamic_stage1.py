@@ -23,7 +23,7 @@ class IslamicProfileUpsert(BaseModel):
 
 class IslamicProfileResponse(IslamicProfileUpsert):
     id: UUID4
-    user_id: UUID4
+    user_id: int
     jurisdiction: str
     created_at: datetime
     updated_at: datetime
