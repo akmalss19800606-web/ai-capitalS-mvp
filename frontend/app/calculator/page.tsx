@@ -369,6 +369,7 @@ function CalculatorProPageInner() {
                     <select value={dcfParams.currency} onChange={e => updateDcf('currency', e.target.value)}
                       className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500/60">
                       <option value="USD">USD</option><option value="UZS">UZS</option>
+                                          </select>
                      
                   </div>
                 </div>
@@ -458,6 +459,7 @@ function CalculatorProPageInner() {
                     <option value="general">Общий (КПН 15%)</option>
                     <option value="simplified">Упрощённый (4%)</option>
                     <option value="sez">СЭЗ (0%)</option>
+                                        </select>
                    
                 </div>
               </div>
