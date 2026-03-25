@@ -3,11 +3,9 @@ Seed script: loads all JSON seed files into the database.
 Usage: python -m seeds.seed_all
 """
 import json
-import os
 import sys
 from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from sqlalchemy.orm import Session
@@ -20,24 +18,24 @@ SEEDS_DIR = Path(__file__).resolve().parent
 
 
 def load_json(filename: str) -> list:
-    filepath = SEEDS_DIR / filename
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(SEEDS_DIR / filename, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
 def seed_islamic_products(db: Session):
     data = load_json("islamic_products.json")
     for item in data:
-        exists = db.query(IslamicProduct).filter_by(product_id=item["id"]).first()
+        slug = item["slug"]
+        exists = db.query(IslamicProduct).filter_by(product_id=slug).first()
         if not exists:
             db.add(IslamicProduct(
-                product_id=item["id"],
-                name=item["name"],
+                product_id=slug,
+                name=item.get("name_ru", slug),
                 name_ar=item.get("name_ar", ""),
-                category=item["category"],
-                description=item["description"],
-                shariah_basis=item.get("shariah_basis", ""),
-                risk_level=item.get("risk_level", "medium"),
+                category=item.get("category", ""),
+                description=item.get("description_ru", ""),
+                shariah_basis=item.get("principle_ru", ""),
+                risk_level=item.get("product_type", "medium"),
                 data_json=item
             ))
     db.commit()
@@ -81,7 +79,6 @@ def seed_recommendation_rules(db: Session):
 
 
 def seed_all():
-    """Run all seed functions."""
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
