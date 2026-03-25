@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { 
   Calculator, BarChart2, GitCompare, Activity, Dice6,
   TrendingUp, Loader2, Download, RefreshCw, Plus, Trash2,
@@ -98,7 +98,7 @@ function npvColor(npv: number): string {
 // Главный компонент
 // ─────────────────────────────────────────────────────────
 
-export default function CalculatorProPage() {
+function CalculatorProPageInner() {
   const sp = useSearchParams(); const [activeTab, setActiveTab] = useState(sp.get('tab') || 'dcf')
   const [dcfParams, setDcfParams] = useState<DCFParams>(DEFAULT_DCF)
   const [waccParams, setWaccParams] = useState<WACCParams>(DEFAULT_WACC)
@@ -1059,4 +1059,9 @@ export default function CalculatorProPage() {
       </div>
     </div>
   )
+}
+
+
+export default function CalculatorProPage() {
+  return <Suspense fallback={<div className="text-center py-12">Loading...</div>}><CalculatorProPageInner /></Suspense>
 }
