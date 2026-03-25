@@ -1,9 +1,10 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import { islamicApi } from "@/lib/islamicApi";
+import IslamicFinanceLayout, { C } from "@/components/islamic/IslamicFinanceLayout";
 
-interface RecommendationRule {
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+interface Rule {
   id: number;
   rule_id: string;
   investor_profile: string;
@@ -14,88 +15,57 @@ interface RecommendationRule {
 }
 
 export default function RecommendationsPage() {
-  const [rules, setRules] = useState<RecommendationRule[]>([]);
+  const [rules, setRules] = useState<Rule[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterProfile, setFilterProfile] = useState("");
   const [filterRisk, setFilterRisk] = useState("");
 
   useEffect(() => {
-    loadRules();
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (filterProfile) params.set("profile", filterProfile);
+    if (filterRisk) params.set("risk", filterRisk);
+    fetch(`${API}/api/v1/islamic/recommendations?${params}`)
+      .then(r => r.json())
+      .then(setRules)
+      .catch(() => setRules([]))
+      .finally(() => setLoading(false));
   }, [filterProfile, filterRisk]);
 
-  const loadRules = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filterProfile) params.set("profile", filterProfile);
-      if (filterRisk) params.set("risk", filterRisk);
-      const res = await islamicApi.get(`/recommendations?${params}`);
-      setRules(res.data);
-    } catch (e) {
-      console.error("Failed to load recommendations", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const profiles = ["", "purchase", "investment", "trade", "leasing", "social", "insurance"];
+  const risks = ["", "low", "medium", "high", "any"];
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">
-        Product Recommendations
-      </h1>
-
-      <div className="flex gap-4 mb-6">
-        <select
-          className="border rounded px-3 py-2"
-          value={filterProfile}
-          onChange={(e) => setFilterProfile(e.target.value)}
-        >
-          <option value="">All Profiles</option>
-          <option value="conservative">Conservative</option>
-          <option value="moderate">Moderate</option>
-          <option value="aggressive">Aggressive</option>
-          <option value="institutional">Institutional</option>
+    <IslamicFinanceLayout title="Рекомендации продуктов" subtitle="Подбор исламских финансовых продуктов">
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
+        <select value={filterProfile} onChange={e => setFilterProfile(e.target.value)}
+          style={{padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:14}}>
+          <option value="">Все цели</option>
+          {profiles.filter(Boolean).map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-
-        <select
-          className="border rounded px-3 py-2"
-          value={filterRisk}
-          onChange={(e) => setFilterRisk(e.target.value)}
-        >
-          <option value="">All Risk Levels</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+        <select value={filterRisk} onChange={e => setFilterRisk(e.target.value)}
+          style={{padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:14}}>
+          <option value="">Все риски</option>
+          {risks.filter(Boolean).map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
-
       {loading ? (
-        <p>Loading...</p>
+        <div style={{textAlign:"center",padding:40,color:C.muted}}>Загрузка...</div>
       ) : rules.length === 0 ? (
-        <p>No recommendations found.</p>
+        <div style={{textAlign:"center",padding:40,color:C.muted}}>Рекомендации не найдены</div>
       ) : (
-        <div className="grid gap-4">
-          {rules.map((rule) => (
-            <div key={rule.id} className="border rounded-lg p-4 shadow-sm">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-lg capitalize">
-                  {rule.investor_profile.replace(/_/g, " ")}
-                </h3>
-                <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                  {rule.risk_tolerance}
-                </span>
-              </div>
-              <div className="mb-2">
-                <strong>Recommended:</strong>{" "}
-                {rule.recommended_products.join(", ")}
-              </div>
-              {rule.notes && (
-                <p className="text-sm text-gray-600">{rule.notes}</p>
-              )}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:16}}>
+          {rules.map(r => (
+            <div key={r.rule_id} style={{background:C.card,borderRadius:12,
+              border:`1px solid ${C.border}`,padding:16,display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{fontSize:14,fontWeight:600}}>Цель: {r.investor_profile}</div>
+              <div style={{fontSize:13,color:C.muted}}>Риск: {r.risk_tolerance}</div>
+              <div style={{fontSize:13}}>Продукты: {(r.recommended_products||[]).join(", ")}</div>
+              {r.notes && <div style={{fontSize:12,color:C.muted,fontStyle:"italic"}}>{r.notes}</div>}
             </div>
           ))}
         </div>
       )}
-    </div>
+    </IslamicFinanceLayout>
   );
 }
