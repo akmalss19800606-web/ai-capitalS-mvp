@@ -325,5 +325,13 @@ export const islamicApi = {
     getPoSCCertificates: () =>
       get<PoSCCertificate[]>("/api/v1/islamic/posc/certificates")
       .catch(() => [] as PoSCCertificate[]),
+
+    // Takaful Calculator API
+  calculateTakaful: (data: { coverage_amount: number; takaful_type: string; term_months: number }) =>
+    post<{ monthly_contribution: number; total_contribution: number; coverage_amount: number; takaful_type: string; term_months: number; surplus_sharing_pct: number }>("/api/v1/islamic/takaful/calculate", data),
+
+  // Waqf Stats API
+  getWaqfStats: () =>
+    get<{ total_projects: number; total_target: number; total_raised: number; active_projects: number; completed_projects: number; total_beneficiaries: number }>("/api/v1/islamic/waqf/stats"),
   
 };
