@@ -96,12 +96,20 @@
       cpiUz: 'Инфляция (ИПЦ)',
       stockExchange: 'Фондовая биржа',
       islamicFinance: 'Исламские финансы',
-      calculator: 'Калькулятор',
+      investmentCalculator: 'Инвестиционный калькулятор',
       businessCases: 'Бизнес-кейсы',
       xaiAnalysis: 'Объяснимость AI',
     },
   },
 
+     /* ─── Investment Calculator Tabs ─── */
+  calcTabDcf: 'DCF / ROI',
+  calcTabCompare: 'Сравнение',
+  calcTabSensitivity: 'Чувствительность',
+  calcTabMonteCarlo: 'Monte Carlo',
+  calcTabBenchmarks: 'Бенчмарки УЗ',
+  calcTabCases: 'Бизнес-кейсы',
+  calcTabXai: 'Объяснимость AI',
   /* ─── Header / User menu ─── */
   header: {
     defaultUser: 'Пользователь',
