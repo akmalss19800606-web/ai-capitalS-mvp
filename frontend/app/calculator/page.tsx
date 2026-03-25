@@ -275,7 +275,7 @@ function CalculatorProPageInner() {
     const submitBusinessCase = async () => {
     setBcLoading(true); setError(null)
     try {
-      const data = await apiRequest('/api/v1/business-cases/evaluate', { method: 'POST', body: JSON.stringify(bcForm) })
+      const data = await apiRequest('/business-cases/evaluate', { method: 'POST', body: JSON.stringify(bcForm) })
       if (data.detail) throw new Error(data.detail)
       setBcResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
@@ -285,7 +285,7 @@ function CalculatorProPageInner() {
   const runXaiAnalysis = async () => {
     setXaiLoading(true); setError(null)
     try {
-      const data = await apiRequest('/api/v1/xai/analyze', { method: 'POST', body: JSON.stringify(xaiForm) })
+      const data = await apiRequest('/xai/analyze', { method: 'POST', body: JSON.stringify(xaiForm) })
       if (data.detail) throw new Error(data.detail)
       setXaiResult(data)
     } catch (e: any) { setError('Ошибка: ' + e.message) }
@@ -369,7 +369,7 @@ function CalculatorProPageInner() {
                     <select value={dcfParams.currency} onChange={e => updateDcf('currency', e.target.value)}
                       className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500/60">
                       <option value="USD">USD</option><option value="UZS">UZS</option>
-                    </select>
+                     
                   </div>
                 </div>
 
@@ -458,7 +458,7 @@ function CalculatorProPageInner() {
                     <option value="general">Общий (КПН 15%)</option>
                     <option value="simplified">Упрощённый (4%)</option>
                     <option value="sez">СЭЗ (0%)</option>
-                  </select>
+                   
                 </div>
               </div>
 
@@ -1032,11 +1032,26 @@ function CalculatorProPageInner() {
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
             <h3 className="text-gray-900 font-bold mb-4">Оценка бизнес-кейса</h3>
             <div className="space-y-4">
-              <InputField label="Название проекта" type="text" value={bcForm.project_name} onChange={(v: string) => setBcForm(p => ({...p, project_name: v}))} />
-              <InputField label="Сумма инвестиций" value={bcForm.investment_amount} onChange={(v: number) => setBcForm(p => ({...p, investment_amount: v}))} />
-              <InputField label="Ожидаемая выручка" value={bcForm.expected_revenue} onChange={(v: number) => setBcForm(p => ({...p, expected_revenue: v}))} />
-              <InputField label="Период (лет)" value={bcForm.period_years} onChange={(v: number) => setBcForm(p => ({...p, period_years: v}))} min={1} max={30} />
-              <InputField label="Отрасль" type="text" value={bcForm.industry} onChange={(v: string) => setBcForm(p => ({...p, industry: v}))} />
+              <InputField label="Название проекта" type="text" value={bcForm.projectname} onChange={(v: string) => setBcForm(p => ({...p, projectname: v}))} />
+              <InputField label="Нач. инвестиции (mlн)" type="text" value={bcForm.initialinvestmentmln} onChange={(v: string) => setBcForm(p => ({...p, initialinvestmentmln: v}))} />
+              <InputField label="Годовая выручка (млн)" type="text" value={bcForm.annualrevenuemln} onChange={(v: string) => setBcForm(p => ({...p, annualrevenuemln: v}))} />
+              <InputField label="Срок проекта (лет)" type="text" value={bcForm.projectyears} onChange={(v: string) => setBcForm(p => ({...p, projectyears: v}))} />
+              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={bcForm.industry} onChange={e => setBcForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)} </div>
+                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={bcForm.region} onChange={e => setBcForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)} </div>
+              <InputField label="Правовая форма" type="text" value={bcForm.legalform} onChange={(v: string) => setBcForm(p => ({...p, legalform: v}))} />
+              <InputField label="Стадия проекта" type="text" value={bcForm.projectstage} onChange={(v: string) => setBcForm(p => ({...p, projectstage: v}))} />
+              <InputField label="Доля собств. капитала (%)" type="text" value={bcForm.equitysharepct} onChange={(v: string) => setBcForm(p => ({...p, equitysharepct: v}))} />
+              <InputField label="Доля заёмного (%)" type="text" value={bcForm.debtsharepct} onChange={(v: string) => setBcForm(p => ({...p, debtsharepct: v}))} />
+              <InputField label="Процент. ставка (%)" type="text" value={bcForm.interestratepct} onChange={(v: string) => setBcForm(p => ({...p, interestratepct: v}))} />
+              <InputField label="Ставка дисконт. (%)" type="text" value={bcForm.discountratepct} onChange={(v: string) => setBcForm(p => ({...p, discountratepct: v}))} />
+              <InputField label="Годовые затраты (млн)" type="text" value={bcForm.annualcostsmln} onChange={(v: string) => setBcForm(p => ({...p, annualcostsmln: v}))} />
+              <InputField label="Рост выручки (%)" type="text" value={bcForm.revenuegrowthpct} onChange={(v: string) => setBcForm(p => ({...p, revenuegrowthpct: v}))} />
+              <InputField label="Ставка налога (%)" type="text" value={bcForm.taxratepct} onChange={(v: string) => setBcForm(p => ({...p, taxratepct: v}))} />
+              <InputField label="Уровень риска" type="text" value={bcForm.risklevel} onChange={(v: string) => setBcForm(p => ({...p, risklevel: v}))} />
+              <InputField label="Конкуренция" type="text" value={bcForm.marketcompetition} onChange={(v: string) => setBcForm(p => ({...p, marketcompetition: v}))} />
+              <div className="flex items-center gap-2"><input type="checkbox" checked={bcForm.hasstatesupport} onChange={e => setBcForm(p => ({...p, hasstatesupport: e.target.checked}))} className="accent-violet-500" /><label className="text-sm text-gray-600">Гос. поддержка</label></div>
+              <InputField label="Доля экспорта (%)" type="text" value={bcForm.exportsharepct} onChange={(v: string) => setBcForm(p => ({...p, exportsharepct: v}))} />
+              <InputField label="Доп. заметки" type="text" value={bcForm.additionalnotes} onChange={(v: string) => setBcForm(p => ({...p, additionalnotes: v}))} />
               <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
                 {bcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />} {bcLoading ? 'Оценка...' : 'Оценить кейс'}
               </button>
@@ -1064,20 +1079,21 @@ function CalculatorProPageInner() {
             <h3 className="text-gray-900 font-bold mb-4">XAI Анализ</h3>
             <div className="space-y-4">
               <div>
-                <label className="text-sm text-gray-600 mb-1 block">Модель</label>
-                <select value={xaiForm.model_name} onChange={e => setXaiForm(p => ({...p, model_name: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
-                  <option value="dcf">DCF</option>
-                  <option value="monte_carlo">Monte Carlo</option>
-                  <option value="sensitivity">Sensitivity</option>
-                </select>
+                <label className="text-sm text-gray-600 mb-1 block">Название компании</label>
+                <input type="text" value={xaiForm.companyName} onChange={e => setXaiForm(p => ({...p, companyName: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500" placeholder="Введите название" />
               </div>
+                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Сектор (GICS)</label><select value={xaiForm.sector} onChange={e => setXaiForm(p => ({...p, sector: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{GICS_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={xaiForm.industry} onChange={e => setXaiForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
+              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={xaiForm.region} onChange={e => setXaiForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+              <InputField label="Сумма инвестиций" type="text" value={xaiForm.investmentAmount} onChange={(v: string) => setXaiForm(p => ({...p, investmentAmount: v}))} />
+              <InputField label="Период (лет)" type="text" value={xaiForm.period} onChange={(v: string) => setXaiForm(p => ({...p, period: v}))} />
               <div>
                 <label className="text-sm text-gray-600 mb-1 block">Тип анализа</label>
-                <select value={xaiForm.analysis_type} onChange={e => setXaiForm(p => ({...p, analysis_type: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
+                <select value={xaiForm.analysisType} onChange={e => setXaiForm(p => ({...p, analysisType: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
                   <option value="shap">SHAP</option>
                   <option value="lime">LIME</option>
                   <option value="feature_importance">Feature Importance</option>
-                </select>
+                 
               </div>
               <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
                 {xaiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} {xaiLoading ? 'Анализ...' : 'Запустить XAI'}
