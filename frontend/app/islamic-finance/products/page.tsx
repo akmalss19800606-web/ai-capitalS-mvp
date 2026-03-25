@@ -32,7 +32,7 @@ export default function ProductsPage() {
     setLoading(true);
     const params = new URLSearchParams();
     if (category) params.set("category", category);
-    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const headers: Record<string, string> = {};
     if (token) headers["Authorization"] = `Bearer ${token}`;
     fetch(`${API}/api/v1/islamic/products?${params}`, { headers })
