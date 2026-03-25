@@ -98,12 +98,20 @@ export const uz: Locale = {
       cpiUz: 'Inflyatsiya (INI)',
       stockExchange: 'Fond birjasi',
       islamicFinance: 'Islom moliyasi',
-      calculator: 'Kalkulyator',
+      investmentCalculator: 'Investitsion kalkulyator',
       businessCases: 'Biznes-keyslar',
       xaiAnalysis: 'AI tushuntirish',
     },
   },
 
+    /* ─── Investment Calculator Tabs ─── */
+  calcTabDcf: 'DCF / ROI',
+  calcTabCompare: 'Taqqoslash',
+  calcTabSensitivity: 'Sezuvchanlik',
+  calcTabMonteCarlo: 'Monte Carlo',
+  calcTabBenchmarks: 'O\'z benchmarklari',
+  calcTabCases: 'Biznes-keyslar',
+  calcTabXai: 'AI tushuntirish',
   /* ─── Header ─── */
   header: {
     defaultUser: 'Foydalanuvchi',
