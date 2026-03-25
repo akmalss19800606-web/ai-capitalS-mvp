@@ -1063,7 +1063,7 @@ function CalculatorProPageInner() {
             {bcResult && !bcLoading && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат оценки</h3>
-                <pre className="text-xs text-gray-700 bg-white p-4 rounded-xl overflow-auto max-h-96">{JSON.stringify(bcResult, null, 2)}</pre>
+                <div className="grid grid-cols-2 gap-3 mb-4"><MetricCard label="NPV" value={bcResult.npvmln ? `${bcResult.npvmln.toFixed(2)} млн` : 'N/A'} color={bcResult.npvmln > 0 ? 'emerald' : 'red'} /><MetricCard label="IRR" value={bcResult.irrpct ? `${bcResult.irrpct.toFixed(2)}%` : 'N/A'} /><MetricCard label="PI" value={bcResult.profitabilityindex?.toFixed(3) || 'N/A'} /><MetricCard label="Окупаемость" value={bcResult.paybackyears ? `${bcResult.paybackyears.toFixed(1)} лет` : 'N/A'} /></div>{bcResult.recommendation && <div className={`p-3 rounded-xl text-sm ${bcResult.isviable ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{bcResult.isviable ? '✅' : '❌'} {bcResult.recommendation}</div>}
               </div>
             )}
           </div>
@@ -1108,8 +1108,8 @@ function CalculatorProPageInner() {
                 <h3 className="text-gray-900 font-bold mb-4">Результат XAI</h3>
                 {xaiResult.factors && xaiResult.factors.map((f: any, i: number) => (
                   <div key={i} className="mb-3">
-                    <div className="flex justify-between text-sm"><span className="text-gray-700">{f.feature}</span><span className="font-bold text-gray-900">{f.importance?.toFixed(4)}</span></div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className="bg-violet-500 h-2 rounded-full" style={{width: `${Math.min(Math.abs(f.importance || 0) * 100, 100)}%`}} /></div>
+                    <div className="flex justify-between text-sm"><span className="text-gray-700">{f.name}</span><span className="font-bold text-gray-900">{f.score?.toFixed(4)}</span></div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className="bg-violet-500 h-2 rounded-full" style={{width: `${Math.min(Math.abs(f.score || 0) * 100, 100)}%`}} /></div>
                   </div>
                 ))}
                 {!xaiResult.factors && <pre className="text-xs text-gray-700 bg-white p-4 rounded-xl overflow-auto max-h-96">{JSON.stringify(xaiResult, null, 2)}</pre>}
