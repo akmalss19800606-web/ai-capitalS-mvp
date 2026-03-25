@@ -14,6 +14,11 @@ from app.db.models.islamic_products import IslamicProduct
 from app.db.models.islamic_stage2 import IslamicProductCatalog
 from app.db.models.posc_rules import PoSCRuleSeed
 from app.db.models.recommendation_rules import ProductRecommendationRule
+from app.db.models.islamic_stage1 import (
+    IslamicGlossaryTerm,
+    IslamicReferenceRegistry,
+    ShariahScreeningCompany,
+)
 
 SEEDS_DIR = Path(__file__).resolve().parent
 
@@ -113,6 +118,73 @@ def seed_recommendation_rules(db: Session):
     print(f"Seeded {len(data)} recommendation rules")
 
 
+def seed_glossary_terms(db: Session):
+    data = load_json("islamic_glossary_terms.json")
+    for item in data:
+        slug = item["slug"]
+        exists = db.query(IslamicGlossaryTerm).filter_by(slug=slug).first()
+        if not exists:
+            db.add(IslamicGlossaryTerm(
+                slug=slug,
+                term_ru=item.get("term_ru", slug),
+                term_ar=item.get("term_ar", ""),
+                transliteration=item.get("transliteration", ""),
+                definition_ru=item.get("definition_ru", ""),
+                category=item.get("category", "concept"),
+                standard_ref=item.get("standard_ref", ""),
+                standard_org=item.get("standard_org", ""),
+                is_published=item.get("is_published", True),
+            ))
+    db.commit()
+    print(f"Seeded {len(data)} glossary terms")
+
+
+def seed_reference_registry(db: Session):
+    data = load_json("islamic_reference_registry.json")
+    for item in data:
+        code = item["code"]
+        reg_type = item["registry_type"]
+        exists = db.query(IslamicReferenceRegistry).filter_by(
+            registry_type=reg_type, code=code
+        ).first()
+        if not exists:
+            db.add(IslamicReferenceRegistry(
+                registry_type=reg_type,
+                code=code,
+                name_ru=item.get("name_ru", code),
+                name_en=item.get("name_en", ""),
+                description_ru=item.get("description_ru", ""),
+                topic=item.get("topic", ""),
+                document_ref=item.get("document_ref", ""),
+                is_active=item.get("is_active", True),
+            ))
+    db.commit()
+    print(f"Seeded {len(data)} reference registry entries")
+
+
+def seed_screening_companies(db: Session):
+    data = load_json("shariah_screening_companies.json")
+    for item in data:
+        ticker = item.get("ticker", "")
+        exists = db.query(ShariahScreeningCompany).filter_by(ticker=ticker).first()
+        if not exists:
+            db.add(ShariahScreeningCompany(
+                name_ru=item.get("name_ru", ""),
+                name_en=item.get("name_en", ""),
+                ticker=ticker,
+                isin=item.get("isin", ""),
+                registration_no=item.get("registration_no", ""),
+                market_type=item.get("market_type", "uzse"),
+                sector=item.get("sector", ""),
+                subsector=item.get("subsector", ""),
+                country=item.get("country", "UZ"),
+                source_url=item.get("source_url", ""),
+                is_active=item.get("is_active", True),
+            ))
+    db.commit()
+    print(f"Seeded {len(data)} screening companies")
+
+
 def seed_all():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -122,6 +194,9 @@ def seed_all():
         seed_islamic_product_catalog(db)
         seed_posc_rules(db)
         seed_recommendation_rules(db)
+        seed_glossary_terms(db)
+        seed_reference_registry(db)
+        seed_screening_companies(db)
         print("All seeds completed successfully!")
     except Exception as e:
         db.rollback()
