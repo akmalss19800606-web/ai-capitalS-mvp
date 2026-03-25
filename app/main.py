@@ -275,6 +275,6 @@ from app.api.v1.routers.company_admin_router import router as company_admin_rout
 app.include_router(islamic_products_router,  prefix="/api/v1",                         tags=["Islamic: Products"])
 app.include_router(purification_router,      prefix="/api/v1",                         tags=["Islamic: Purification"])
 app.include_router(company_admin_router,     prefix="/api/v1",                         tags=["Islamic: Admin"])
-    # Islamic Finance Reference Data
-    from app.api.v1.routers.islamic_products_ref_router import router as islamic_ref_router
-    app.include_router(islamic_ref_router,         prefix="/api/v1/islamic",          tags=["Islamic: Reference Data"])
+# Islamic Finance Reference Data
+from app.api.v1.routers.islamic_products_ref_router import router as islamic_ref_router
+app.include_router(islamic_ref_router,         prefix="/api/v1/islamic",          tags=["Islamic: Reference Data"])
