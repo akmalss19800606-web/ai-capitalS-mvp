@@ -313,5 +313,17 @@ export const islamicApi = {
     if (type) params.set("type", type);
     return get<WaqfProject[]>(`/api/v1/islamic/waqf?${params}`);
   },
+
+    // Products API
+    getProducts: (category?: string) => {
+          const params = new URLSearchParams();
+          if (category) params.set("category", category);
+          return get<IslamicProduct[]>(`/api/v1/islamic/products?${params}`);
+        },
+
+    // PoSC Certificates API
+    getPoSCCertificates: () =>
+      get<PoSCCertificate[]>("/api/v1/islamic/posc/certificates")
+      .catch(() => [] as PoSCCertificate[]),
   
 };
