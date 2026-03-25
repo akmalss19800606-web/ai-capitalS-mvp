@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal, engine, Base
 from app.db.models.islamic_products import IslamicProduct
+from app.db.models.islamic_stage2 import IslamicProductCatalog
 from app.db.models.posc_rules import PoSCRuleSeed
 from app.db.models.recommendation_rules import ProductRecommendationRule
 
@@ -40,6 +41,35 @@ def seed_islamic_products(db: Session):
             ))
     db.commit()
     print(f"Seeded {len(data)} islamic products")
+
+
+def seed_islamic_product_catalog(db: Session):
+    data = load_json("islamic_products.json")
+    for item in data:
+        slug = item["slug"]
+        exists = db.query(IslamicProductCatalog).filter_by(slug=slug).first()
+        if not exists:
+            db.add(IslamicProductCatalog(
+                slug=slug,
+                name_ru=item.get("name_ru", slug),
+                name_ar=item.get("name_ar", ""),
+                transliteration=item.get("transliteration", ""),
+                product_type=item.get("product_type", ""),
+                category=item.get("category", ""),
+                description_ru=item.get("description_ru", ""),
+                principle_ru=item.get("principle_ru", ""),
+                allowed_for=item.get("allowed_for", "both"),
+                prohibited_elements=item.get("prohibited_elements", []),
+                aaoifi_standard_code=item.get("aaoifi_standard_code", ""),
+                ifsb_standard_code=item.get("ifsb_standard_code", ""),
+                use_cases_ru=item.get("use_cases_ru", []),
+                risks_ru=item.get("risks_ru", []),
+                typical_tenure=item.get("typical_tenure", ""),
+                is_published=item.get("is_published", True),
+                sort_order=item.get("sort_order", 0),
+            ))
+    db.commit()
+    print(f"Seeded {len(data)} islamic product catalog entries")
 
 
 def seed_posc_rules(db: Session):
@@ -89,6 +119,7 @@ def seed_all():
     try:
         print("Starting seed process...")
         seed_islamic_products(db)
+        seed_islamic_product_catalog(db)
         seed_posc_rules(db)
         seed_recommendation_rules(db)
         print("All seeds completed successfully!")
