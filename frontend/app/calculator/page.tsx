@@ -5,9 +5,10 @@ import {
   Calculator, BarChart2, GitCompare, Activity, Dice6,
   TrendingUp, Loader2, Download, RefreshCw, Plus, Trash2,
   ChevronDown, ChevronUp, Info, CheckCircle2, AlertCircle,
-  ArrowUpRight, ArrowDownRight, Minus
+  ArrowUpRight, ArrowDownRight, Minus, Briefcase, Brain
 } from 'lucide-react'
 import { apiRequest } from '@/lib/api'
+import { useSearchParams } from 'next/navigation'
 
 // ─────────────────────────────────────────────────────────
 // Типы
@@ -46,6 +47,8 @@ const TABS = [
   { id: 'sensitivity', label: 'Чувствительность', icon: Activity, desc: 'Торнадо, Spider' },
   { id: 'montecarlo', label: 'Monte Carlo', icon: Dice6, desc: 'Вероятностный анализ' },
   { id: 'benchmarks', label: 'Бенчмарки УЗ', icon: BarChart2, desc: 'Альтернативы' },
+    { id: 'cases', label: 'Бизнес-кейсы', icon: Briefcase, desc: 'Оценка проектов' },
+  { id: 'xai', label: 'Объяснимость AI', icon: Brain, desc: 'XAI-анализ' },
 ]
 
 // ─────────────────────────────────────────────────────────
@@ -96,7 +99,7 @@ function npvColor(npv: number): string {
 // ─────────────────────────────────────────────────────────
 
 export default function CalculatorProPage() {
-  const [activeTab, setActiveTab] = useState('dcf')
+  const sp = useSearchParams(); const [activeTab, setActiveTab] = useState(sp.get('tab') || 'dcf')
   const [dcfParams, setDcfParams] = useState<DCFParams>(DEFAULT_DCF)
   const [waccParams, setWaccParams] = useState<WACCParams>(DEFAULT_WACC)
   const [showWacc, setShowWacc] = useState(false)
@@ -120,6 +123,14 @@ export default function CalculatorProPage() {
   const token = () => typeof window !== 'undefined' ? localStorage.getItem('token') || localStorage.getItem('token') || '' : ''
   const authHeader = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' })
 
+    // Business Cases state
+  const [bcForm, setBcForm] = useState({ project_name: '', investment_amount: 0, expected_revenue: 0, period_years: 5, industry: '', description: '' })
+  const [bcResult, setBcResult] = useState<any>(null)
+  const [bcLoading, setBcLoading] = useState(false)
+  // XAI state
+  const [xaiForm, setXaiForm] = useState({ model_name: 'dcf', input_data: {}, analysis_type: 'shap' })
+  const [xaiResult, setXaiResult] = useState<any>(null)
+  const [xaiLoading, setXaiLoading] = useState(false)
   useEffect(() => {
     const load = async () => {
       const [bmRes, prRes, txRes] = await Promise.all([
@@ -212,6 +223,26 @@ export default function CalculatorProPage() {
 
   const applyPreset = (preset: any) => {
     setDcfParams({ ...DEFAULT_DCF, ...preset.prefilled })
+  }
+
+    const submitBusinessCase = async () => {
+    setBcLoading(true); setError(null)
+    try {
+      const data = await apiRequest('/api/v1/business-cases/evaluate', { method: 'POST', body: JSON.stringify(bcForm) })
+      if (data.detail) throw new Error(data.detail)
+      setBcResult(data)
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
+    finally { setBcLoading(false) }
+  }
+
+  const runXaiAnalysis = async () => {
+    setXaiLoading(true); setError(null)
+    try {
+      const data = await apiRequest('/api/v1/xai/analyze', { method: 'POST', body: JSON.stringify(xaiForm) })
+      if (data.detail) throw new Error(data.detail)
+      setXaiResult(data)
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
+    finally { setXaiLoading(false) }
   }
 
   // ─────────────────────────────────────────────────────────
@@ -945,6 +976,85 @@ export default function CalculatorProPage() {
             )}
           </div>
         )}
+
+              {/* ══════════════════════════════════════════════ */}
+      {/* Вкладка 6: Бизнес-кейсы */}
+      {/* ══════════════════════════════════════════════ */}
+      {activeTab === 'cases' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+            <h3 className="text-gray-900 font-bold mb-4">Оценка бизнес-кейса</h3>
+            <div className="space-y-4">
+              <InputField label="Название проекта" type="text" value={bcForm.project_name} onChange={(v: string) => setBcForm(p => ({...p, project_name: v}))} />
+              <InputField label="Сумма инвестиций" value={bcForm.investment_amount} onChange={(v: number) => setBcForm(p => ({...p, investment_amount: v}))} />
+              <InputField label="Ожидаемая выручка" value={bcForm.expected_revenue} onChange={(v: number) => setBcForm(p => ({...p, expected_revenue: v}))} />
+              <InputField label="Период (лет)" value={bcForm.period_years} onChange={(v: number) => setBcForm(p => ({...p, period_years: v}))} min={1} max={30} />
+              <InputField label="Отрасль" type="text" value={bcForm.industry} onChange={(v: string) => setBcForm(p => ({...p, industry: v}))} />
+              <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
+                {bcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />} {bcLoading ? 'Оценка...' : 'Оценить кейс'}
+              </button>
+            </div>
+          </div>
+          <div>
+            {!bcResult && !bcLoading && <div className="text-center text-gray-400 mt-12">Заполните форму и нажмите «Оценить кейс»</div>}
+            {bcLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
+            {bcResult && !bcLoading && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+                <h3 className="text-gray-900 font-bold mb-4">Результат оценки</h3>
+                <pre className="text-xs text-gray-700 bg-white p-4 rounded-xl overflow-auto max-h-96">{JSON.stringify(bcResult, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+              {/* ══════════════════════════════════════════════ */}
+      {/* Вкладка 7: Объяснимость AI */}
+      {/* ══════════════════════════════════════════════ */}
+      {activeTab === 'xai' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+            <h3 className="text-gray-900 font-bold mb-4">XAI Анализ</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Модель</label>
+                <select value={xaiForm.model_name} onChange={e => setXaiForm(p => ({...p, model_name: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
+                  <option value="dcf">DCF</option>
+                  <option value="monte_carlo">Monte Carlo</option>
+                  <option value="sensitivity">Sensitivity</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm text-gray-600 mb-1 block">Тип анализа</label>
+                <select value={xaiForm.analysis_type} onChange={e => setXaiForm(p => ({...p, analysis_type: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
+                  <option value="shap">SHAP</option>
+                  <option value="lime">LIME</option>
+                  <option value="feature_importance">Feature Importance</option>
+                </select>
+              </div>
+              <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
+                {xaiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} {xaiLoading ? 'Анализ...' : 'Запустить XAI'}
+              </button>
+            </div>
+          </div>
+          <div>
+            {!xaiResult && !xaiLoading && <div className="text-center text-gray-400 mt-12">Выберите модель и запустите анализ</div>}
+            {xaiLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
+            {xaiResult && !xaiLoading && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+                <h3 className="text-gray-900 font-bold mb-4">Результат XAI</h3>
+                {xaiResult.factors && xaiResult.factors.map((f: any, i: number) => (
+                  <div key={i} className="mb-3">
+                    <div className="flex justify-between text-sm"><span className="text-gray-700">{f.feature}</span><span className="font-bold text-gray-900">{f.importance?.toFixed(4)}</span></div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className="bg-violet-500 h-2 rounded-full" style={{width: `${Math.min(Math.abs(f.importance || 0) * 100, 100)}%`}} /></div>
+                  </div>
+                ))}
+                {!xaiResult.factors && <pre className="text-xs text-gray-700 bg-white p-4 rounded-xl overflow-auto max-h-96">{JSON.stringify(xaiResult, null, 2)}</pre>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       </div>
     </div>
