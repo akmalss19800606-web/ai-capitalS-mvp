@@ -1,73 +1,42 @@
-"""
-API routers for Islamic products, PoSC rules, and recommendation rules.
-"""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from app.db.session import get_db
-from app.schemas.islamic_products import (
-    IslamicProductOut, PoSCRuleOut, RecommendationRuleOut
+from app.api.v1.deps import get_current_user
+from app.schemas.islamic_stage2 import (
+    IslamicProductListItem,
+    IslamicProductDetail,
+    ProductRecommendationRequest,
+    ProductRecommendationResponse
 )
-from app.services.islamic_products_service import (
-    get_all_islamic_products, get_islamic_product_by_id,
-    get_islamic_products_by_category,
-    get_all_posc_rules, get_posc_rule_by_id,
-    get_posc_rules_by_category, get_posc_rules_by_severity,
-    get_all_recommendation_rules, get_recommendation_by_profile,
-    get_recommendation_by_risk
-)
+from app.services import islamic_product_service
 
-router = APIRouter()
+router = APIRouter(prefix="/islamic/products", tags=["islamic-products"])
 
 
-# --- Islamic Products endpoints ---
-@router.get("/products", response_model=List[IslamicProductOut])
-def list_products(category: Optional[str] = None, db: Session = Depends(get_db)):
-    if category:
-        return get_islamic_products_by_category(db, category)
-    return get_all_islamic_products(db)
+@router.get("", response_model=List[IslamicProductListItem])
+def list_products(
+    category: Optional[str] = Query(None),
+    allowed_for: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return islamic_product_service.get_products(db, category=category, allowed_for=allowed_for)
 
 
-@router.get("/products/{product_id}", response_model=IslamicProductOut)
-def get_product(product_id: str, db: Session = Depends(get_db)):
-    product = get_islamic_product_by_id(db, product_id)
+@router.get("/{slug}", response_model=IslamicProductDetail)
+def get_product(slug: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    product = islamic_product_service.get_product_by_slug(db, slug)
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Продукт не найден")
     return product
 
 
-# --- PoSC Rules endpoints ---
-@router.get("/posc-rules", response_model=List[PoSCRuleOut])
-def list_posc_rules(
-    category: Optional[str] = None,
-    severity: Optional[str] = None,
-    db: Session = Depends(get_db)
+@router.post("/recommend", response_model=ProductRecommendationResponse)
+def recommend_product(
+    request: ProductRecommendationRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
-    if category:
-        return get_posc_rules_by_category(db, category)
-    if severity:
-        return get_posc_rules_by_severity(db, severity)
-    return get_all_posc_rules(db)
-
-
-@router.get("/posc-rules/{rule_id}", response_model=PoSCRuleOut)
-def get_posc_rule(rule_id: str, db: Session = Depends(get_db)):
-    rule = get_posc_rule_by_id(db, rule_id)
-    if not rule:
-        raise HTTPException(status_code=404, detail="PoSC rule not found")
-    return rule
-
-
-# --- Recommendation Rules endpoints ---
-@router.get("/recommendations", response_model=List[RecommendationRuleOut])
-def list_recommendations(
-    profile: Optional[str] = None,
-    risk: Optional[str] = None,
-    db: Session = Depends(get_db)
-):
-    if profile:
-        return get_recommendation_by_profile(db, profile)
-    if risk:
-        return get_recommendation_by_risk(db, risk)
-    return get_all_recommendation_rules(db)
+    return islamic_product_service.recommend_product(db, request)
