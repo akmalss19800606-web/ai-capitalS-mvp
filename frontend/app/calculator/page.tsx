@@ -1038,8 +1038,8 @@ function CalculatorProPageInner() {
               <InputField label="Нач. инвестиции (mlн)" type="text" value={bcForm.initialinvestmentmln} onChange={(v: string) => setBcForm(p => ({...p, initialinvestmentmln: v}))} />
               <InputField label="Годовая выручка (млн)" type="text" value={bcForm.annualrevenuemln} onChange={(v: string) => setBcForm(p => ({...p, annualrevenuemln: v}))} />
               <InputField label="Срок проекта (лет)" type="text" value={bcForm.projectyears} onChange={(v: string) => setBcForm(p => ({...p, projectyears: v}))} />
-              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={bcForm.industry} onChange={e => setBcForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)} </div>
-                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={bcForm.region} onChange={e => setBcForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)} </div>
+              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={bcForm.industry} onChange={e => setBcForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
+                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={bcForm.region} onChange={e => setBcForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
               <InputField label="Правовая форма" type="text" value={bcForm.legalform} onChange={(v: string) => setBcForm(p => ({...p, legalform: v}))} />
               <InputField label="Стадия проекта" type="text" value={bcForm.projectstage} onChange={(v: string) => setBcForm(p => ({...p, projectstage: v}))} />
               <InputField label="Доля собств. капитала (%)" type="text" value={bcForm.equitysharepct} onChange={(v: string) => setBcForm(p => ({...p, equitysharepct: v}))} />
@@ -1095,6 +1095,7 @@ function CalculatorProPageInner() {
                   <option value="shap">SHAP</option>
                   <option value="lime">LIME</option>
                   <option value="feature_importance">Feature Importance</option>
+                                    </select>
                  
               </div>
               <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
