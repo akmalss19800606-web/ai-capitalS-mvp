@@ -27,12 +27,13 @@ class ZakatCalculationV2(Base):
     __tablename__ = "zakat_calculation_v2"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+        user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     mode = Column(String(20), nullable=False, default="individual")
     calculation_date = Column(Date, nullable=False)
     zakat_type = Column(String(30), nullable=False)
     assets_total_uzs = Column(Numeric(20, 2), nullable=False)
     liabilities_uzs = Column(Numeric(20, 2), nullable=False, default=0)
+    net_assets_uzs = Column(Numeric(20, 2), nullable=False, default=0)
     nisab_uzs = Column(Numeric(20, 2), nullable=False)
     gold_price_uzs = Column(Numeric(20, 2), nullable=False)
     exchange_rate_uzs = Column(Numeric(20, 6), nullable=False)
