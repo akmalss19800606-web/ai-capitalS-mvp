@@ -27,7 +27,7 @@ class ZakatCalculationV2(Base):
     __tablename__ = "zakat_calculation_v2"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-        user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     mode = Column(String(20), nullable=False, default="individual")
     calculation_date = Column(Date, nullable=False)
     zakat_type = Column(String(30), nullable=False)
@@ -83,7 +83,6 @@ class ShariahScreeningCompany(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     last_updated = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default="now()")
-
     results = relationship("ShariahScreeningResult", back_populates="company")
 
     __table_args__ = (
@@ -111,7 +110,6 @@ class ShariahScreeningResult(Base):
     notes = Column(Text)
     mode = Column(String(20), nullable=False, default="individual")
     created_at = Column(DateTime(timezone=True), server_default="now()")
-
     company = relationship("ShariahScreeningCompany", back_populates="results")
 
     __table_args__ = (
