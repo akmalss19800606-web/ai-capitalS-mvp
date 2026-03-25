@@ -2,7 +2,6 @@
 Zakat Service — расчёт закята по методу AAOIFI (2.5% от чистых активов).
 Хранит историю в таблице zakat_calculation_v2.
 """
-import uuid
 from decimal import Decimal
 from datetime import date
 from typing import List, Optional
@@ -20,7 +19,7 @@ ZAKAT_RATE = Decimal("0.025")  # 2.5%
 
 def calculate_zakat(
     db: Session,
-    user_id: uuid.UUID,
+    user_id: int,
     request: ZakatCalculateRequest,
 ) -> ZakatCalculateResponse:
     nisab_data = get_nisab_today(db)
@@ -57,6 +56,7 @@ def calculate_zakat(
             zakat_type=request.zakat_type,
             assets_total_uzs=assets_total,
             liabilities_uzs=request.liabilities_uzs,
+            net_assets_uzs=net_assets,
             nisab_uzs=nisab_data["nisab_uzs"],
             gold_price_uzs=nisab_data["gold_price_uzs"],
             exchange_rate_uzs=nisab_data["exchange_rate_uzs"],
@@ -88,7 +88,7 @@ def calculate_zakat(
 
 def get_zakat_history(
     db: Session,
-    user_id: uuid.UUID,
+    user_id: int,
     limit: int = 20,
 ) -> List[ZakatHistoryItem]:
     try:
