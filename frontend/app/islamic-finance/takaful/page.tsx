@@ -24,7 +24,7 @@ const MOCK_PLANS: TakafulPlan[] = [
 
 const typeLabels: Record<string, { label: string; icon: string }> = {
   general: { label: "Общий", icon: "🛡️" },
-  family: { label: "Семейный", icon: "👨\u200d👩\u200d👧" },
+  family: { label: "Семейный", icon: "👨‍👩‍👧" },
   health: { label: "Здоровье", icon: "🏥" },
   property: { label: "Имущество", icon: "🏠" },
 };
@@ -33,6 +33,13 @@ export default function TakafulPage() {
   const [filter, setFilter] = useState<string>("all");
   const [plans, setPlans] = useState<TakafulPlan[]>(MOCK_PLANS);
   const [loading, setLoading] = useState(true);
+  // Calculator state
+  const [calcAmount, setCalcAmount] = useState("");
+  const [calcType, setCalcType] = useState("general");
+  const [calcMonths, setCalcMonths] = useState("12");
+  const [calcResult, setCalcResult] = useState<{ monthly_contribution: number; total_contribution: number; surplus_sharing_pct: number } | null>(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+
   useEffect(() => {
     islamicApi.getTakafulPlans(filter !== "all" ? filter : undefined)
       .then(data => {
@@ -48,50 +55,92 @@ export default function TakafulPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [filter]);
+
   const filtered = filter === "all" ? plans : plans.filter(p => p.type === filter);
   const fmt = (n: number) => n.toLocaleString("ru-RU");
+
+  const handleCalc = () => {
+    const amount = parseFloat(calcAmount);
+    if (!amount || amount <= 0) return;
+    setCalcLoading(true);
+    islamicApi.calculateTakaful({ coverage_amount: amount, takaful_type: calcType, term_months: parseInt(calcMonths) })
+      .then(res => setCalcResult({ monthly_contribution: res.monthly_contribution, total_contribution: res.total_contribution, surplus_sharing_pct: res.surplus_sharing_pct }))
+      .catch(() => {
+        const months = parseInt(calcMonths);
+        const rates: Record<string, number> = { general: 0.003, family: 0.004, health: 0.005, property: 0.006 };
+        const rate = rates[calcType] || 0.004;
+        const monthly = Math.round(amount * rate);
+        setCalcResult({ monthly_contribution: monthly, total_contribution: monthly * months, surplus_sharing_pct: 65 });
+      })
+      .finally(() => setCalcLoading(false));
+  };
 
   return (
     <IslamicFinanceLayout>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 8 }}>
-          🛡️ Такафул (Исламское страхование)
-        </h2>
-        <p style={{ fontSize: 14, color: C.muted, marginBottom: 20 }}>
-          Планы взаимного страхования, основанные на принципах табарру (пожертвование) и таавун (взаимопомощь)
-        </p>
+        <h2 style={{ color: C.primary }}>🛡️ Такафул (Исламское страхование)</h2>
+        <p style={{ color: C.muted }}>Планы взаимного страхования, основанные на принципах табарру и таавун</p>
 
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+        {/* Calculator Section */}
+        <div style={{ background: "#f0fdf4", borderRadius: 12, padding: 20, marginBottom: 24, border: "1px solid #bbf7d0" }}>
+          <h3 style={{ margin: "0 0 12px", color: C.primary }}>🧮 Калькулятор такафул-взноса</h3>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div>
+              <label style={{ fontSize: 12, color: C.muted, display: "block" }}>Сумма покрытия (UZS)</label>
+              <input value={calcAmount} onChange={e => setCalcAmount(e.target.value)} type="number" placeholder="50000000" style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", width: 180 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: C.muted, display: "block" }}>Тип</label>
+              <select value={calcType} onChange={e => setCalcType(e.target.value)} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db" }}>
+                {Object.entries(typeLabels).map(([k, v]) => (<option key={k} value={k}>{v.icon} {v.label}</option>))}
+              </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: C.muted, display: "block" }}>Срок (мес)</label>
+              <input value={calcMonths} onChange={e => setCalcMonths(e.target.value)} type="number" min="1" max="360" style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #d1d5db", width: 80 }} />
+            </div>
+            <button onClick={handleCalc} disabled={calcLoading} style={{ padding: "8px 20px", borderRadius: 8, border: "none", background: C.primary, color: "#fff", cursor: "pointer", fontWeight: 600 }}>
+              {calcLoading ? "..." : "Рассчитать"}
+            </button>
+          </div>
+          {calcResult && (
+            <div style={{ display: "flex", gap: 24, marginTop: 16 }}>
+              <div style={{ background: "#fff", borderRadius: 8, padding: 12, flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: C.muted }}>Ежемесячный взнос</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.primary }}>{fmt(calcResult.monthly_contribution)} UZS</div>
+              </div>
+              <div style={{ background: "#fff", borderRadius: 8, padding: 12, flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: C.muted }}>Общая сумма взносов</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: C.text }}>{fmt(calcResult.total_contribution)} UZS</div>
+              </div>
+              <div style={{ background: "#fff", borderRadius: 8, padding: 12, flex: 1, textAlign: "center" }}>
+                <div style={{ fontSize: 12, color: C.muted }}>Распределение излишков</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: "#16a34a" }}>{calcResult.surplus_sharing_pct}%</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Filter Buttons */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
           {["all", "general", "family", "health", "property"].map(t => (
-            <button key={t} onClick={() => setFilter(t)} style={{
-              padding: "6px 16px", borderRadius: 20, border: "none", fontSize: 13, cursor: "pointer",
-              background: filter === t ? C.primary : "#f3f4f6", color: filter === t ? "#fff" : C.text,
-            }}>
+            <button key={t} onClick={() => setFilter(t)} style={{ padding: "6px 16px", borderRadius: 20, border: "none", fontSize: 13, cursor: "pointer", background: filter === t ? C.primary : "#f3f4f6", color: filter === t ? "#fff" : C.text }}>
               {t === "all" ? "Все" : `${typeLabels[t].icon} ${typeLabels[t].label}`}
             </button>
           ))}
         </div>
 
+        {/* Plan Cards */}
         {filtered.map(p => (
-          <div key={p.id} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 20, marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-                  {typeLabels[p.type]?.icon} {p.name}
-                </h3>
-                <p style={{ fontSize: 13, color: C.muted }}>{p.provider} \u2022 {typeLabels[p.type]?.label}</p>
-              </div>
-              {p.shariah_compliant && (
-                <span style={{ padding: "4px 12px", borderRadius: 12, fontSize: 12, fontWeight: 600, background: "#dcfce7", color: "#166534" }}>
-                  ✅ Халяль
-                </span>
-              )}
-            </div>
-            <p style={{ fontSize: 13, color: C.text, marginBottom: 12 }}>{p.description}</p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, padding: 12, background: "#f9fafb", borderRadius: 8 }}>
-              <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase" }}>Взнос/мес</div><div style={{ fontSize: 14, fontWeight: 600 }}>{fmt(p.monthly_contribution)} {p.currency}</div></div>
-              <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase" }}>Покрытие</div><div style={{ fontSize: 14, fontWeight: 600 }}>{fmt(p.coverage_amount)} {p.currency}</div></div>
-              <div><div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase" }}>Распред. излишков</div><div style={{ fontSize: 14, fontWeight: 600 }}>{p.surplus_sharing}%</div></div>
+          <div key={p.id} style={{ background: "#fff", borderRadius: 12, padding: 20, marginBottom: 16, border: "1px solid #e5e7eb" }}>
+            <h3 style={{ margin: "0 0 4px" }}>{typeLabels[p.type]?.icon} {p.name}</h3>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: C.muted }}>{p.provider} • {typeLabels[p.type]?.label}</p>
+            {p.shariah_compliant && (<span style={{ background: "#dcfce7", color: "#166534", fontSize: 11, padding: "2px 8px", borderRadius: 8 }}>✅ Халяль</span>)}
+            <p style={{ margin: "8px 0", fontSize: 14 }}>{p.description}</p>
+            <div style={{ display: "flex", gap: 24 }}>
+              <div><div style={{ fontSize: 11, color: C.muted }}>Взнос/мес</div><div style={{ fontWeight: 600 }}>{fmt(p.monthly_contribution)} {p.currency}</div></div>
+              <div><div style={{ fontSize: 11, color: C.muted }}>Покрытие</div><div style={{ fontWeight: 600 }}>{fmt(p.coverage_amount)} {p.currency}</div></div>
+              <div><div style={{ fontSize: 11, color: C.muted }}>Распред. излишков</div><div style={{ fontWeight: 600 }}>{p.surplus_sharing}%</div></div>
             </div>
           </div>
         ))}
