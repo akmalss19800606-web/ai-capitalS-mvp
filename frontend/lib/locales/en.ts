@@ -98,12 +98,20 @@ export const en: Locale = {
       cpiUz: 'Inflation (CPI)',
       stockExchange: 'Stock Exchange',
       islamicFinance: 'Islamic Finance',
-      calculator: 'Calculator',
+      investmentCalculator: 'Investment Calculator',
       businessCases: 'Business Cases',
       xaiAnalysis: 'AI Explainability',
     },
   },
 
+    /* ─── Investment Calculator Tabs ─── */
+  calcTabDcf: 'DCF / ROI',
+  calcTabCompare: 'Compare',
+  calcTabSensitivity: 'Sensitivity',
+  calcTabMonteCarlo: 'Monte Carlo',
+  calcTabBenchmarks: 'UZ Benchmarks',
+  calcTabCases: 'Business Cases',
+  calcTabXai: 'AI Explainability',
   /* ─── Header ─── */
   header: {
     defaultUser: 'User',
