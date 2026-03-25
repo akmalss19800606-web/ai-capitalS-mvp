@@ -1,10 +1,9 @@
 """Islamic Profile Service — создаёт/обновляет профиль пользователя."""
-import uuid
 from sqlalchemy.orm import Session
 from app.schemas.islamic_stage1 import IslamicProfileUpsert, IslamicProfileResponse
 
 
-def get_or_create_profile(db: Session, user_id: uuid.UUID) -> IslamicProfileResponse:
+def get_or_create_profile(db: Session, user_id: int) -> IslamicProfileResponse:
     from app.db.models.islamic_stage1 import IslamicProfile
     profile = db.query(IslamicProfile).filter(IslamicProfile.user_id == user_id).first()
     if not profile:
@@ -17,7 +16,7 @@ def get_or_create_profile(db: Session, user_id: uuid.UUID) -> IslamicProfileResp
 
 def update_profile(
     db: Session,
-    user_id: uuid.UUID,
+    user_id: int,
     data: IslamicProfileUpsert,
 ) -> IslamicProfileResponse:
     from app.db.models.islamic_stage1 import IslamicProfile
