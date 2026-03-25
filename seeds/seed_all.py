@@ -64,15 +64,20 @@ def seed_posc_rules(db: Session):
 def seed_recommendation_rules(db: Session):
     data = load_json("product_recommendation_rules.json")
     for item in data:
-        exists = db.query(ProductRecommendationRule).filter_by(rule_id=item["id"]).first()
+        goal = item["goal"]
+        tenure = item["tenure"]
+        risk = item["risk"]
+        product = item["product"]
+        rule_id = f"{goal}_{tenure}_{risk}"
+        exists = db.query(ProductRecommendationRule).filter_by(rule_id=rule_id).first()
         if not exists:
             db.add(ProductRecommendationRule(
-                rule_id=item["id"],
-                investor_profile=item["investor_profile"],
-                risk_tolerance=item["risk_tolerance"],
-                recommended_products=item["recommended_products"],
-                allocation_pct=item.get("allocation_pct"),
-                notes=item.get("notes", "")
+                rule_id=rule_id,
+                investor_profile=goal,
+                risk_tolerance=risk,
+                recommended_products=[product],
+                allocation_pct=None,
+                notes=f"tenure: {tenure}"
             ))
     db.commit()
     print(f"Seeded {len(data)} recommendation rules")
