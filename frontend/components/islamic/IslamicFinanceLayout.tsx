@@ -40,6 +40,7 @@ const NAV_ITEMS = [
     { href: "/islamic-finance/analytics", label: "Аналитика", icon: "📊" },
     { href: "/islamic-finance/compliance-checker", label: "Комплаенс", icon: "✅" },
     { href: "/islamic-finance/risk-assessment", label: "Риски", icon: "🛡️" },
+    { href: "/islamic-finance/contracts", label: "Контракты", icon: "📝" },
 ];
 
 export interface MacroIndicator {
