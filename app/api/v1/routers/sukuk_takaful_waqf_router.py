@@ -10,7 +10,7 @@ from app.services.sukuk_takaful_waqf_service import (
     get_all_waqf_projects, get_waqf_by_id, get_waqf_stats,
 )
 
-router = APIRouter(tags=["Islamic: Sukuk, Takaful, Waqf"])
+router = APIRouter(prefix="/islamic", tags=["Islamic: Sukuk, Takaful, Waqf"])
 
 
 # ── Sukuk ──
