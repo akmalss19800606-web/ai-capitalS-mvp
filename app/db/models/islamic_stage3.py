@@ -151,3 +151,89 @@ class P2PIslamicProject(Base):
     __table_args__ = (
         CheckConstraint("status IN ('draft','screening','pending_review','published','rejected','closed')"),
     )
+
+
+class SukukIssuance(Base):
+    """Sukuk (Islamic bond) issuance records"""
+    __tablename__ = "sukuk_issuance"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name_ru = Column(String(300), nullable=False)
+    name_en = Column(String(300))
+    issuer = Column(String(300), nullable=False)
+    sukuk_type = Column(String(30), nullable=False)  # ijara, murabaha, musharaka, mudaraba, wakala, hybrid
+    currency = Column(String(3), nullable=False, default="UZS")
+    face_value = Column(Numeric(20, 2), nullable=False)
+    total_issued = Column(Numeric(20, 2), nullable=False)
+    coupon_rate = Column(Numeric(5, 2))  # periodic distribution rate %
+    maturity_date = Column(Date)
+    issue_date = Column(Date, nullable=False)
+    underlying_asset = Column(Text)
+    standard_ref = Column(String(100))  # AAOIFI SS No. 17
+    rating = Column(String(10))  # AAA, AA, A, BBB, etc.
+    market = Column(String(30), nullable=False, default="domestic")
+    status = Column(String(20), nullable=False, default="active")
+    description_ru = Column(Text)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        CheckConstraint(
+            "sukuk_type IN ('ijara','murabaha','musharaka','mudaraba','wakala','hybrid')",
+        ),
+        CheckConstraint("status IN ('active','matured','defaulted','cancelled')"),
+    )
+
+
+class TakafulPlan(Base):
+    """Takaful (Islamic insurance) plans"""
+    __tablename__ = "takaful_plan"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name_ru = Column(String(300), nullable=False)
+    name_en = Column(String(300))
+    provider = Column(String(300), nullable=False)
+    takaful_type = Column(String(30), nullable=False)  # general, family, health, motor, travel
+    coverage_amount_uzs = Column(Numeric(20, 2), nullable=False)
+    monthly_contribution_uzs = Column(Numeric(20, 2), nullable=False)
+    surplus_sharing_pct = Column(Numeric(5, 2))  # % of surplus returned to participants
+    wakala_fee_pct = Column(Numeric(5, 2))  # management fee %
+    contract_term_months = Column(Integer)
+    standard_ref = Column(String(100))  # AAOIFI SS No. 26
+    description_ru = Column(Text)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        CheckConstraint(
+            "takaful_type IN ('general','family','health','motor','travel')",
+        ),
+    )
+
+
+class WaqfProject(Base):
+    """Waqf (Islamic endowment) projects"""
+    __tablename__ = "waqf_project"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title_ru = Column(String(300), nullable=False)
+    title_en = Column(String(300))
+    waqf_type = Column(String(30), nullable=False)  # cash, property, corporate, educational
+    category = Column(String(50), nullable=False)  # education, healthcare, mosque, social, infrastructure
+    target_amount_uzs = Column(Numeric(20, 2), nullable=False)
+    collected_amount_uzs = Column(Numeric(20, 2), nullable=False, default=0)
+    beneficiary = Column(Text)
+    location = Column(String(200))
+    manager = Column(String(300))
+    status = Column(String(20), nullable=False, default="active")
+    description_ru = Column(Text)
+    start_date = Column(Date)
+    is_perpetual = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        CheckConstraint(
+            "waqf_type IN ('cash','property','corporate','educational')",
+        ),
+        CheckConstraint("status IN ('active','completed','suspended','planning')"),
+    )
+
