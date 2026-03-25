@@ -1127,7 +1127,6 @@ function CalculatorProPageInner() {
   )
 }
 
-
 export default function CalculatorProPage() {
   return <Suspense fallback={<div className="text-center py-12">Loading...</div>}><CalculatorProPageInner /></Suspense>
 }
