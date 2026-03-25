@@ -336,7 +336,7 @@ export const islamicApi = {
 
 
     // Education API
-  getStandards: (org?: string, category?: string) => {
+  getEducationStandards: (org?: string, category?: string) => {
     const params = new URLSearchParams();
     if (org) params.set("org", org);
     if (category) params.set("category", category);
