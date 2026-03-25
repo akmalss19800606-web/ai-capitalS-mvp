@@ -48,17 +48,13 @@ const NAV_GROUPS: NavGroup[] = [
   {
     titleKey: 'research',
     items: [
-      { labelKey: 'businessCases', path: '/business-cases',
-        icon: <Icon paths={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} /> },
-      { labelKey: 'xaiAnalysis', path: '/xai-analysis',
-        icon: <Icon paths={<><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></>} /> },
       { labelKey: 'dueDiligence', path: '/due-diligence',
         icon: <Icon paths={<><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12 2 4-4"/></>} /> },
       { labelKey: 'islamicFinance', path: '/islamic-finance',
         icon: <Icon paths={<><path d="M12 2L2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/><path d="M12 12v10"/><path d="M7 9.5v7"/><path d="M17 9.5v7"/></>} /> },
       { labelKey: 'marketUz', path: '/uz-market',
         icon: <Icon paths={<><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>} /> },
-      { labelKey: 'calculator', path: '/calculator',
+      { labelKey: 'investmentCalculator', path: '/calculator',
         icon: <Icon paths={<><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><path d="M8 10h8"/><path d="M8 14h4"/><path d="M8 18h4"/></>} /> },
     ],
   },
