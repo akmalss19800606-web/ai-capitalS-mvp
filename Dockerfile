@@ -29,6 +29,7 @@ RUN pip install --no-cache-dir \
     pdfplumber \
     python-telegram-bot \
     numpy-financial
+    COPY ./seeds /app/seeds
 COPY ./app /app/app
 COPY ./alembic /app/alembic
 COPY ./alembic.ini /app/alembic.ini
