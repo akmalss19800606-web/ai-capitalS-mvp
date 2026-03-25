@@ -12,7 +12,7 @@ from app.schemas.islamic_stage2 import (
 )
 from app.services import islamic_product_service
 
-router = APIRouter(prefix="/islamic/products", tags=["islamic-products"])
+router = APIRouter(prefix="/products", tags=["islamic-products"])
 
 
 @router.get("", response_model=List[IslamicProductListItem])
