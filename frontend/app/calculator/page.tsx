@@ -46,6 +46,35 @@ interface BusinessCaseResult {
   isviable: boolean; recommendation: string; cashflows: number[]
 }
 
+// — XAI Analysis Types —
+interface XAIFactor {
+  name: string; weight: number; score: number; explanation: string
+}
+interface XAIResult {
+  overallScore: number; recommendation: string; factors: XAIFactor[]; confidence: number
+}
+
+// — Constants: GICS Sectors, Industries, UZ Regions —
+const GICS_SECTORS = [
+  'Energy', 'Materials', 'Industrials', 'Consumer Discretionary',
+  'Consumer Staples', 'Health Care', 'Financials',
+  'Information Technology', 'Communication Services',
+  'Utilities', 'Real Estate'
+]
+
+const INDUSTRIES = [
+  'Oil & Gas', 'Mining', 'Construction', 'Manufacturing',
+  'Retail', 'Banking', 'Insurance', 'Telecommunications',
+  'Agriculture', 'Transport', 'IT Services', 'Pharmaceuticals',
+  'Food & Beverage', 'Textiles', 'Tourism', 'Education'
+]
+
+const UZ_REGIONS = [
+  'Tashkent', 'Tashkent region', 'Samarkand', 'Bukhara',
+  'Fergana', 'Andijan', 'Namangan', 'Kashkadarya',
+  'Surkhandarya', 'Khorezm', 'Navoi', 'Jizzakh',
+  'Syrdarya', 'Karakalpakstan'
+]
 const DEFAULT_DCF: DCFParams = {
   initial_investment: 100000, currency: 'USD', horizon_years: 5,
   cash_flow_mode: 'auto', revenue_year1: 120000, revenue_growth_rate: 15,
