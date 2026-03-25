@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.api.v1.routers import (
     auth, users, portfolios, decisions, ai, health, roles,
-    market_analysis, islamic_finance, islamic_stage3,
+    market_analysis, islamic_finance, islamic_stage3, islamic_ask,
 )
 
 api_router = APIRouter()
@@ -15,3 +15,4 @@ api_router.include_router(roles.router)
 api_router.include_router(market_analysis.router)
 api_router.include_router(islamic_finance.router)
 api_router.include_router(islamic_stage3.router)
+api_router.include_router(islamic_ask.router)
