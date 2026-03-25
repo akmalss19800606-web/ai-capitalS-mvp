@@ -36,6 +36,7 @@ const NAV_ITEMS = [
   { href: "/islamic-finance/waqf", label: "Вакф", icon: "🏛️" },
     { href: "/islamic-finance/profile", label: "Профиль", icon: "⚙️" },
     { href: "/islamic-finance/indices", label: "Индексы", icon: "📈" },
+    { href: "/islamic-finance/education", label: "Образование", icon: "🎓" },
 ];
 
 export interface MacroIndicator {
