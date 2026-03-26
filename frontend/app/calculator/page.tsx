@@ -102,13 +102,28 @@ const TABS = [
 // Вспомогательные компоненты
 // ─────────────────────────────────────────────────────────
 
-const MetricCard = ({ label, value, sub, trend, color = 'blue' }: any) => (
-  <div className={`bg-gray-50 border border-gray-200 rounded-xl p-4`}>
-    <div className="text-gray-500 text-xs mb-1">{label}</div>
-    <div className={`text-xl font-bold text-gray-900`}>{value}</div>
-    {sub && <div className={`text-xs mt-1 text-gray-500`}>{sub}</div>}
-  </div>
-)
+const MetricCard = ({ label, value, sub, trend, color = 'blue' }: any) => {
+  const colorMap: Record<string, { bg: string; border: string; text: string; badge: string }> = {
+    blue:    { bg: 'bg-blue-50',    border: 'border-blue-200',    text: 'text-blue-700',    badge: 'bg-blue-100 text-blue-600' },
+    emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-600' },
+    red:     { bg: 'bg-red-50',     border: 'border-red-200',     text: 'text-red-700',     badge: 'bg-red-100 text-red-600' },
+    amber:   { bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   badge: 'bg-amber-100 text-amber-600' },
+    gray:    { bg: 'bg-gray-50',    border: 'border-gray-200',    text: 'text-gray-700',    badge: 'bg-gray-100 text-gray-500' },
+  }
+  const c = colorMap[color] || colorMap.blue
+  return (
+    <div className={`${c.bg} border ${c.border} rounded-xl p-4`}>
+      <div className="text-gray-500 text-xs mb-1 font-medium">{label}</div>
+      <div className={`text-xl font-bold ${c.text} flex items-center gap-1`}>
+        {value}
+        {trend === 'up' && <span className="text-emerald-500 text-sm">▲</span>}
+        {trend === 'down' && <span className="text-red-500 text-sm">▼</span>}
+        {trend === 'neutral' && <span className="text-gray-400 text-sm">—</span>}
+      </div>
+      {sub && <div className={`text-xs mt-1 ${c.badge} rounded px-1.5 py-0.5 inline-block`}>{sub}</div>}
+    </div>
+  )
+}
 
 const InputField = ({ label, value, onChange, type = 'number', min, max, step, suffix, hint, required }: any) => (
   <div>
