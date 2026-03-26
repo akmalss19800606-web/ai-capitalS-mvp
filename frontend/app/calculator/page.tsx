@@ -522,49 +522,52 @@ function CalculatorProPageInner() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                      <div className={`bg-white/80 rounded-xl p-4 ${dcfResult.npv >= 0 ? 'border border-emerald-500/40' : 'border border-red-500/30'}`}>
-                        <div className="text-gray-500 text-xs mb-1">NPV</div>
-                        <div className={`text-2xl font-bold ${npvColor(dcfResult.npv)}`}>
-                          {formatMoney(dcfResult.npv, dcfResult.currency)}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">{dcfResult.npv >= 0 ? 'Проект добавляет стоимость' : 'Проект разрушает стоимость'}</div>
-                      </div>
-                      <div className="bg-white/80 border border-gray-200 rounded-xl p-4">
-                        <div className="text-gray-500 text-xs mb-1">IRR</div>
-                        <div className="text-2xl font-bold text-gray-900">{dcfResult.irr ? `${dcfResult.irr.toFixed(2)}%` : 'N/A'}</div>
-                        <div className="text-xs text-gray-400 mt-1">Внутренняя норма доходности</div>
-                      </div>
-                      <div className="bg-white/80 border border-gray-200 rounded-xl p-4">
-                        <div className="text-gray-500 text-xs mb-1">MIRR</div>
-                        <div className="text-2xl font-bold text-gray-900">{dcfResult.mirr ? `${dcfResult.mirr.toFixed(2)}%` : 'N/A'}</div>
-                        <div className="text-xs text-gray-400 mt-1">Модифицированная IRR</div>
-                      </div>
-                      <div className="bg-white/80 border border-gray-200 rounded-xl p-4">
-                        <div className="text-gray-500 text-xs mb-1">ROI</div>
-                        <div className={`text-2xl font-bold ${(dcfResult.roi_pct || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {dcfResult.roi_pct ? `${dcfResult.roi_pct.toFixed(1)}%` : 'N/A'}
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1">Return on Investment</div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-white/80 rounded-xl p-3">
-                        <div className="text-gray-500 text-xs">Срок окупаемости</div>
-                        <div className="text-gray-900 font-bold mt-1">{dcfResult.payback_period ? `${dcfResult.payback_period.toFixed(1)} лет` : 'N/A'}</div>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3">
-                        <div className="text-gray-500 text-xs">Диск. окупаемость</div>
-                        <div className="text-gray-900 font-bold mt-1">{dcfResult.discounted_payback ? `${dcfResult.discounted_payback.toFixed(1)} лет` : 'N/A'}</div>
-                      </div>
-                      <div className="bg-white/80 rounded-xl p-3">
-                        <div className="text-gray-500 text-xs">Индекс прибыльности</div>
-                        <div className={`font-bold mt-1 ${(dcfResult.profitability_index || 0) >= 1 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {dcfResult.profitability_index ? dcfResult.profitability_index.toFixed(4) : 'N/A'}
-                        </div>
-                      </div>
-                    </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <MetricCard
+                label="NPV"
+                value={formatMoney(dcfResult.npv, dcfResult.currency)}
+                sub={dcfResult.npv >= 0 ? 'Проект добавляет стоимость' : 'Проект разрушает стоимость'}
+                color={dcfResult.npv >= 0 ? 'emerald' : 'red'}
+                trend={dcfResult.npv >= 0 ? 'up' : 'down'}
+              />
+              <MetricCard
+                label="IRR"
+                value={dcfResult.irr ? `${dcfResult.irr.toFixed(2)}%` : 'N/A'}
+                sub="Внутр. норма доходности"
+                color={dcfResult.irr && dcfResult.irr > dcfResult.discount_rate ? 'emerald' : 'amber'}
+              />
+              <MetricCard
+                label="MIRR"
+                value={dcfResult.mirr ? `${dcfResult.mirr.toFixed(2)}%` : 'N/A'}
+                sub="Модифицированная IRR"
+                color="blue"
+              />
+              <MetricCard
+                label="ROI"
+                value={dcfResult.roi_pct ? `${dcfResult.roi_pct.toFixed(1)}%` : 'N/A'}
+                sub="Return on Investment"
+                color={dcfResult.roi_pct && dcfResult.roi_pct >= 0 ? 'emerald' : 'red'}
+                trend={dcfResult.roi_pct && dcfResult.roi_pct >= 0 ? 'up' : 'down'}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <MetricCard
+                label="Срок окупаемости"
+                value={dcfResult.payback_period ? `${dcfResult.payback_period.toFixed(1)} лет` : 'N/A'}
+                color="amber"
+              />
+              <MetricCard
+                label="Диск. окупаемость"
+                value={dcfResult.discounted_payback ? `${dcfResult.discounted_payback.toFixed(1)} лет` : 'N/A'}
+                color="amber"
+              />
+              <MetricCard
+                label="Индекс прибыльности"
+                value={dcfResult.profitability_index ? dcfResult.profitability_index.toFixed(4) : 'N/A'}
+                sub={dcfResult.profitability_index >= 1 ? 'PI ≥ 1 (эффективен)' : 'PI < 1 (неэффективен)'}
+                color={dcfResult.profitability_index >= 1 ? 'emerald' : 'red'}
+              />
+            </div>
 
                     {dcfResult.tax_savings && (
                       <div className="mt-3 p-3 bg-emerald-500/10 border border-emerald-500/40 rounded-xl text-sm text-emerald-600">
