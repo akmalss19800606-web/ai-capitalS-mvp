@@ -871,43 +871,45 @@ function CalculatorProPageInner() {
             {mcResult && (
               <div className="space-y-4">
                 {/* Ключевые метрики */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    {l:'P(NPV>0)',v:`${(mcResult.prob_positive*100).toFixed(1)}%`,c:mcResult.prob_positive>0.6?'text-emerald-600':'text-red-600'},
-                    {l:'Ожид. NPV (P50)',v:formatMoney(mcResult.p50),c:mcResult.p50>=0?'text-emerald-600':'text-red-600'},
-                    {l:'VaR 95%',v:formatMoney(mcResult.var_95),c:'text-amber-600'},
-                    {l:'CVaR 95%',v:formatMoney(mcResult.cvar_95),c:'text-red-600'},
-                  ].map(m => (
-                    <div key={m.l} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                      <div className="text-gray-500 text-xs mb-1">{m.l}</div>
-                      <div className={`text-xl font-bold ${m.c}`}>{m.v}</div>
-                    </div>
-                  ))}
-                </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <MetricCard
+            label="P(NPV>0)"
+            value={`${(mcResult.prob_positive*100).toFixed(1)}%`}
+            sub={mcResult.prob_positive > 0.6 ? 'Риск приемлем' : 'Высокий риск'}
+            color={mcResult.prob_positive > 0.6 ? 'emerald' : 'red'}
+            trend={mcResult.prob_positive > 0.6 ? 'up' : 'down'}
+          />
+          <MetricCard
+            label="Ожид. NPV (P50)"
+            value={formatMoney(mcResult.p50)}
+            sub="Медиана"
+            color={mcResult.p50 >= 0 ? 'emerald' : 'red'}
+            trend={mcResult.p50 >= 0 ? 'up' : 'down'}
+          />
+          <MetricCard
+            label="VaR 95%"
+            value={formatMoney(mcResult.var_95)}
+            sub="Риск потерь"
+            color="amber"
+          />
+          <MetricCard
+            label="CVaR 95%"
+            value={formatMoney(mcResult.cvar_95)}
+            sub="Хвост потерь"
+            color="red"
+          />
+        </div>
 
                 {/* Перцентили */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                   <h4 className="text-gray-900 font-semibold mb-4">Распределение NPV ({mcResult.n_simulations.toLocaleString()} симуляций)</h4>
-                  <div className="grid grid-cols-5 gap-3">
-                    {[
-                      {l:'P10 (пессимизм)',v:mcResult.p10,c:'text-red-600'},
-                      {l:'P25',v:mcResult.p25,c:'text-orange-600'},
-                      {l:'P50 (медиана)',v:mcResult.p50,c:'text-gray-900'},
-                      {l:'P75',v:mcResult.p75,c:'text-blue-600'},
-                      {l:'P90 (оптимизм)',v:mcResult.p90,c:'text-emerald-600'},
-                    ].map(p => (
-                      <div key={p.l} className="text-center bg-gray-50/40 rounded-xl p-3">
-                        <div className="text-gray-500 text-xs mb-2">{p.l}</div>
-                        <div className={`font-bold text-lg ${p.c}`}>{formatMoney(p.v)}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Интерпретация */}
-                  <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-300">
-                    {mcResult.interpretation}
-                  </div>
-
+          <div className="grid grid-cols-5 gap-3">
+            <MetricCard label="P10 (пессимизм)" value={formatMoney(mcResult.p10)} color="red" />
+            <MetricCard label="P25" value={formatMoney(mcResult.p25)} color="amber" />
+            <MetricCard label="P50 (медиана)" value={formatMoney(mcResult.p50)} color={mcResult.p50 >= 0 ? 'emerald' : 'red'} />
+            <MetricCard label="P75" value={formatMoney(mcResult.p75)} color="blue" />
+            <MetricCard label="P90 (оптимизм)" value={formatMoney(mcResult.p90)} color="emerald" />
+          </div>
                   {/* Статистика */}
                   <div className="mt-4 grid grid-cols-3 gap-3 text-xs">
                     {[
