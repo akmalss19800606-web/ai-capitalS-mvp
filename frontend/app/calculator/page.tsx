@@ -1032,43 +1032,66 @@ function CalculatorProPageInner() {
       {activeTab === 'cases' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-            <h3 className="text-gray-900 font-bold mb-4">Оценка бизнес-кейса</h3>
-            <div className="space-y-4">
-              <InputField label="Название проекта" type="text" value={bcForm.projectname} onChange={(v: string) => setBcForm(p => ({...p, projectname: v}))} />
-              <InputField label="Нач. инвестиции (mlн)" type="text" value={bcForm.initialinvestmentmln} onChange={(v: string) => setBcForm(p => ({...p, initialinvestmentmln: v}))} />
-              <InputField label="Годовая выручка (млн)" type="text" value={bcForm.annualrevenuemln} onChange={(v: string) => setBcForm(p => ({...p, annualrevenuemln: v}))} />
-              <InputField label="Срок проекта (лет)" type="text" value={bcForm.projectyears} onChange={(v: string) => setBcForm(p => ({...p, projectyears: v}))} />
-              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={bcForm.industry} onChange={e => setBcForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
-                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={bcForm.region} onChange={e => setBcForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Правовая форма</label><select value={bcForm.legalform} onChange={e => setBcForm(p => ({...p, legalform: e.target.value}))} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-400"><option value="">Выберите...</option>{['ООО','АО','ИП','СП','ГУП'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Стадия проекта</label><select value={bcForm.projectstage} onChange={e => setBcForm(p => ({...p, projectstage: e.target.value}))} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-400"><option value="">Выберите...</option>{['Идея','Стартап','Рост','Зрелость'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-              <InputField label="Доля собств. капитала (%)" type="text" value={bcForm.equitysharepct} onChange={(v: string) => setBcForm(p => ({...p, equitysharepct: v}))} />
-              <InputField label="Доля заёмного (%)" type="text" value={bcForm.debtsharepct} onChange={(v: string) => setBcForm(p => ({...p, debtsharepct: v}))} />
-              <InputField label="Процент. ставка (%)" type="text" value={bcForm.interestratepct} onChange={(v: string) => setBcForm(p => ({...p, interestratepct: v}))} />
-              <InputField label="Ставка дисконт. (%)" type="text" value={bcForm.discountratepct} onChange={(v: string) => setBcForm(p => ({...p, discountratepct: v}))} />
-              <InputField label="Годовые затраты (млн)" type="text" value={bcForm.annualcostsmln} onChange={(v: string) => setBcForm(p => ({...p, annualcostsmln: v}))} />
-              <InputField label="Рост выручки (%)" type="text" value={bcForm.revenuegrowthpct} onChange={(v: string) => setBcForm(p => ({...p, revenuegrowthpct: v}))} />
-              <InputField label="Ставка налога (%)" type="text" value={bcForm.taxratepct} onChange={(v: string) => setBcForm(p => ({...p, taxratepct: v}))} />
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Уровень риска</label><select value={bcForm.risklevel} onChange={e => setBcForm(p => ({...p, risklevel: e.target.value}))} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-400"><option value="">Выберите...</option>{['Низкий','Средний','Высокий'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1">Конкуренция</label><select value={bcForm.marketcompetition} onChange={e => setBcForm(p => ({...p, marketcompetition: e.target.value}))} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-blue-400"><option value="">Выберите...</option>{['Низкая','Средняя','Высокая'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-              <div className="flex items-center gap-2"><input type="checkbox" checked={bcForm.hasstatesupport} onChange={e => setBcForm(p => ({...p, hasstatesupport: e.target.checked}))} className="accent-violet-500" /><label className="text-sm text-gray-600">Гос. поддержка</label></div>
-              <InputField label="Доля экспорта (%)" type="text" value={bcForm.exportsharepct} onChange={(v: string) => setBcForm(p => ({...p, exportsharepct: v}))} />
-              <InputField label="Доп. заметки" type="text" value={bcForm.additionalnotes} onChange={(v: string) => setBcForm(p => ({...p, additionalnotes: v}))} />
-              <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
+              <h3 className="text-gray-900 font-bold mb-4">Оценка бизнес-кейса</h3>
+              {/* Секция 1: Проект */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Проект</h4>
+                <div className="space-y-3">
+                  <InputField label="Название проекта" type="text" value={bcForm.projectname} onChange={(v: string) => setBcForm(p => ({...p, projectname: v}))} required />
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Отрасль</label><select value={bcForm.industry} onChange={e => setBcForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Регион</label><select value={bcForm.region} onChange={e => setBcForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Правовая форма</label><select value={bcForm.legalform} onChange={e => setBcForm(p => ({...p, legalform: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['ООО','АО','ИП','СП','ГУП'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Стадия проекта</label><select value={bcForm.projectstage} onChange={e => setBcForm(p => ({...p, projectstage: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['Идея','Стартап','Рост','Зрелость'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
+                </div>
+              </div>
+              {/* Секция 2: Финансы */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Финансы</h4>
+                <div className="space-y-3">
+                  <InputField label="Нач. инвестиции (млн)" type="text" value={bcForm.initialinvestmentmln} onChange={(v: string) => setBcForm(p => ({...p, initialinvestmentmln: v}))} />
+                  <InputField label="Доля собств. капитала (%)" type="text" value={bcForm.equitysharepct} onChange={(v: string) => setBcForm(p => ({...p, equitysharepct: v}))} />
+                  <InputField label="Доля заёмного (%)" type="text" value={bcForm.debtsharepct} onChange={(v: string) => setBcForm(p => ({...p, debtsharepct: v}))} />
+                  <InputField label="Процент. ставка (%)" type="text" value={bcForm.interestratepct} onChange={(v: string) => setBcForm(p => ({...p, interestratepct: v}))} />
+                  <InputField label="Ставка дисконт. (%)" type="text" value={bcForm.discountratepct} onChange={(v: string) => setBcForm(p => ({...p, discountratepct: v}))} />
+                  <InputField label="Годовая выручка (млн)" type="text" value={bcForm.annualrevenuemln} onChange={(v: string) => setBcForm(p => ({...p, annualrevenuemln: v}))} />
+                  <InputField label="Годовые затраты (млн)" type="text" value={bcForm.annualcostsmln} onChange={(v: string) => setBcForm(p => ({...p, annualcostsmln: v}))} />
+                  <InputField label="Рост выручки (%)" type="text" value={bcForm.revenuegrowthpct} onChange={(v: string) => setBcForm(p => ({...p, revenuegrowthpct: v}))} />
+                  <InputField label="Срок проекта (лет)" type="text" value={bcForm.projectyears} onChange={(v: string) => setBcForm(p => ({...p, projectyears: v}))} />
+                  <InputField label="Ставка налога (%)" type="text" value={bcForm.taxratepct} onChange={(v: string) => setBcForm(p => ({...p, taxratepct: v}))} />
+                </div>
+              </div>
+              {/* Секция 3: Риски */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Риски</h4>
+                <div className="space-y-3">
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Уровень риска</label><select value={bcForm.risklevel} onChange={e => setBcForm(p => ({...p, risklevel: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['Низкий','Средний','Высокий'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Конкуренция</label><select value={bcForm.marketcompetition} onChange={e => setBcForm(p => ({...p, marketcompetition: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['Низкая','Средняя','Высокая'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" checked={bcForm.hasstatesupport} onChange={e => setBcForm(p => ({...p, hasstatesupport: e.target.checked}))} className="accent-violet-500" /><label className="text-sm text-gray-700">Гос. поддержка</label></div>
+                  <InputField label="Доля экспорта (%)" type="text" value={bcForm.exportsharepct} onChange={(v: string) => setBcForm(p => ({...p, exportsharepct: v}))} />
+                  <InputField label="Доп. заметки" type="text" value={bcForm.additionalnotes} onChange={(v: string) => setBcForm(p => ({...p, additionalnotes: v}))} />
+                </div>
+              </div>
+              <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {bcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />} {bcLoading ? 'Оценка...' : 'Оценить кейс'}
-              </button>
-            </div>
+              </button>            </div>
           </div>
           <div>
             {!bcResult && !bcLoading && <div className="text-center text-gray-400 mt-12">Заполните форму и нажмите «Оценить кейс»</div>}
             {bcLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
             {bcResult && !bcLoading && (
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+              <div className="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат оценки</h3>
-                <div className="grid grid-cols-2 gap-3 mb-4"><MetricCard label="NPV" value={bcResult.npvmln ? `${bcResult.npvmln.toFixed(2)} млн` : 'N/A'} color={bcResult.npvmln > 0 ? 'emerald' : 'red'} /><MetricCard label="IRR" value={bcResult.irrpct ? `${bcResult.irrpct.toFixed(2)}%` : 'N/A'} /><MetricCard label="PI" value={bcResult.profitabilityindex?.toFixed(3) || 'N/A'} /><MetricCard label="Окупаемость" value={bcResult.paybackyears ? `${bcResult.paybackyears.toFixed(1)} лет` : 'N/A'} /></div>{bcResult.recommendation && <div className={`p-3 rounded-xl text-sm ${bcResult.isviable ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>{bcResult.isviable ? '✅' : '❌'} {bcResult.recommendation}</div>}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                  <MetricCard label="NPV (млн)" value={bcResult.npvmln ? `${bcResult.npvmln.toFixed(2)} млн` : 'N/A'} color={bcResult.npvmln > 0 ? 'emerald' : 'red'} />
+                  <MetricCard label="IRR" value={bcResult.irrpct ? `${bcResult.irrpct.toFixed(1)}%` : 'N/A'} />
+                  <MetricCard label="PI" value={bcResult.profitabilityindex ? bcResult.profitabilityindex.toFixed(2) : 'N/A'} color={bcResult.profitabilityindex >= 1 ? 'emerald' : 'red'} />
+                  <MetricCard label="Окупаемость" value={bcResult.paybackyears ? `${bcResult.paybackyears.toFixed(1)} лет` : 'N/A'} />
+                </div>
+                {bcResult.recommendation && <div className={`p-4 rounded-xl ${bcResult.isviable ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+                  <p className="text-sm font-medium text-gray-800">{bcResult.isviable ? '✅' : '❌'} {bcResult.recommendation}</p>
+                </div>}
               </div>
-            )}
-          </div>
+              )}              </div>
         </div>
       )}
 
