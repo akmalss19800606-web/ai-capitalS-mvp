@@ -734,16 +734,10 @@ function CalculatorProPageInner() {
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-3 flex gap-3 text-sm">
-                  <div className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg border border-emerald-500/40">
-                    🏆 Лучший NPV: {compareResult.best_npv}
-                  </div>
-                  <div className="px-3 py-1.5 bg-blue-500/10 text-blue-600 rounded-lg border border-blue-500/30">
-                    📈 Лучший IRR: {compareResult.best_irr}
-                  </div>
-                  <div className="px-3 py-1.5 bg-violet-500/10 text-violet-400 rounded-lg border border-violet-500/30">
-                    ⏰ Быстрее окупается: {compareResult.best_payback}
-                  </div>
+                <div className="mt-3 grid grid-cols-3 gap-3">
+                  <MetricCard label="Лучший NPV" value={compareResult.best_npv || 'N/A'} color="emerald" />
+                  <MetricCard label="Лучший IRR" value={compareResult.best_irr || 'N/A'} color="blue" />
+                  <MetricCard label="Быстрее окупается" value={compareResult.best_payback || 'N/A'} color="violet" />
                 </div>
               </div>
             )}
