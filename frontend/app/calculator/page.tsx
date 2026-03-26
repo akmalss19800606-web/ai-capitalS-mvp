@@ -301,7 +301,7 @@ function CalculatorProPageInner() {
       <div className="max-w-7xl mx-auto">
 
         {/* Заголовок */}
-        <div className="mb-8">
+                <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-100 -mx-6 px-6 pt-6 pb-4 mb-2">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 bg-violet-600 rounded-xl">
               <Calculator className="w-6 h-6 text-gray-900" />
@@ -313,7 +313,7 @@ function CalculatorProPageInner() {
         </div>
 
         {/* Вкладки */}
-        <div className="flex gap-1 bg-white/40 border border-gray-200 rounded-2xl p-1.5 mb-6 overflow-x-auto">
+                <div className="flex gap-1 bg-white/40 border border-gray-200 rounded-2xl p-1.5 mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden">
           {TABS.map(tab => {
             const Icon = tab.icon
             return (
