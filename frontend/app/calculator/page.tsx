@@ -706,7 +706,10 @@ function CalculatorProPageInner() {
 
             {compareResult && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
-                <h3 className="text-gray-900 font-bold text-lg mb-4">Матрица сравнения</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-gray-900 font-bold text-lg">Матрица сравнения</h3>
+                    <button onClick={() => { const headers = ['Проект','NPV','IRR','MIRR','Окупаемость','PI','ROI']; const rows = compareResult.projects?.map((p: any) => [p.name, p.npv?.toFixed(0), p.irr ? p.irr.toFixed(2)+'%' : 'N/A', p.mirr ? p.mirr.toFixed(2)+'%' : 'N/A', p.payback_period ? p.payback_period.toFixed(1) : 'N/A', p.profitability_index?.toFixed(3) || 'N/A', p.roi_pct ? p.roi_pct.toFixed(1)+'%' : 'N/A'].join(',')); const csv = headers.join(',') + '\n' + (rows||[]).join('\n'); const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'compare_results.csv'; a.click() }} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs transition-colors"><Download className="w-3.5 h-3.5" /> CSV</button>
+                  </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
