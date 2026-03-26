@@ -604,15 +604,15 @@ function CalculatorProPageInner() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="text-gray-500 text-xs border-b border-gray-200">
+                            <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
                               {['Год','Выручка','EBIT','Налоги','FCF','Диск. FCF','Нараст. DCF'].map(h => (
-                                <th key={h} className="text-left pb-2 pr-4 whitespace-nowrap">{h}</th>
+                                <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px] whitespace-nowrap">{h}</th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
                             {dcfResult.yearly_breakdown.map((yr: any) => (
-                              <tr key={yr.year} className="border-b border-gray-200 hover:bg-gray-100/20">
+                              <tr key={yr.year} className="border-b border-gray-200 hover:bg-gray-50/50 transition-colors">
                                 <td className="py-2 pr-4 text-gray-500">{yr.year}</td>
                                 <td className="py-2 pr-4 text-gray-900">{formatMoney(yr.revenue, dcfResult.currency)}</td>
                                 <td className="py-2 pr-4">{formatMoney(yr.ebit, dcfResult.currency)}</td>
@@ -710,15 +710,15 @@ function CalculatorProPageInner() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-gray-500 text-xs border-b border-gray-200">
+                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
                         {['Проект','NPV','IRR','MIRR','Окупаемость','PI','ROI'].map(h => (
-                          <th key={h} className="text-left pb-2 pr-4">{h}</th>
+                          <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px]">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {compareResult.projects?.map((p: any, i: number) => (
-                        <tr key={i} className={`border-b border-gray-200 ${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
+                        <tr key={i} className={`border-b border-gray-200 hover:bg-violet-50/50 transition-colors ${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
                           <td className="py-2 pr-4 font-medium text-gray-900 flex items-center gap-2">
                             {p.name === compareResult.best_npv && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                             {p.name}
@@ -809,8 +809,8 @@ function CalculatorProPageInner() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-gray-500 text-xs border-b border-gray-200">
-                        <th className="text-left pb-2 pr-4">Переменная</th>
+                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
+                        <th className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px]">Переменная</th>
                         {[-30,-20,-10,0,10,20,30].map(p => <th key={p} className="pb-2 pr-3">{p}%</th>)}
                       </tr>
                     </thead>
@@ -818,7 +818,7 @@ function CalculatorProPageInner() {
                       {[...new Set(sensitResult.spider.map((s: any) => s.variable))].map((varName: any) => {
                         const rows = sensitResult.spider.filter((s: any) => s.variable === varName)
                         return (
-                          <tr key={varName} className="border-b border-gray-200">
+                          <tr key={varName} className="border-b border-gray-200 hover:bg-gray-50/50 transition-colors">
                             <td className="py-2 pr-4 text-gray-900">{varName}</td>
                             {[-30,-20,-10,0,10,20,30].map(p => {
                               const row = rows.find((r: any) => r.pct_change === p)
