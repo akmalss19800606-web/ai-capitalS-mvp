@@ -1100,30 +1100,29 @@ function CalculatorProPageInner() {
       {activeTab === 'xai' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-            <h3 className="text-gray-900 font-bold mb-4">XAI Анализ</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Название компании</label>
-                <input type="text" value={xaiForm.companyName} onChange={e => setXaiForm(p => ({...p, companyName: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500" placeholder="Введите название" />
+              <h3 className="text-gray-900 font-bold mb-4">XAI Анализ</h3>
+              {/* Секция 1: Компания */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Компания</h4>
+                <div className="space-y-3">
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Название компании</label><input type="text" value={xaiForm.companyName} onChange={e => setXaiForm(p => ({...p, companyName: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500" placeholder="Введите название" /></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Сектор (GICS)</label><select value={xaiForm.sector} onChange={e => setXaiForm(p => ({...p, sector: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{GICS_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Отрасль</label><select value={xaiForm.industry} onChange={e => setXaiForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Регион</label><select value={xaiForm.region} onChange={e => setXaiForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+                </div>
               </div>
-                            <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Сектор (GICS)</label><select value={xaiForm.sector} onChange={e => setXaiForm(p => ({...p, sector: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{GICS_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Отрасль</label><select value={xaiForm.industry} onChange={e => setXaiForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
-              <div><label className="block text-sm font-medium text-gray-600 mb-1.5">Регион</label><select value={xaiForm.region} onChange={e => setXaiForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
-              <InputField label="Сумма инвестиций" type="text" value={xaiForm.investmentAmount} onChange={(v: string) => setXaiForm(p => ({...p, investmentAmount: v}))} />
-              <InputField label="Период (лет)" type="text" value={xaiForm.period} onChange={(v: string) => setXaiForm(p => ({...p, period: v}))} />
-              <div>
-                <label className="text-sm text-gray-600 mb-1 block">Тип анализа</label>
-                <select value={xaiForm.analysisType} onChange={e => setXaiForm(p => ({...p, analysisType: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500">
-                  <option value="shap">SHAP</option>
-                  <option value="lime">LIME</option>
-                  <option value="feature_importance">Feature Importance</option>
-                                    </select>
-                 
+              {/* Секция 2: Анализ */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Параметры анализа</h4>
+                <div className="space-y-3">
+                  <InputField label="Сумма инвестиций" type="text" value={xaiForm.investmentAmount} onChange={(v: string) => setXaiForm(p => ({...p, investmentAmount: v}))} />
+                  <InputField label="Период (лет)" type="text" value={xaiForm.period} onChange={(v: string) => setXaiForm(p => ({...p, period: v}))} />
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Тип анализа</label><select value={xaiForm.analysisType} onChange={e => setXaiForm(p => ({...p, analysisType: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="shap">SHAP</option><option value="lime">LIME</option><option value="feature_importance">Feature Importance</option></select></div>
+                </div>
               </div>
-              <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
+              <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {xaiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} {xaiLoading ? 'Анализ...' : 'Запустить XAI'}
-              </button>
-            </div>
+              </button>            </div>
           </div>
           <div>
             {!xaiResult && !xaiLoading && <div className="text-center text-gray-400 mt-12">Выберите модель и запустите анализ</div>}
