@@ -1074,7 +1074,6 @@ function CalculatorProPageInner() {
               <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {bcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />} {bcLoading ? 'Оценка...' : 'Оценить кейс'}
               </button>            </div>
-          </div>
           <div>
             {!bcResult && !bcLoading && <div className="text-center text-gray-400 mt-12">Заполните форму и нажмите «Оценить кейс»</div>}
             {bcLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
