@@ -298,6 +298,8 @@ function CalculatorProPageInner() {
     window.open(`/api/v1/calculator/history/${calcId}/pdf?token=${token()}`, '_blank')
   }
 
+const printResults = () => window.print()
+
   const applyPreset = (preset: any) => {
     setDcfParams({ ...DEFAULT_DCF, ...preset.prefilled })
   }
@@ -1166,6 +1168,7 @@ function CalculatorProPageInner() {
             {bcResult && !bcLoading && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат оценки</h3>
+              <button onClick={printResults} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs transition-colors"><Download className="w-3.5 h-3.5" /> Печать</button>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
                   <MetricCard label="NPV (млн)" value={bcResult.npvmln ? `${bcResult.npvmln.toFixed(2)} млн` : 'N/A'} color={bcResult.npvmln > 0 ? 'emerald' : 'red'} />
                   <MetricCard label="IRR" value={bcResult.irrpct ? `${bcResult.irrpct.toFixed(1)}%` : 'N/A'} />
@@ -1221,6 +1224,7 @@ function CalculatorProPageInner() {
                         {xaiResult && !xaiLoading && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат XAI</h3>
+              <button onClick={printResults} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-xs transition-colors"><Download className="w-3.5 h-3.5" /> Печать</button>
                 {/* Recommendation */}
                 <div className={`p-4 rounded-xl border ${xaiResult.recommendation?.action_code === 'invest' ? 'bg-emerald-50 border-emerald-200' : xaiResult.recommendation?.action_code === 'avoid' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="flex items-center justify-between mb-2">
