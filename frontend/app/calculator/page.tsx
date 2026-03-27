@@ -604,7 +604,7 @@ function CalculatorProPageInner() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
+                            <tr className="text-gray-500 text-xs border-b-2 border-gray-200 sticky top-0 z-10 bg-white">
                               {['Год','Выручка','EBIT','Налоги','FCF','Диск. FCF','Нараст. DCF'].map(h => (
                                 <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px] whitespace-nowrap">{h}</th>
                               ))}
@@ -713,7 +713,7 @@ function CalculatorProPageInner() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
+                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 sticky top-0 z-10 bg-white">
                         {['Проект','NPV','IRR','MIRR','Окупаемость','PI','ROI'].map(h => (
                           <th key={h} className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px]">{h}</th>
                         ))}
@@ -812,7 +812,7 @@ function CalculatorProPageInner() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 bg-gray-50/80">
+                      <tr className="text-gray-500 text-xs border-b-2 border-gray-200 sticky top-0 z-10 bg-white">
                         <th className="text-left py-3 px-4 font-semibold uppercase tracking-wider text-[11px]">Переменная</th>
                         {[-30,-20,-10,0,10,20,30].map(p => <th key={p} className="pb-2 pr-3">{p}%</th>)}
                       </tr>
