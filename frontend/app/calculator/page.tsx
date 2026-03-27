@@ -46,12 +46,23 @@ interface BusinessCaseResult {
   isviable: boolean; recommendation: string; cashflows: number[]
 }
 
-// — XAI Analysis Types —
+// — XAI Analysis Types (matches backend /xai/analyze response) —
 interface XAIFactor {
-  name: string; weight: number; score: number; explanation: string
+  key: string; name: string; weight: number; importance_pct: number
+  impact: 'positive' | 'negative'; category: string
+}
+interface XAIConfidence {
+  score: number; level: string; level_ru: string
+  positive_factors_weight: number; negative_factors_weight: number
+}
+interface XAIRecommendation {
+  action: string; action_code: 'invest' | 'consider' | 'avoid'
+  explanation: string; top_positive_factors: string[]; top_negative_factors: string[]
 }
 interface XAIResult {
-  overallScore: number; recommendation: string; factors: XAIFactor[]; confidence: number
+  factors: XAIFactor[]; categories: Record<string, { label: string; factors: XAIFactor[] }>
+  confidence: XAIConfidence; recommendation: XAIRecommendation
+  metadata: { sector: string; investment_amount: number; time_horizon_years: number; analysis_type: string; language: string; num_factors: number }
 }
 
 // — Constants: GICS Sectors, Industries, UZ Regions —
@@ -190,7 +201,7 @@ function CalculatorProPageInner() {
   const [bcResult, setBcResult] = useState<any>(null)
   const [bcLoading, setBcLoading] = useState(false)
   // XAI state
-  const [xaiForm, setXaiForm] = useState({ companyName: '', sector: '', industry: '', region: '', investmentAmount: '', period: '', analysisType: 'shap' })
+    const [xaiForm, setXaiForm] = useState({ sector: 'general', investment_amount: 10000, time_horizon_years: 3, language: 'ru', analysis_type: 'investment' })
   const [xaiResult, setXaiResult] = useState<any>(null)
   const [xaiLoading, setXaiLoading] = useState(false)
   useEffect(() => {
@@ -1119,41 +1130,49 @@ function CalculatorProPageInner() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
               <h3 className="text-gray-900 font-bold mb-4">XAI Анализ</h3>
-              {/* Секция 1: Компания */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Компания</h4>
-                <div className="space-y-3">
-                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Название компании</label><input type="text" value={xaiForm.companyName} onChange={e => setXaiForm(p => ({...p, companyName: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500" placeholder="Введите название" /></div>
-                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Сектор (GICS)</label><select value={xaiForm.sector} onChange={e => setXaiForm(p => ({...p, sector: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{GICS_SECTORS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Отрасль</label><select value={xaiForm.industry} onChange={e => setXaiForm(p => ({...p, industry: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{INDUSTRIES.map(i => <option key={i} value={i}>{i}</option>)}</select></div>
-                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Регион</label><select value={xaiForm.region} onChange={e => setXaiForm(p => ({...p, region: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{UZ_REGIONS.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+                              <div className="space-y-4">
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Сектор</label><select value={xaiForm.sector} onChange={e => setXaiForm(p => ({...p, sector: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="general">Общий</option><option value="agriculture">Сельское хозяйство</option><option value="food_processing">Пищевая пром.</option><option value="trade">Торговля</option><option value="construction">Строительство</option><option value="manufacturing">Производство</option><option value="it_services">IT услуги</option><option value="transport">Транспорт</option><option value="tourism">Туризм</option></select></div>
+                  <InputField label="Сумма инвестиции ($)" value={xaiForm.investment_amount} onChange={(v: number) => setXaiForm(p => ({...p, investment_amount: v}))} min={100} max={10000000} suffix="$" />
+                  <InputField label="Горизонт (лет)" value={xaiForm.time_horizon_years} onChange={(v: number) => setXaiForm(p => ({...p, time_horizon_years: v}))} min={1} max={30} suffix="лет" />
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Язык</label><select value={xaiForm.language} onChange={e => setXaiForm(p => ({...p, language: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="ru">Русский</option><option value="en">English</option></select></div>
+                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Тип анализа</label><select value={xaiForm.analysis_type} onChange={e => setXaiForm(p => ({...p, analysis_type: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="investment">Инвестиционный</option><option value="risk">Риск-анализ</option><option value="sector">Секторный</option></select></div>
                 </div>
-              </div>
-              {/* Секция 2: Анализ */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Параметры анализа</h4>
-                <div className="space-y-3">
-                  <InputField label="Сумма инвестиций" type="text" value={xaiForm.investmentAmount} onChange={(v: string) => setXaiForm(p => ({...p, investmentAmount: v}))} />
-                  <InputField label="Период (лет)" type="text" value={xaiForm.period} onChange={(v: string) => setXaiForm(p => ({...p, period: v}))} />
-                  <div><label className="block text-sm font-medium text-gray-600 mb-1">Тип анализа</label><select value={xaiForm.analysisType} onChange={e => setXaiForm(p => ({...p, analysisType: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="shap">SHAP</option><option value="lime">LIME</option><option value="feature_importance">Feature Importance</option></select></div>
-                </div>
-              </div>
               <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {xaiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} {xaiLoading ? 'Анализ...' : 'Запустить XAI'}
               </button>            </div>
           <div>
             {!xaiResult && !xaiLoading && <div className="text-center text-gray-400 mt-12">Выберите модель и запустите анализ</div>}
             {xaiLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
-            {xaiResult && !xaiLoading && (
-              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
+                        {xaiResult && !xaiLoading && (
+              <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат XAI</h3>
-                {xaiResult.factors && xaiResult.factors.map((f: any, i: number) => (
-                  <div key={i} className="mb-3">
-                    <div className="flex justify-between text-sm"><span className="text-gray-700">{f.name}</span><span className="font-bold text-gray-900">{f.score?.toFixed(4)}</span></div>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-1"><div className="bg-violet-500 h-2 rounded-full" style={{width: `${Math.min(Math.abs(f.score || 0) * 100, 100)}%`}} /></div>
+                {/* Recommendation */}
+                <div className={`p-4 rounded-xl border ${xaiResult.recommendation?.action_code === 'invest' ? 'bg-emerald-50 border-emerald-200' : xaiResult.recommendation?.action_code === 'avoid' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-lg font-bold">{xaiResult.recommendation?.action}</span>
+                    <span className="text-sm bg-white/80 px-3 py-1 rounded-full">Уверенность: {xaiResult.confidence?.score}% ({xaiResult.confidence?.level_ru})</span>
                   </div>
-                ))}
-                {!xaiResult.factors && <pre className="text-xs text-gray-700 bg-white p-4 rounded-xl overflow-auto max-h-96">{JSON.stringify(xaiResult, null, 2)}</pre>}
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{xaiResult.recommendation?.explanation}</p>
+                </div>
+                {/* Factors */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Факторы анализа</h4>
+                  {xaiResult.factors?.map((f: any, i: number) => (
+                    <div key={i} className="mb-3">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-700">{f.name}</span>
+                        <span className={f.impact === 'positive' ? 'text-emerald-600' : 'text-red-600'}>{f.importance_pct}% ({f.impact === 'positive' ? '+' : '-'})</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className={`h-2 rounded-full ${f.impact === 'positive' ? 'bg-emerald-500' : 'bg-red-400'}`} style={{width: `${Math.min(f.importance_pct * 2, 100)}%`}} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Metadata */}
+                <div className="text-xs text-gray-400 pt-2 border-t border-gray-200">
+                  Сектор: {xaiResult.metadata?.sector} | Сумма: ${xaiResult.metadata?.investment_amount?.toLocaleString()} | Горизонт: {xaiResult.metadata?.time_horizon_years} лет | Факторов: {xaiResult.metadata?.num_factors}
+                </div>
               </div>
             )}
           </div>
