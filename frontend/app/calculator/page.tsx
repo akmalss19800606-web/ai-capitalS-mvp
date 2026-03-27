@@ -1117,6 +1117,24 @@ function CalculatorProPageInner() {
                 </div>
                 {bcResult.recommendation && <div className={`p-4 rounded-xl ${bcResult.isviable ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
                   <p className="text-sm font-medium text-gray-800">{bcResult.isviable ? '✅' : '❌'} {bcResult.recommendation}</p>
+                                      {bcResult.cashflows && bcResult.cashflows.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Денежные потоки по годам</h4>
+                        <div className="flex items-end gap-2 h-40">
+                          {bcResult.cashflows.map((cf: number, i: number) => {
+                            const maxCf = Math.max(...bcResult.cashflows.map((c: number) => Math.abs(c)))
+                            const height = maxCf > 0 ? (Math.abs(cf) / maxCf) * 100 : 0
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center">
+                                <span className="text-xs text-gray-500 mb-1">{cf >= 0 ? '+' : ''}{cf.toFixed(1)}</span>
+                                <div className={`w-full rounded-t ${cf >= 0 ? 'bg-emerald-400' : 'bg-red-400'}`} style={{height: `${height}%`}} />
+                                <span className="text-xs text-gray-400 mt-1">Г{i}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                 </div>}
               </div>
               )}              </div>
