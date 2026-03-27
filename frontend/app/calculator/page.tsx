@@ -790,7 +790,7 @@ function CalculatorProPageInner() {
                           <div className="flex-1 h-6 bg-gray-100 rounded-lg overflow-hidden relative">
                             <div className="absolute inset-y-0 left-1/2 w-0.5 bg-gray-300" />
                             <div
-                              className="absolute inset-y-0 bg-gradient-to-r from-violet-500 to-blue-500 rounded"
+                                                className={`h-full bg-gradient-to-r ${isPositive ? 'from-emerald-500 to-emerald-400' : 'from-red-500 to-red-400'} rounded transition-all`}
                               style={{
                                 left: `${50 - barWidth/2}%`,
                                 width: `${barWidth}%`,
