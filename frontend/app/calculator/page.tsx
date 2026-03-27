@@ -300,6 +300,11 @@ function CalculatorProPageInner() {
   }
 
     const submitBusinessCase = async () => {
+          const required = ['projectname', 'industry', 'region', 'initialinvestmentmln', 'projectyears', 'discountratepct']
+    const missing = required.filter(f => !(bcForm as any)[f])
+    if (missing.length > 0) { setError('Заполните обязательные поля: ' + missing.join(', ')); return }
+        const eq = Number(bcForm.equitysharepct) || 0; const db = Number(bcForm.debtsharepct) || 0
+    if (eq && db && Math.abs(eq + db - 100) > 1) { setError('Доля собственного + заёмного капитала должны быть = 100%'); return }
     setBcLoading(true); setError(null)
     try {
       const data = await apiRequest('/business-cases/evaluate', { method: 'POST', body: JSON.stringify(bcForm) })
