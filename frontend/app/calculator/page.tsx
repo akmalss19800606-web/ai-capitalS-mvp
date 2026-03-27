@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { apiRequest } from '@/lib/api'
 import { useSearchParams } from 'next/navigation'
+import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 
 // ─────────────────────────────────────────────────────────
 // Типы
@@ -820,6 +821,35 @@ function CalculatorProPageInner() {
             {sensitResult?.mode === 'spider' && sensitResult.spider && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                 <h3 className="text-gray-900 font-bold mb-4">Spider Chart (данные)</h3>
+                                    {(() => {
+                      const variables = [...new Set(sensitResult.spider.map((s: any) => s.variable))]
+                      const pcts = [-20, -10, 0, 10, 20]
+                      const radarData = variables.map((v: any) => {
+                        const row: any = { variable: v }
+                        pcts.forEach(p => {
+                          const found = sensitResult.spider.find((s: any) => s.variable === v && s.pct_change === p)
+                          row[`${p}%`] = found ? found.npv : 0
+                        })
+                        return row
+                      })
+                      const colors = ['#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#3b82f6']
+                      return (
+                        <div className="mb-6 h-80">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RadarChart data={radarData}>
+                              <PolarGrid />
+                              <PolarAngleAxis dataKey="variable" className="text-xs" />
+                              <PolarRadiusAxis />
+                              {pcts.map((p, i) => (
+                                <Radar key={p} name={`${p}%`} dataKey={`${p}%`} stroke={colors[i]} fill={colors[i]} fillOpacity={p === 0 ? 0.3 : 0.05} strokeWidth={p === 0 ? 2 : 1} />
+                              ))}
+                              <Legend />
+                              <Tooltip formatter={(val: any) => formatMoney(val)} />
+                            </RadarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )
+                    })()}
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
