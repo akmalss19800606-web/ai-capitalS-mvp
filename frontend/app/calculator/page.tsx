@@ -924,6 +924,7 @@ function CalculatorProPageInner() {
                     ))}
                   </div>
                 </div>
+                            {mcResult.histogram && mcResult.histogram.length > 0 && (<div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-2xl"><h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">NPV Distribution ({mcResult.n_simulations?.toLocaleString()} runs)</h4><div className="flex items-end gap-px h-16">{mcResult.histogram.map((b: any, i: number) => { const mx = mcResult.histogram.reduce((a: number, x: any) => Math.max(a, x.count), 0); return <div key={i} className={`flex-1 rounded-sm transition-all ${b.lower_bound < 0 ? 'bg-red-300 hover:bg-red-400' : 'bg-emerald-400 hover:bg-emerald-500'}`} style={{height: mx > 0 ? `${Math.round(b.count / mx * 100)}%` : '0%'}} title={`${formatMoney(b.lower_bound)}: ${b.count}`} /> })}</div><div className="flex justify-between text-xs text-gray-400 mt-1"><span>{formatMoney(mcResult.min_npv)}</span><span>NPV</span><span>{formatMoney(mcResult.max_npv)}</span></div></div>)}
               </div>
             )}
           </div>
