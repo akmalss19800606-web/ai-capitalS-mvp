@@ -206,6 +206,8 @@ function CalculatorProPageInner() {
     const [xaiForm, setXaiForm] = useState({ sector: 'general', investment_amount: 10000, time_horizon_years: 3, language: 'ru', analysis_type: 'investment' })
   const [xaiResult, setXaiResult] = useState<any>(null)
   const [xaiLoading, setXaiLoading] = useState(false)
+    // Dark mode
+  const [darkMode, setDarkMode] = useState(false)
   useEffect(() => {
     const load = async () => {
       const [bmRes, prRes, txRes] = await Promise.all([
