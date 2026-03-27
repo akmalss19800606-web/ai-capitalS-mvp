@@ -10,6 +10,7 @@ import {
 import { apiRequest } from '@/lib/api'
 import { useSearchParams } from 'next/navigation'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
 
 // ─────────────────────────────────────────────────────────
 // Типы
@@ -754,6 +755,25 @@ function CalculatorProPageInner() {
                     </tbody>
                   </table>
                 </div>
+                                  {compareResult.projects?.length > 0 && (
+                    <div className="mt-4 h-64">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">NPV сравнение</h4>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={compareResult.projects.map((p: any) => ({ name: p.name, NPV: p.npv || 0, IRR: p.irr || 0 }))}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" className="text-xs" />
+                          <YAxis />
+                          <Tooltip formatter={(val: any) => formatMoney(val)} />
+                          <Legend />
+                          <Bar dataKey="NPV" fill="#8b5cf6" radius={[4,4,0,0]}>
+                            {compareResult.projects.map((p: any, i: number) => (
+                              <Cell key={i} fill={(p.npv || 0) >= 0 ? '#10b981' : '#ef4444'} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   <MetricCard label="Лучший NPV" value={compareResult.best_npv || 'N/A'} color="emerald" />
                   <MetricCard label="Лучший IRR" value={compareResult.best_irr || 'N/A'} color="blue" />
