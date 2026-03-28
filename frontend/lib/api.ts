@@ -211,7 +211,20 @@ export const ddDocuments = {
     analyze: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}/analyze`, { method: 'POST' }),
   delete: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`, { method: 'DELETE' }),
   get: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`),
-  upload: (inn: string, data: unknown) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}`, { method: 'POST', body: JSON.stringify(data) }),
+  upload: async (inn: string, file: File): Promise<any> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('company_id', inn);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`/api/v1/dd/documents/${encodeURIComponent(inn)}`, {
+      method: 'POST', headers, body: formData, credentials: 'include',
+    });
+    if (!res.ok) throw new Error(await res.text());
+    if (res.status === 204) return null;
+    return res.json();
+  },
 };
 
 export const riskAnalysis = {
