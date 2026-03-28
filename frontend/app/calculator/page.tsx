@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { 
@@ -83,17 +83,17 @@ interface XAIResult {
   ]
 
 const INDUSTRIES = [
-  'Oil & Gas', 'Mining', 'Construction', 'Manufacturing',
-  'Retail', 'Banking', 'Insurance', 'Telecommunications',
-  'Agriculture', 'Transport', 'IT Services', 'Pharmaceuticals',
-  'Food & Beverage', 'Textiles', 'Tourism', 'Education'
+  'Нефть и газ', 'Горнодобыча', 'Строительство', 'Производство',
+  'Розничная торговля', 'Банковское дело', 'Страхование', 'Телекоммуникации',
+  'Сельское хозяйство', 'Транспорт', 'IT-услуги', 'Фармацевтика',
+  'Пищевая промышленность', 'Текстиль', 'Туризм', 'Образование'
 ]
 
 const UZ_REGIONS = [
-  'Tashkent', 'Tashkent region', 'Samarkand', 'Bukhara',
-  'Fergana', 'Andijan', 'Namangan', 'Kashkadarya',
-  'Surkhandarya', 'Khorezm', 'Navoi', 'Jizzakh',
-  'Syrdarya', 'Karakalpakstan'
+  'Ташкент', 'Ташкентская область', 'Самарканд', 'Бухара',
+  'Фергана', 'Андижан', 'Наманган', 'Кашкадарья',
+  'Сурхандарья', 'Хорезм', 'Навои', 'Джиззах',
+  'Сырдарья', 'Каракалпакстан'
 ]
 const DEFAULT_DCF: DCFParams = {
   initial_investment: 100000, currency: 'USD', horizon_years: 5,
