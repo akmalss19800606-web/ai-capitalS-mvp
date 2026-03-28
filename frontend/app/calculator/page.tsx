@@ -68,12 +68,19 @@ interface XAIResult {
 }
 
 // — Constants: GICS Sectors, Industries, UZ Regions —
-const GICS_SECTORS = [
-  'Energy', 'Materials', 'Industrials', 'Consumer Discretionary',
-  'Consumer Staples', 'Health Care', 'Financials',
-  'Information Technology', 'Communication Services',
-  'Utilities', 'Real Estate'
-]
+  const GICS_SECTORS = [
+    { v: 'energy', l: 'Энергетика', subs: ['Нефть', 'Газ'] },
+    { v: 'materials', l: 'Материалы', subs: ['Горнодобыча', 'Химия', 'Металлы'] },
+    { v: 'industrials', l: 'Промышленность', subs: ['Строительство', 'Машиностроение', 'Транспорт'] },
+    { v: 'consumerdisc', l: 'Потребительские', subs: ['Авто', 'Розница', 'Текстиль'] },
+    { v: 'consumerstaples', l: 'FMCG', subs: ['Продукты', 'Напитки'] },
+    { v: 'healthcare', l: 'Здравоохранение', subs: ['Фарма', 'Медоборудование'] },
+    { v: 'financials', l: 'Финансы', subs: ['Банки', 'Страхование', 'Лизинг'] },
+    { v: 'it', l: 'IT и Телеком', subs: ['ПО', 'Аутсорсинг', 'Телеком'] },
+    { v: 'communication', l: 'Коммуникации', subs: ['Медиа', 'Реклама'] },
+    { v: 'utilities', l: 'Коммунальные', subs: ['Электричество', 'Вода'] },
+    { v: 'realestate', l: 'Недвижимость', subs: ['Жилая', 'Коммерческая'] },
+  ]
 
 const INDUSTRIES = [
   'Oil & Gas', 'Mining', 'Construction', 'Manufacturing',
@@ -146,7 +153,7 @@ const InputField = ({ label, value, onChange, type = 'number', min, max, step, s
     <div className="relative">
       <input type={type} value={value} min={min} max={max} step={step || 1}
         onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
-        className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500 transition-colors pr-12"
+        className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-blue-500 transition-colors pr-12"
       />
       {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">{suffix}</span>}
     </div>
@@ -199,7 +206,7 @@ function CalculatorProPageInner() {
   const authHeader = () => ({ 'Authorization': `Bearer ${token()}`, 'Content-Type': 'application/json' })
 
     // Business Cases state
-  const [bcForm, setBcForm] = useState<BusinessCaseForm>({ projectname: '', industry: '', region: '', legalform: '', projectstage: '', initialinvestmentmln: '', equitysharepct: '', debtsharepct: '', interestratepct: '', discountratepct: '', annualrevenuemln: '', annualcostsmln: '', revenuegrowthpct: '', projectyears: '', taxratepct: '', risklevel: '', marketcompetition: '', hasstatesupport: false, exportsharepct: '', additionalnotes: '' })
+  const [bcForm, setBcForm] = useState<BusinessCaseForm>({ projectname: '', industry: '', region: '', legalform: '', projectstage: '', initialinvestmentmln: '', equitysharepct: '60', debtsharepct: '40', interestratepct: '22', discountratepct: '15', annualrevenuemln: '', annualcostsmln: '', revenuegrowthpct: '', projectyears: '5', taxratepct: '15', risklevel: '', marketcompetition: '', hasstatesupport: false, exportsharepct: '', additionalnotes: '' })
   const [bcResult, setBcResult] = useState<any>(null)
   const [bcLoading, setBcLoading] = useState(false)
   // XAI state
@@ -340,11 +347,11 @@ const printResults = () => window.print()
         {/* Заголовок */}
                 <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-md border-b border-gray-100 -mx-6 px-6 pt-6 pb-4 mb-2">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-violet-600 rounded-xl">
+            <div className="p-2 bg-blue-600 rounded-xl">
               <Calculator className="w-6 h-6 text-gray-900" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Investment Calculator</h1>
-            <span className="px-2 py-0.5 bg-violet-600/20 text-violet-400 text-xs rounded-full font-medium border border-violet-500/30">PRO</span>
+            <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded-full font-medium border border-blue-500/30">PRO</span>
           </div>
           <p className="text-gray-500 ml-14">NPV • IRR • MIRR • WACC • Monte Carlo • Анализ чувствительности</p>
         </div>
@@ -359,7 +366,7 @@ const printResults = () => window.print()
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all whitespace-nowrap ${
                   activeTab === tab.id
-                    ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/25'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
@@ -404,7 +411,7 @@ const printResults = () => window.print()
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-1.5">Валюта</label>
                     <select value={dcfParams.currency} onChange={e => updateDcf('currency', e.target.value)}
-                      className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-violet-500/60">
+                      className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:border-blue-500/60">
                       <option value="USD">USD</option><option value="UZS">UZS</option>
                                           </select>
                      
@@ -413,11 +420,11 @@ const printResults = () => window.print()
 
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                    Горизонт: <span className="text-violet-400">{dcfParams.horizon_years} лет</span>
+                    Горизонт: <span className="text-blue-400">{dcfParams.horizon_years} лет</span>
                   </label>
                   <input type="range" min={1} max={30} value={dcfParams.horizon_years}
                     onChange={e => updateDcf('horizon_years', Number(e.target.value))}
-                    className="w-full accent-violet-500" />
+                    className="w-full accent-blue-500" />
                   <div className="flex justify-between text-xs text-gray-400 mt-1"><span>1 год</span><span>30 лет</span></div>
                 </div>
 
@@ -446,7 +453,7 @@ const printResults = () => window.print()
                   {[{v:'manual',l:'Вручную'},{v:'wacc',l:'WACC'}].map(opt => (
                     <button key={opt.v} onClick={() => { updateDcf('discount_rate_mode', opt.v); setShowWacc(opt.v==='wacc') }}
                       className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                        dcfParams.discount_rate_mode === opt.v ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-500'
+                        dcfParams.discount_rate_mode === opt.v ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-500'
                       }`}>{opt.l}</button>
                   ))}
                 </div>
@@ -483,7 +490,7 @@ const printResults = () => window.print()
                         </div>
                       ))}
                     </div>
-                    <div className="bg-violet-500/10 border border-violet-500/30 rounded-lg p-2 text-xs text-violet-300">
+                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-2 text-xs text-blue-300">
                       Re = Rf + β×ERP + CRP + SCP | WACC = E%×Re + D%×Rd×(1-T)
                     </div>
                   </div>
@@ -502,7 +509,7 @@ const printResults = () => window.print()
               </div>
 
               <button onClick={calcDCF} disabled={dcfLoading}
-                className="w-full py-4 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-60 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-violet-500/25 flex items-center justify-center gap-3">
+                className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 disabled:opacity-60 text-white rounded-2xl font-bold text-lg transition-all shadow-lg shadow-blue-500/25 flex items-center justify-center gap-3">
                 {dcfLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Calculator className="w-5 h-5" />}
                 {dcfLoading ? 'Вычисление...' : 'Рассчитать'}
               </button>
@@ -521,7 +528,7 @@ const printResults = () => window.print()
 
               {dcfLoading && (
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-12 text-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-violet-400 mx-auto mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-blue-400 mx-auto mb-4" />
                   <p className="text-gray-500">Вычисление DCF модели...</p>
                 </div>
               )}
@@ -605,7 +612,7 @@ const printResults = () => window.print()
                       <div className="grid grid-cols-3 gap-3 text-center">
                         <div className="bg-white/80 rounded-xl p-3">
                           <div className="text-gray-500 text-xs">WACC</div>
-                          <div className="text-violet-400 font-bold text-xl">{dcfResult.wacc_breakdown.wacc?.toFixed(2)}%</div>
+                          <div className="text-blue-400 font-bold text-xl">{dcfResult.wacc_breakdown.wacc?.toFixed(2)}%</div>
                         </div>
                         <div className="bg-white/80 rounded-xl p-3">
                           <div className="text-gray-500 text-xs">Re (собств.)</div>
@@ -676,7 +683,7 @@ const printResults = () => window.print()
                   }
                 }}
                 disabled={compareProjects.length >= 5}
-                className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl text-sm transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-sm transition-colors"
               >
                 <Plus className="w-4 h-4" /> Добавить проект
               </button>
@@ -688,7 +695,7 @@ const printResults = () => window.print()
                   <div className="flex items-center justify-between">
                     <input value={compareNames[idx]}
                       onChange={e => setCompareNames(prev => prev.map((n,i) => i===idx ? e.target.value : n))}
-                      className="bg-transparent text-gray-900 font-semibold text-sm w-32 outline-none border-b border-gray-300 focus:border-violet-500"
+                      className="bg-transparent text-gray-900 font-semibold text-sm w-32 outline-none border-b border-gray-300 focus:border-blue-500"
                     />
                     {idx >= 2 && (
                       <button onClick={() => {
@@ -712,7 +719,7 @@ const printResults = () => window.print()
                       <label className="text-xs text-gray-500 block mb-1">{item.l}</label>
                       <input type="number" value={(proj as any)[item.f]} min={item.min} max={item.max}
                         onChange={e => setCompareProjects(prev => prev.map((p,i) => i===idx ? {...p,[item.f]:Number(e.target.value)} : p))}
-                        className="w-full bg-white/80 border border-gray-300 rounded-lg px-3 py-1.5 text-gray-900 text-sm focus:outline-none focus:border-violet-500/60"
+                        className="w-full bg-white/80 border border-gray-300 rounded-lg px-3 py-1.5 text-gray-900 text-sm focus:outline-none focus:border-blue-500/60"
                       />
                     </div>
                   ))}
@@ -721,7 +728,7 @@ const printResults = () => window.print()
             </div>
 
             <button onClick={calcCompare} disabled={compareLoading}
-              className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-60 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 disabled:opacity-60 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2">
               {compareLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GitCompare className="w-5 h-5" />}
               Сравнить проекты
             </button>
@@ -743,7 +750,7 @@ const printResults = () => window.print()
                     </thead>
                     <tbody>
                       {compareResult.projects?.map((p: any, i: number) => (
-                        <tr key={i} className={`border-b border-gray-200 hover:bg-violet-50/50 transition-colors ${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
+                        <tr key={i} className={`border-b border-gray-200 hover:bg-blue-50/50 transition-colors ${p.name === compareResult.best_npv ? 'bg-emerald-500/5' : ''}`}>
                           <td className="py-2 pr-4 font-medium text-gray-900 flex items-center gap-2">
                             {p.name === compareResult.best_npv && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                             {p.name}
@@ -781,7 +788,7 @@ const printResults = () => window.print()
                 <div className="mt-3 grid grid-cols-3 gap-3">
                   <MetricCard label="Лучший NPV" value={compareResult.best_npv || 'N/A'} color="emerald" />
                   <MetricCard label="Лучший IRR" value={compareResult.best_irr || 'N/A'} color="blue" />
-                  <MetricCard label="Быстрее окупается" value={compareResult.best_payback || 'N/A'} color="violet" />
+                  <MetricCard label="Быстрее окупается" value={compareResult.best_payback || 'N/A'} color="blue" />
                 </div>
               </div>
             )}
@@ -798,14 +805,14 @@ const printResults = () => window.print()
               <div className="flex gap-3 mb-4">
                 {[{v:'tornado',l:'Торнадо'},{v:'spider',l:'Spider'},{v:'data_table',l:'Таблица 2D'}].map(opt => (
                   <button key={opt.v} onClick={() => setSensitMode(opt.v as any)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${sensitMode===opt.v?'bg-violet-600 text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${sensitMode===opt.v?'bg-blue-600 text-white':'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>
                     {opt.l}
                   </button>
                 ))}
               </div>
               <p className="text-gray-500 text-sm">Базовые параметры берутся из вкладки DCF/ROI</p>
               <button onClick={calcSensitivity} disabled={sensitLoading}
-                className="mt-3 flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white rounded-xl font-medium transition-all">
+                className="mt-3 flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl font-medium transition-all">
                 {sensitLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
                 Рассчитать
               </button>
@@ -922,15 +929,15 @@ const printResults = () => window.print()
               <div className="flex items-end gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-600 mb-1.5">
-                    Количество симуляций: <span className="text-violet-400">{nSimulations.toLocaleString()}</span>
+                    Количество симуляций: <span className="text-blue-400">{nSimulations.toLocaleString()}</span>
                   </label>
                   <input type="range" min={1000} max={50000} step={1000} value={nSimulations}
                     onChange={e => setNSimulations(Number(e.target.value))}
-                    className="w-full accent-violet-500" />
+                    className="w-full accent-blue-500" />
                   <div className="flex justify-between text-xs text-gray-400 mt-1"><span>1,000</span><span>50,000</span></div>
                 </div>
                 <button onClick={calcMonteCarlo} disabled={mcLoading}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white rounded-xl font-medium transition-all">
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white rounded-xl font-medium transition-all">
                   {mcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Dice6 className="w-4 h-4" />}
                   Симуляция
                 </button>
@@ -1012,9 +1019,9 @@ const printResults = () => window.print()
                   <p className="text-gray-500 text-sm">Источники: ЦБ РУз, Минфин, uzse.uz, банки</p>
                 </div>
                 {dcfResult?.irr && (
-                  <div className="bg-violet-600/20 border border-violet-500/30 rounded-xl px-4 py-2 text-center">
+                  <div className="bg-blue-600/20 border border-blue-500/30 rounded-xl px-4 py-2 text-center">
                     <div className="text-gray-500 text-xs">Ваш IRR</div>
-                    <div className="text-violet-400 font-bold text-xl">{dcfResult.irr.toFixed(2)}%</div>
+                    <div className="text-blue-400 font-bold text-xl">{dcfResult.irr.toFixed(2)}%</div>
                   </div>
                 )}
               </div>
@@ -1070,7 +1077,7 @@ const printResults = () => window.print()
               </div>
 
               {dcfResult?.irr && (
-                <div className="mt-4 p-3 bg-violet-500/10 border border-violet-500/30 rounded-xl text-sm text-violet-300">
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-xl text-sm text-blue-300">
                   Ваш проект (IRR {dcfResult.irr.toFixed(2)}%) превосходит {benchmarks.filter(b => dcfResult.irr > b.annual_return_pct).length} из {benchmarks.length} альтернатив
                 </div>
               )}
@@ -1154,17 +1161,17 @@ const printResults = () => window.print()
                 <div className="space-y-3">
                   <div><label className="block text-sm font-medium text-gray-600 mb-1">Уровень риска</label><select value={bcForm.risklevel} onChange={e => setBcForm(p => ({...p, risklevel: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['Низкий','Средний','Высокий'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
                   <div><label className="block text-sm font-medium text-gray-600 mb-1">Конкуренция</label><select value={bcForm.marketcompetition} onChange={e => setBcForm(p => ({...p, marketcompetition: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="">Выберите...</option>{['Низкая','Средняя','Высокая'].map(v => <option key={v} value={v}>{v}</option>)}</select></div>
-                  <div className="flex items-center gap-2"><input type="checkbox" checked={bcForm.hasstatesupport} onChange={e => setBcForm(p => ({...p, hasstatesupport: e.target.checked}))} className="accent-violet-500" /><label className="text-sm text-gray-700">Гос. поддержка</label></div>
+                  <div className="flex items-center gap-2"><input type="checkbox" checked={bcForm.hasstatesupport} onChange={e => setBcForm(p => ({...p, hasstatesupport: e.target.checked}))} className="accent-blue-500" /><label className="text-sm text-gray-700">Гос. поддержка</label></div>
                   <InputField label="Доля экспорта (%)" type="text" value={bcForm.exportsharepct} onChange={(v: string) => setBcForm(p => ({...p, exportsharepct: v}))} />
                   <InputField label="Доп. заметки" type="text" value={bcForm.additionalnotes} onChange={(v: string) => setBcForm(p => ({...p, additionalnotes: v}))} />
                 </div>
               </div>
-              <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
+              <button onClick={submitBusinessCase} disabled={bcLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {bcLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Briefcase className="w-4 h-4" />} {bcLoading ? 'Оценка...' : 'Оценить кейс'}
               </button>            </div>
           <div>
             {!bcResult && !bcLoading && <div className="text-center text-gray-400 mt-12">Заполните форму и нажмите «Оценить кейс»</div>}
-            {bcLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
+            {bcLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" /></div>}
             {bcResult && !bcLoading && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат оценки</h3>
@@ -1215,12 +1222,12 @@ const printResults = () => window.print()
                   <div><label className="block text-sm font-medium text-gray-600 mb-1">Язык</label><select value={xaiForm.language} onChange={e => setXaiForm(p => ({...p, language: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="ru">Русский</option><option value="en">English</option></select></div>
                   <div><label className="block text-sm font-medium text-gray-600 mb-1">Тип анализа</label><select value={xaiForm.analysis_type} onChange={e => setXaiForm(p => ({...p, analysis_type: e.target.value}))} className="w-full bg-white/80 border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900"><option value="investment">Инвестиционный</option><option value="risk">Риск-анализ</option><option value="sector">Секторный</option></select></div>
                 </div>
-              <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
+              <button onClick={runXaiAnalysis} disabled={xaiLoading} className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl font-semibold transition-all">
                 {xaiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />} {xaiLoading ? 'Анализ...' : 'Запустить XAI'}
               </button>            </div>
           <div>
             {!xaiResult && !xaiLoading && <div className="text-center text-gray-400 mt-12">Выберите модель и запустите анализ</div>}
-            {xaiLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-violet-500 mx-auto" /></div>}
+            {xaiLoading && <div className="text-center mt-12"><Loader2 className="w-8 h-8 animate-spin text-blue-500 mx-auto" /></div>}
                         {xaiResult && !xaiLoading && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-6">
                 <h3 className="text-gray-900 font-bold mb-4">Результат XAI</h3>
@@ -1263,6 +1270,6 @@ const printResults = () => window.print()
   )
 }
 
-export default function CalculatorProPage() {
+export default function InvestmentCalculatorPage() {
   return <Suspense fallback={<div className="text-center py-12">Loading...</div>}><CalculatorProPageInner /></Suspense>
 }
