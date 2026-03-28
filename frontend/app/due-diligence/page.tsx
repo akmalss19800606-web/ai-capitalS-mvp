@@ -7,6 +7,14 @@ import {
   ResponsiveContainer, Cell, Legend,
 } from 'recharts';
 import { ddScoring, decisions, companyLookup, ddDocuments } from '@/lib/api';
+import {
+  CompanyProfileCard,
+  DueDiligenceLayout,
+  ScoreBadge,
+  RiskBadge,
+  FinancialHighlights,
+} from '@/components/dd';
+import type { DDTab } from '@/components/dd';
 
 // ─── Color Palette ─────────────────────────────────────────────────────────
 const C = {
