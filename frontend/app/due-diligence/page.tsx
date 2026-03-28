@@ -453,32 +453,33 @@ export default function DueDiligencePage() {
                   { icon: 'C', label: 'Checklist', value: result ? `${result.checklist_completion_pct?.toFixed(0) ?? 0}%` : '---' },
                       { icon: 'R', label: 'Risk', value: result ? (result.risk_level ?? '---') : '---' },
                         ];
+
+                          // Build sidebar & scoreHeader for DueDiligenceLayout
+  const scoreHeader = result ? (
+    <div style={{ ...card, borderLeft: `4px solid ${result.risk_level === 'low' ? C.success : result.risk_level === 'medium' ? C.warning : C.error}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: C.text, marginBottom: '4px' }}>{result.company_name}</div>
+          <div style={{ fontSize: '13px', color: C.textMuted }}>
+            {result.industry && <span>{result.industry} &middot; </span>}
+            {result.geography}
+            {result.decision_id && <span> &middot; Решение #{result.decision_id}</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <ScoreBadge score={result.total_score} />
+          <RiskBadge level={result.risk_level} />
+        </div>
+      </div>
+    </div>
+  ) : undefined;
   // ═════════════════════════════════════════════════════════════════════
   // RENDER
   // ═════════════════════════════════════════════════════════════════════
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', color: C.text }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '32px 24px' }}>
-
-        {/* Page Header */}
-        <div style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: C.purpleLight, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.purple }}>
-              <IconClipboard />
-            </div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: C.text, margin: 0 }}>Due Diligence</h1>
-          </div>
-          <p style={{ margin: 0, color: C.textMuted, fontSize: '14px' }}>
-            Автоматический скоринг, чеклист проверки и сравнение с отраслевыми бенчмарками
-          </p>
-        </div>
-
-        {loadingData ? (
-          <div style={card}><LoadingState text="Загрузка данных..." /></div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px', alignItems: 'start' }}>
-
-            {/* ─── LEFT PANEL: Input Form ──────────────────────────────── */}
+          <DueDiligenceLayout
+        sidebar={
+                    <>
             <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <SectionTitle>Параметры скоринга</SectionTitle>
 
@@ -641,68 +642,18 @@ export default function DueDiligencePage() {
                 )}
               </div>
             </div>
-
-            {/* ─── RIGHT PANEL: Results ─────────────────────────────── */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {error && <ErrorState message={error} />}
-
-              {!result && !loading && !error && (
-                <div style={card}>
-                  <EmptyState text="Введите название компании, параметры и запустите автоматический DD-скоринг для оценки рисков" />
-                </div>
-              )}
-
-              {loading && (
-                <div style={card}><LoadingState text="Выполняется DD-скоринг..." /></div>
-              )}
-
-              {result && !loading && (
+                      </>
+        }
+        scoreHeader={scoreHeader}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        hasResult={!!result}
+        loading={loading || loadingData}
+        error={error}
+        loadingText={loadingData ? 'Загрузка данных...' : 'Выполняется DD-скоринг...'}
+            >
+                      {result && (
                 <>
-                  {/* Score Header */}
-                  <div style={{ ...card, borderLeft: `4px solid ${result.risk_level === 'low' ? C.success : result.risk_level === 'medium' ? C.warning : C.error}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                      <div>
-                        <div style={{ fontSize: '18px', fontWeight: 700, color: C.text, marginBottom: '4px' }}>
-                          {result.company_name}
-                        </div>
-                        <div style={{ fontSize: '13px', color: C.textMuted }}>
-                          {result.industry && <span>{result.industry} &middot; </span>}
-                          {result.geography}
-                          {result.decision_id && <span> &middot; Решение #{result.decision_id}</span>}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <ScoreBadge score={result.total_score} size="lg" />
-                        <RiskBadge level={result.risk_level} />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tabs */}
-                  <div style={{ display: 'flex', gap: '4px', backgroundColor: C.white, borderRadius: '10px', padding: '4px', boxShadow: C.cardShadow }}>
-                    {TABS.map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        style={{
-                          flex: 1,
-                          padding: '9px 16px',
-                          border: 'none',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: 600,
-                          transition: 'all 0.15s',
-                          backgroundColor: activeTab === tab ? C.primary : 'transparent',
-                          color: activeTab === tab ? C.white : C.textMuted,
-                        }}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* ─── TAB: Обзор ───────────────────────────────── */}
                   {activeTab === 'Обзор' && (
                     <>
                       {/* Score Cards */}
@@ -1057,12 +1008,8 @@ export default function DueDiligencePage() {
                       })}
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </div>
+                          </>
         )}
-      </div>
-    </div>
+                        </DueDiligenceLayout>
   );
 }
