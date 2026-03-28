@@ -935,7 +935,7 @@ const printResults = () => window.print()
           </div>
         )}
 
-                  {sensitResult?.mode === 'data_table' && (
+          {activeTab === 'sensitivity' && sensitResult?.mode === 'data_table' && (
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
               <h3 className="text-gray-900 font-bold mb-4">2D NPV Таблица чувствительности</h3>
               <p className="text-xs text-gray-500 mb-3">Ставка дисконтирования (строки) vs Рост выручки (столбцы). Базовый NPV: {formatMoney(sensitResult.base_npv)}</p>
