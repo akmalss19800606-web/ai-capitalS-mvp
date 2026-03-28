@@ -199,10 +199,18 @@ export const ddScoring = {
     run: (data: unknown) => apiRequest('/dd/scoring', { method: 'POST', body: JSON.stringify(data) }),
     updateChecklist: (id: number, data: unknown) => apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PUT', body: JSON.stringify(data) }),
     history: () => apiRequest('/dd/scoring/history'),
+    getById: (id: number) => apiRequest(`/dd/scoring/${id}`),
+  delete: (id: number) => apiRequest(`/dd/scoring/${id}`, { method: 'DELETE' }),
+  export: (id: number, format: string = 'pdf') => apiRequest(`/dd/scoring/${id}/export?format=${format}`),
+  compare: (ids: number[]) => apiRequest('/dd/scoring/compare', { method: 'POST', body: JSON.stringify({ ids }) }),
+  redFlags: (id: number) => apiRequest(`/dd/scoring/${id}/red-flags`),
 };
 
 export const ddDocuments = {
   list: (inn: string) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}`),
+    analyze: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}/analyze`, { method: 'POST' }),
+  delete: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`, { method: 'DELETE' }),
+  get: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`),
   upload: (inn: string, data: unknown) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
