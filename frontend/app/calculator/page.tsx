@@ -319,9 +319,9 @@ const printResults = () => window.print()
     if (eq && db && Math.abs(eq + db - 100) > 1) { setError('Доля собственного + заёмного капитала должны быть = 100%'); return }
     setBcLoading(true); setError(null)
     try {
-      const data = await apiRequest('/business-cases/evaluate', { method: 'POST', body: JSON.stringify(bcForm) })
+      const data = await apiRequest('/business-cases/evaluate', { method: 'POST', body: JSON.stringify({ project_name: bcForm.projectname, industry: bcForm.industry, region: bcForm.region, legal_form: bcForm.legalform, project_stage: bcForm.projectstage, initial_investment_mln: Number(bcForm.initialinvestmentmln), equity_share_pct: Number(bcForm.equitysharepct), debt_share_pct: Number(bcForm.debtsharepct), interest_rate_pct: Number(bcForm.interestratepct), discount_rate_pct: Number(bcForm.discountratepct), annual_revenue_mln: Number(bcForm.annualrevenuemln), annual_costs_mln: Number(bcForm.annualcostsmln), revenue_growth_pct: Number(bcForm.revenuegrowthpct) || 0, project_years: Number(bcForm.projectyears), tax_rate_pct: Number(bcForm.taxratepct) || 15, risk_level: bcForm.risklevel, market_competition: bcForm.marketcompetition, has_state_support: bcForm.hasstatesupport, export_share_pct: Number(bcForm.exportsharepct) || 0, additional_notes: bcForm.additionalnotes || null }) })
       if (data.detail) throw new Error(data.detail)
-      setBcResult(data)
+      setBcResult({ ...data, npvmln: data.npv_mln, irrpct: data.irr_pct, profitabilityindex: data.profitability_index, paybackyears: data.payback_years, discountratepct: data.discount_rate_pct, initialinvestmentmln: data.initial_investment_mln, projectyears: data.project_years, isviable: data.is_viable, projectname: data.project_name, cashflows: data.cash_flows })
     } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setBcLoading(false) }
   }
