@@ -27,7 +27,12 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
         if (!retryRes.ok) throw new Error(await retryRes.text());
         if (retryRes.status === 204) return null;
         return retryRes.json();
-      }
+      } else {
+          localStorage.removeItem('token');
+          removeCookie('access_token');
+          window.location.href = '/login';
+          return;
+        }
     } catch {
       localStorage.removeItem('token');
       removeCookie('access_token');
