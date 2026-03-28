@@ -833,6 +833,8 @@ const printResults = () => window.print()
               </button>
             </div>
 
+
+                  {error && <div className="mt-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{error}</div>}
             {sensitResult?.mode === 'tornado' && sensitResult.tornado && (
               <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
                 <h3 className="text-gray-900 font-bold mb-4">Торнадо-диаграмма</h3>
