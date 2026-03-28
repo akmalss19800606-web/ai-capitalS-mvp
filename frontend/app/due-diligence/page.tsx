@@ -285,6 +285,11 @@ export default function DueDiligencePage() {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [uploadedDocs, setUploadedDocs] = useState<any[]>([]);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+    const [directorName, setDirectorName] = useState('');
+  const [legalForm, setLegalForm] = useState('');
+  const [authorizedCapital, setAuthorizedCapital] = useState('');
+  const [foundedYear, setFoundedYear] = useState('');
+  const [licenseCount, setLicenseCount] = useState('');
 
   // ─── Load Decisions ───────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -319,6 +324,10 @@ export default function DueDiligencePage() {
         if (detail?.oked || detail?.industry) setIndustry(detail.oked || detail.industry);
         if (detail?.address || detail?.region) setGeography(detail.address || detail.region);
         if (detail?.employee_count) setEmployeeCount(String(detail.employee_count));
+              if (detail?.director) setDirectorName(detail.director);
+      if (detail?.legalform) setLegalForm(detail.legalform);
+      if (detail?.authorizedcapital) setAuthorizedCapital(String(detail.authorizedcapital));
+      if (detail?.foundedyear) setFoundedYear(String(detail.foundedyear));
     } catch (e: any) {
       setError(e.message || 'Ошибка поиска компании');
     } finally {
@@ -331,9 +340,19 @@ export default function DueDiligencePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadingDoc(true);
+    setError(null);
     try {
-      const res = await ddDocuments.upload(innQuery || companyName, { filename: file.name });
+      const res = await ddDocuments.upload(innQuery || companyName, file);
       setUploadedDocs(prev => [...prev, res]);
+      if (res?.extracteddata) {
+        const ed = res.extracteddata;
+        if (ed.revenue_mln) setRevenueMln(String(ed.revenue_mln));
+        if (ed.profit_margin_pct) setProfitMargin(String(ed.profit_margin_pct));
+        if (ed.debt_to_equity) setDebtToEquity(String(ed.debt_to_equity));
+        if (ed.employee_count) setEmployeeCount(String(ed.employee_count));
+        if (ed.authorized_capital) setAuthorizedCapital(String(ed.authorized_capital));
+        if (ed.founded_year) setFoundedYear(String(ed.founded_year));
+      }
     } catch (err: any) {
       setError(err.message || 'Ошибка загрузки документа');
     } finally {
@@ -358,6 +377,11 @@ export default function DueDiligencePage() {
       if (debtToEquity) payload.debt_to_equity = Number(debtToEquity);
       if (yearsInBiz) payload.years_in_business = Number(yearsInBiz);
       if (employeeCount) payload.employee_count = Number(employeeCount);
+            if (directorName) payload.director_name = directorName;
+      if (legalForm) payload.legal_form = legalForm;
+      if (authorizedCapital) payload.authorized_capital = Number(authorizedCapital);
+      if (foundedYear) payload.founded_year = Number(foundedYear);
+      if (licenseCount) payload.license_count = Number(licenseCount);
 
       const res = await ddScoring.run(payload);
       setResult(res);
@@ -423,6 +447,12 @@ export default function DueDiligencePage() {
     color: b.delta >= 0 ? C.success : b.delta < -5 ? C.error : C.warning,
   }));
 
+    const ddIndicators = [
+          { icon: '\ud83d\udcca', label: 'Score', value: result ? result.total_score?.toFixed(1) ?? '---' : '---' },
+              { icon: 'F', label: 'Flags', value: result ? String(result.red_flags?.length ?? 0) : '---' },
+                  { icon: 'C', label: 'Checklist', value: result ? `${result.checklist_completion_pct?.toFixed(0) ?? 0}%` : '---' },
+                      { icon: 'R', label: 'Risk', value: result ? (result.risk_level ?? '---') : '---' },
+                        ];
   // ═════════════════════════════════════════════════════════════════════
   // RENDER
   // ═════════════════════════════════════════════════════════════════════
@@ -474,6 +504,11 @@ export default function DueDiligencePage() {
                     ✅ Найдено: {lookupResult.name} {lookupResult.inn && `(ИНН: ${lookupResult.inn})`}
                   </div>
                 )}
+                            {lookupResult && (
+              <div style={{ marginTop: 12 }}>
+                <CompanyProfileCard company={lookupResult} />
+              </div>
+            )}
               </div>
               <div>
                 <label style={labelStyle}>Название компании *</label>
@@ -535,6 +570,44 @@ export default function DueDiligencePage() {
                     <input style={inputStyle} type="number" value={employeeCount} onChange={e => setEmployeeCount(e.target.value)} placeholder="50" />
                   </div>
                 </div>
+
+                            {/* Company Details */}
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4 }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: C.textMuted, marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Данные компании</div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Директор</label>
+                  <input style={inputStyle} value={directorName} onChange={e => setDirectorName(e.target.value)} placeholder="ФИО руководителя" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>ОПФ</label>
+                  <select style={inputStyle} value={legalForm} onChange={e => setLegalForm(e.target.value)}>
+                    <option value="">Не указана</option>
+                    <option value="ООО">ООО</option>
+                    <option value="АО">АО</option>
+                    <option value="ИП">ИП</option>
+                    <option value="ГУП">ГУП</option>
+                    <option value="Фермерское хозяйство">Фермерское хозяйство</option>
+                    <option value="СЧЗ">СЧЗ</option>
+                    <option value="Другое">Другое</option>
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Год основания</label>
+                    <input style={inputStyle} type="number" min={1900} max={2026} value={foundedYear} onChange={e => setFoundedYear(e.target.value)} placeholder="2010" />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, fontSize: '11px' }}>Уставной капитал</label>
+                    <input style={inputStyle} type="number" min={0} value={authorizedCapital} onChange={e => setAuthorizedCapital(e.target.value)} placeholder="100" />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Лицензии</label>
+                  <input style={inputStyle} type="number" min={0} value={licenseCount} onChange={e => setLicenseCount(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+            </div>
               </div>
 
               <button
