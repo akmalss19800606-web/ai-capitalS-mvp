@@ -951,10 +951,10 @@ const printResults = () => window.print()
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <MetricCard
             label="P(NPV>0)"
-            value={`${(mcResult.prob_positive*100).toFixed(1)}%`}
-            sub={mcResult.prob_positive > 0.6 ? 'Риск приемлем' : 'Высокий риск'}
-            color={mcResult.prob_positive > 0.6 ? 'emerald' : 'red'}
-            trend={mcResult.prob_positive > 0.6 ? 'up' : 'down'}
+            value={`${(mcResult.prob_positive > 1 ? mcResult.prob_positive : mcResult.prob_positive * 100).toFixed(1)}%`}
+            sub={(mcResult.prob_positive > 1 ? mcResult.prob_positive / 100 : mcResult.prob_positive) > 0.6 ? 'Риск приемлем' : 'Высокий риск'}
+            color={(mcResult.prob_positive > 1 ? mcResult.prob_positive / 100 : mcResult.prob_positive) > 0.6 ? 'emerald' : 'red'}
+            trend={(mcResult.prob_positive > 1 ? mcResult.prob_positive / 100 : mcResult.prob_positive) > 0.6 ? 'up' : 'down'}
           />
           <MetricCard
             label="Ожид. NPV (P50)"
