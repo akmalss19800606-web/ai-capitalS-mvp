@@ -168,6 +168,111 @@ def update_checklist_item(
 # БЕНЧМАРКИ — ШАБЛОНЫ
 # ═══════════════════════════════════════════════════════════════
 
+# ===============================================================
+# DELETE / EXPORT / COMPARE / RED-FLAGS
+# ===============================================================
+
+@router.delete("/scoring/{score_id}")
+def delete_dd_scoring(
+    score_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete a DD scoring result."""
+    dd = db.query(DueDiligenceScore).filter(
+        DueDiligenceScore.id == score_id,
+        DueDiligenceScore.user_id == current_user.id,
+    ).first()
+    if not dd:
+        raise HTTPException(status_code=404, detail="DD-scoring not found")
+    db.delete(dd)
+    db.commit()
+    return {"detail": "Deleted", "id": score_id}
+
+
+@router.get("/scoring/{score_id}/export")
+def export_dd_scoring(
+    score_id: int,
+    format: str = Query("pdf", regex="^(pdf|json|csv)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export DD scoring result."""
+    dd = db.query(DueDiligenceScore).filter(DueDiligenceScore.id == score_id).first()
+    if not dd:
+        raise HTTPException(status_code=404, detail="DD-scoring not found")
+    export_data = {
+        "id": dd.id,
+        "company_name": dd.company_name,
+        "industry": dd.industry,
+        "geography": dd.geography,
+        "total_score": dd.total_score,
+        "risk_level": dd.risk_level,
+        "financial_score": dd.financial_score,
+        "legal_score": dd.legal_score,
+        "operational_score": dd.operational_score,
+        "market_score": dd.market_score,
+        "management_score": dd.management_score,
+        "esg_score": dd.esg_score,
+        "red_flags": dd.red_flags,
+        "recommendation": dd.recommendation,
+        "checklist_completion_pct": dd.checklist_completion_pct,
+        "created_at": str(dd.created_at) if dd.created_at else None,
+        "format": format,
+    }
+    return export_data
+
+
+@router.post("/scoring/compare")
+def compare_dd_scorings(
+    data: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Compare multiple DD scoring results."""
+    ids = data.get("ids", [])
+    if len(ids) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 IDs required")
+    results = db.query(DueDiligenceScore).filter(
+        DueDiligenceScore.id.in_(ids),
+    ).all()
+    if len(results) < 2:
+        raise HTTPException(status_code=404, detail="Not enough results found")
+    comparison = []
+    for dd in results:
+        comparison.append({
+            "id": dd.id,
+            "company_name": dd.company_name,
+            "total_score": dd.total_score,
+            "risk_level": dd.risk_level,
+            "financial_score": dd.financial_score,
+            "legal_score": dd.legal_score,
+            "operational_score": dd.operational_score,
+            "market_score": dd.market_score,
+            "management_score": dd.management_score,
+            "esg_score": dd.esg_score,
+        })
+    return {"comparison": comparison, "count": len(comparison)}
+
+
+@router.get("/scoring/{score_id}/red-flags")
+def get_dd_red_flags(
+    score_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get red flags for a DD scoring."""
+    dd = db.query(DueDiligenceScore).filter(DueDiligenceScore.id == score_id).first()
+    if not dd:
+        raise HTTPException(status_code=404, detail="DD-scoring not found")
+    return {
+        "id": dd.id,
+        "company_name": dd.company_name,
+        "red_flags": dd.red_flags or [],
+        "risk_level": dd.risk_level,
+        "total_flags": len(dd.red_flags or []),
+    }
+
 @router.get("/benchmarks/templates")
 def get_benchmark_templates(
     current_user: User = Depends(get_current_user),
