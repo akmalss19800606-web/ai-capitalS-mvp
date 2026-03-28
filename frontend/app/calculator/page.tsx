@@ -294,11 +294,9 @@ function CalculatorProPageInner() {
         })
       })
       if (data.detail) throw new Error(data.detail)
-              // Flatten spider data for frontend
-      const flatSpider = (data.spider || []).flatMap((s: any) =>
-        (s.points || []).map((p: any) => ({ variable: s.variable, pct_change: p.pct_change, npv: p.npv }))
-      )
-            setSensitResult({ ...data, spider: flatSpider, mode: sensitMode })
+              // Spider data is already flat from backend: [{variable, pct_change, npv}]
+        const flatSpider = data.spider || []
+        setSensitResult({ ...data, spider: flatSpider, mode: sensitMode })
     } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
   }
@@ -936,6 +934,51 @@ const printResults = () => window.print()
             )}
           </div>
         )}
+
+                  {sensitResult?.mode === 'data_table' && (
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5">
+              <h3 className="text-gray-900 font-bold mb-4">2D NPV Таблица чувствительности</h3>
+              <p className="text-xs text-gray-500 mb-3">Ставка дисконтирования (строки) vs Рост выручки (столбцы). Базовый NPV: {formatMoney(sensitResult.base_npv)}</p>
+              {(() => {
+                const drSteps = [-10, -5, 0, 5, 10]
+                const grSteps = [-10, -5, 0, 5, 10]
+                const baseDR = dcfParams.discount_rate
+                const baseGR = dcfParams.revenue_growth_rate
+                const computeNPV = (dr: number, gr: number) => {
+                  let npv = -dcfParams.initial_investment
+                  for (let y = 1; y <= dcfParams.horizon_years; y++) {
+                    const rev = dcfParams.revenue_year1 * Math.pow(1 + gr / 100, y - 1)
+                    const cf = rev * dcfParams.operating_margin / 100
+                    npv += cf / Math.pow(1 + dr / 100, y)
+                  }
+                  return npv
+                }
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="border border-gray-300 bg-gray-100 px-2 py-1">Ставка \\ Рост</th>
+                          {grSteps.map(g => <th key={g} className="border border-gray-300 bg-gray-100 px-2 py-1">{baseGR + g}%</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {drSteps.map(d => (
+                          <tr key={d}>
+                            <td className="border border-gray-300 bg-gray-100 px-2 py-1 font-medium">{baseDR + d}%</td>
+                            {grSteps.map(g => {
+                              const val = computeNPV(baseDR + d, baseGR + g)
+                              return <td key={g} className={`border border-gray-300 px-2 py-1 text-center ${val >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>{formatMoney(val)}</td>
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
 
         {/* ══════════════════════════════════════════════ */}
         {/* Вкладка 4: Monte Carlo */}
