@@ -289,7 +289,8 @@ function CalculatorProPageInner() {
           cash_flows: cfs,
           discount_rate: dcfParams.discount_rate / 100,
           initial_investment: dcfParams.initial_investment,
-          variation_pct: 20
+          variation_pct: 20,
+                      mode: sensitMode
         })
       })
       if (data.detail) throw new Error(data.detail)
