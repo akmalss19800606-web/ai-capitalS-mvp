@@ -4,7 +4,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Body
 from app.api.v1.deps import get_current_user
-from app.services.calculator_service import InvestmentCalculatorService
+from app.services.calculator_service import InvestmentCalculatorService, TAX_REGIMES
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calculator", tags=["Calculator Frontend"])
@@ -18,10 +18,15 @@ def build_cash_flows(p: dict) -> List[float]:
     growth_raw = p.get("revenue_growth_rate", 0); growth = growth_raw / 100 if growth_raw > 1 else growth_raw
     margin_raw = p.get("operating_margin", 20); margin = margin_raw / 100 if margin_raw > 1 else margin_raw
     horizon = p.get("horizon_years", 5)
+        # --- Tax rate from regime ---
+    tax_regime = p.get("tax_regime", "general")
+    tax_rate = TAX_REGIMES.get(tax_regime, TAX_REGIMES["general"])["cit"]
     cfs = [-inv]
     for yr in range(1, horizon + 1):
         r = rev * ((1 + growth) ** (yr - 1))
-        cf = r * margin
+                ebit = r * margin
+        tax = max(0, ebit * tax_rate)
+        cf = ebit - tax
         cfs.append(round(cf, 2))
     return cfs
 
@@ -29,6 +34,9 @@ def build_cash_flows(p: dict) -> List[float]:
 def adapt_dcf_response(raw: dict, params: dict) -> dict:
     """Map service response to frontend-expected field names."""
     # Build yearly_breakdown from periods
+        # Get tax rate for breakdown
+    tax_regime = params.get("tax_regime", "general")
+    tax_rate = TAX_REGIMES.get(tax_regime, TAX_REGIMES["general"])["cit"]
     yearly = []
     periods = raw.get("periods", [])
     for p in periods:
@@ -36,9 +44,9 @@ def adapt_dcf_response(raw: dict, params: dict) -> dict:
             continue
         yearly.append({
             "year": p["period"],
-            "revenue": p.get("cash_flow", 0) / max((params.get("operating_margin", 20) / 100 if params.get("operating_margin", 20) > 1 else params.get("operating_margin", 0.20)), 0.01),
-            "ebit": p.get("cash_flow", 0),
-            "taxes": 0,
+                        "revenue": p.get("cash_flow", 0) / max((1 - tax_rate), 0.01) / max((params.get("operating_margin", 20) / 100 if params.get("operating_margin", 20) > 1 else params.get("operating_margin", 0.20)), 0.01),
+            "ebit": p.get("cash_flow", 0) / max((1 - tax_rate), 0.01),
+            "taxes": p.get("cash_flow", 0) / max((1 - tax_rate), 0.01) * tax_rate,
             "free_cash_flow": p.get("cash_flow", 0),
             "discounted_cf": p.get("present_value", 0),
             "cumulative_dcf": p.get("cumulative_pv", 0),
