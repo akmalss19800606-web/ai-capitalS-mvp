@@ -274,15 +274,30 @@ function CalculatorProPageInner() {
     finally { setCompareLoading(false) }
   }
 
-  const calcSensitivity = async () => {
+    const calcSensitivity = async () => {
     setSensitLoading(true)
     try {
+      // Generate cash flows from DCF params
+      const cfs: number[] = []
+      for (let y = 1; y <= dcfParams.horizon_years; y++) {
+        const rev = dcfParams.revenue_year1 * Math.pow(1 + dcfParams.revenue_growth_rate / 100, y - 1)
+        cfs.push(rev * dcfParams.operating_margin / 100)
+      }
       const data = await apiRequest('/calculator/sensitivity', {
         method: 'POST',
-        body: JSON.stringify({ base_params: dcfParams, mode: sensitMode, variation_range_pct: 20 })
+        body: JSON.stringify({
+          cash_flows: cfs,
+          discount_rate: dcfParams.discount_rate / 100,
+          initial_investment: dcfParams.initial_investment,
+          variation_pct: 20
+        })
       })
-      
-      setSensitResult(data)
+      if (data.detail) throw new Error(data.detail)
+              // Flatten spider data for frontend
+      const flatSpider = (data.spider || []).flatMap((s: any) =>
+        (s.points || []).map((p: any) => ({ variable: s.variable, pct_change: p.pct_change, npv: p.npv }))
+      )
+            setSensitResult({ ...data, spider: flatSpider, mode: sensitMode })
     } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
   }
@@ -357,7 +372,7 @@ const printResults = () => window.print()
         </div>
 
         {/* Вкладки */}
-                <div className="flex gap-1 bg-white/40 border border-gray-200 rounded-2xl p-1.5 mb-6 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+                    <div className="flex gap-1 bg-white/40 border border-gray-200 rounded-2xl p-1.5 mb-6 flex-wrap">
           {TABS.map(tab => {
             const Icon = tab.icon
             return (
@@ -824,17 +839,17 @@ const printResults = () => window.print()
                 <p className="text-gray-500 text-sm mb-4">Базовый NPV: {formatMoney(sensitResult.base_npv)} | Варьируем ±20%</p>
                 <div className="space-y-3">
                   {sensitResult.tornado.map((item: any) => {
-                    const maxImpact = Math.max(...sensitResult.tornado.map((i: any) => i.impact))
-                    const barWidth = (item.impact / maxImpact) * 100
-                    const isPositive = item.high_npv > item.low_npv
+                    const maxImpact = Math.max(...sensitResult.tornado.map((i: any) => i.npv_range))
+                    const barWidth = (item.npv_range / maxImpact) * 100
+                    const isPositive = item.npv_high > item.npv_low
                     return (
                       <div key={item.variable}>
                         <div className="flex justify-between text-xs text-gray-500 mb-1">
-                          <span>{item.label}</span>
-                          <span>Влияние: {formatMoney(item.impact)}</span>
+                          <span>{item.variable}</span>
+                          <span>Влияние: {formatMoney(item.npv_range)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-20 text-right text-xs text-red-600">{formatMoney(item.low_npv)}</div>
+                          <div className="w-20 text-right text-xs text-red-600">{formatMoney(item.npv_low)}</div>
                           <div className="flex-1 h-6 bg-gray-100 rounded-lg overflow-hidden relative">
                             <div className="absolute inset-y-0 left-1/2 w-0.5 bg-gray-300" />
                             <div
@@ -845,7 +860,7 @@ const printResults = () => window.print()
                               }}
                             />
                           </div>
-                          <div className="w-20 text-xs text-emerald-600">{formatMoney(item.high_npv)}</div>
+                          <div className="w-20 text-xs text-emerald-600">{formatMoney(item.npv_high)}</div>
                         </div>
                       </div>
                     )
