@@ -24,7 +24,7 @@ def build_cash_flows(p: dict) -> List[float]:
     cfs = [-inv]
     for yr in range(1, horizon + 1):
         r = rev * ((1 + growth) ** (yr - 1))
-                ebit = r * margin
+        ebit = r * margin
         tax = max(0, ebit * tax_rate)
         cf = ebit - tax
         cfs.append(round(cf, 2))
