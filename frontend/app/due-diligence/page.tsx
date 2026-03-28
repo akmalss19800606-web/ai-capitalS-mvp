@@ -180,45 +180,6 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ─── Score Badge ────────────────────────────────────────────────────────────
-function ScoreBadge({ score, size = 'sm' }: { score: number; size?: 'sm' | 'lg' }) {
-  const color = score >= 75 ? C.success : score >= 55 ? C.warning : C.error;
-  const bg = score >= 75 ? C.successLight : score >= 55 ? C.warningLight : C.errorLight;
-  const isLg = size === 'lg';
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: bg, color, fontWeight: 700,
-      fontSize: isLg ? '28px' : '14px',
-      padding: isLg ? '8px 18px' : '3px 10px',
-      borderRadius: isLg ? '12px' : '8px',
-      minWidth: isLg ? '80px' : '42px',
-    }}>
-      {score.toFixed(1)}
-    </span>
-  );
-}
-
-// ─── Risk Level Badge ───────────────────────────────────────────────────────
-function RiskBadge({ level }: { level: string }) {
-  const map: Record<string, { label: string; color: string; bg: string }> = {
-    low: { label: 'Низкий', color: C.success, bg: C.successLight },
-    medium: { label: 'Умеренный', color: C.warning, bg: C.warningLight },
-    high: { label: 'Высокий', color: '#ea580c', bg: '#fff7ed' },
-    critical: { label: 'Критический', color: C.error, bg: C.errorLight },
-  };
-  const m = map[level] || map.medium;
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '5px',
-      backgroundColor: m.bg, color: m.color, fontWeight: 700,
-      fontSize: '13px', padding: '4px 12px', borderRadius: '8px',
-    }}>
-      <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: m.color }} />
-      {m.label}
-    </span>
-  );
-}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface CategoryDetail {
