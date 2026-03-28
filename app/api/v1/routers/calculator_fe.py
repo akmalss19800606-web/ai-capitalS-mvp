@@ -144,14 +144,14 @@ async def fe_sensitivity(body: dict = Body(...), _u=Depends(get_current_user)):
         pos_cfs = [c for c in cfs if c > 0]
         if not pos_cfs:
             pos_cfs = [10000]
-        raw = calc.sensitivity_analysis(cash_flows=pos_cfs, discount_rate=dr, initial_investment=inv, variation_pct=body.get("variation_range_pct", 20))
+        raw = calc.sensitivity_analysis(cash_flows=pos_cfs, discount_rate=dr, initial_investment=inv, variation_pct=body.get("variation_pct", 20))
         mode = body.get("mode", "tornado")
         base_npv = raw.get("base_npv", 0)
         result = {"mode": mode, "base_npv": base_npv}
         if mode == "tornado":
             tornado_items = []
             for t in raw.get("tornado", []):
-                tornado_items.append({"label": t["variable"], "impact": t["npv_range"], "low_npv": t["npv_low"], "high_npv": t["npv_high"]})
+                tornado_items.append({"variable": t["variable"], "npv_range": t["npv_range"], "npv_low": t["npv_low"], "npv_high": t["npv_high"], "base_value": t.get("base_value", 0)})
             result["tornado"] = tornado_items
         elif mode == "spider":
             spider_items = []
