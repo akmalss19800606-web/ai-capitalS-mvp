@@ -93,48 +93,88 @@ def _safe_div(a: float, b: float) -> float:
     return round(a / b, 4) if b != 0 else 0.0
 
 
+def _kpi_status(value: float, norm_threshold: float, lower_is_better: bool = False) -> str:
+    """Determine KPI status: ok / warn / bad."""
+    if lower_is_better:
+        if value <= norm_threshold:
+            return "ok"
+        elif value <= norm_threshold * 1.5:
+            return "warn"
+        return "bad"
+    else:
+        if value >= norm_threshold:
+            return "ok"
+        elif value >= norm_threshold * 0.5:
+            return "warn"
+        return "bad"
+
+
 def _calc_kpis(agg: dict) -> list:
-    """Calculate KPI groups from balance aggregates."""
+    """Calculate KPI groups from balance aggregates.
+
+    Returns list of groups with 'title', 'icon', 'metrics' array.
+    Each metric has: key, label, value, formula, norm, status, standard.
+    """
     ca = agg["current_assets"]
     cl = agg["st_liabilities"]
     inv = agg["inventories"]
+    cash = agg["cash"]
     ta = agg["total_assets"]
     te = agg["total_equity"]
     tl = agg["total_liabilities"]
     np_ = agg["net_profit"]
     rev = agg["revenue"]
+    exp = agg["expenses"]
+    recv = agg["receivables"]
+
+    current_ratio = _safe_div(ca, cl)
+    quick_ratio = _safe_div(ca - inv, cl)
+    cash_ratio = _safe_div(cash, cl)
+    roa = _safe_div(np_, ta)
+    roe = _safe_div(np_, te)
+    net_margin = _safe_div(np_, rev)
+    gross_margin = _safe_div(rev - exp, rev)
+    debt_to_equity = _safe_div(tl, te)
+    debt_ratio = _safe_div(tl, ta)
+    equity_ratio = _safe_div(te, ta)
+    asset_turnover = _safe_div(rev, ta)
+    receivables_turnover = _safe_div(rev, recv) if recv else 0.0
 
     return [
         {
-            "group": "Ликвидность",
-            "items": [
-                {"name": "Коэффициент текущей ликвидности", "code": "current_ratio", "value": _safe_div(ca, cl), "norm": "≥ 2.0", "unit": "x"},
-                {"name": "Коэффициент быстрой ликвидности", "code": "quick_ratio", "value": _safe_div(ca - inv, cl), "norm": "≥ 1.0", "unit": "x"},
-                {"name": "Коэффициент абсолютной ликвидности", "code": "cash_ratio", "value": _safe_div(agg["cash"], cl), "norm": "≥ 0.2", "unit": "x"},
+            "title": "Ликвидность",
+            "icon": "💧",
+            "metrics": [
+                {"key": "current_ratio", "label": "Текущая ликвидность", "value": round(current_ratio, 2), "formula": "Оборотные активы / Краткосрочные обяз.", "norm": "> 2.0", "status": _kpi_status(current_ratio, 2.0), "standard": "both"},
+                {"key": "quick_ratio", "label": "Быстрая ликвидность", "value": round(quick_ratio, 2), "formula": "(Оборотные - Запасы) / Краткосрочные обяз.", "norm": "> 1.0", "status": _kpi_status(quick_ratio, 1.0), "standard": "both"},
+                {"key": "cash_ratio", "label": "Абсолютная ликвидность", "value": round(cash_ratio, 2), "formula": "Денежные средства / Краткосрочные обяз.", "norm": "> 0.2", "status": _kpi_status(cash_ratio, 0.2), "standard": "both"},
             ],
         },
         {
-            "group": "Рентабельность",
-            "items": [
-                {"name": "Рентабельность активов (ROA)", "code": "roa", "value": _safe_div(np_, ta), "norm": "> 0.05", "unit": "%"},
-                {"name": "Рентабельность капитала (ROE)", "code": "roe", "value": _safe_div(np_, te), "norm": "> 0.10", "unit": "%"},
-                {"name": "Чистая маржа", "code": "net_margin", "value": _safe_div(np_, rev), "norm": "> 0.05", "unit": "%"},
+            "title": "Рентабельность",
+            "icon": "📈",
+            "metrics": [
+                {"key": "roa", "label": "Рентабельность активов (ROA)", "value": round(roa, 4), "formula": "Чистая прибыль / Активы", "norm": "> 5%", "status": _kpi_status(roa, 0.05), "standard": "both"},
+                {"key": "roe", "label": "Рентабельность капитала (ROE)", "value": round(roe, 4), "formula": "Чистая прибыль / Капитал", "norm": "> 15%", "status": _kpi_status(roe, 0.15), "standard": "both"},
+                {"key": "net_margin", "label": "Чистая маржа", "value": round(net_margin, 4), "formula": "Чистая прибыль / Выручка", "norm": "> 10%", "status": _kpi_status(net_margin, 0.10), "standard": "both"},
+                {"key": "gross_margin", "label": "Валовая маржа", "value": round(gross_margin, 4), "formula": "(Выручка - Себестоимость) / Выручка", "norm": "> 20%", "status": _kpi_status(gross_margin, 0.20), "standard": "both"},
             ],
         },
         {
-            "group": "Левередж",
-            "items": [
-                {"name": "Долг / Капитал", "code": "debt_equity", "value": _safe_div(tl, te), "norm": "< 2.0", "unit": "x"},
-                {"name": "Коэффициент автономии", "code": "equity_ratio", "value": _safe_div(te, ta), "norm": "≥ 0.5", "unit": "%"},
-                {"name": "Финансовый рычаг", "code": "leverage", "value": _safe_div(ta, te), "norm": "< 3.0", "unit": "x"},
+            "title": "Левередж",
+            "icon": "⚖️",
+            "metrics": [
+                {"key": "debt_to_equity", "label": "Долг / Капитал", "value": round(debt_to_equity, 2), "formula": "Обязательства / Капитал", "norm": "< 1.5", "status": _kpi_status(debt_to_equity, 1.5, lower_is_better=True), "standard": "both"},
+                {"key": "debt_ratio", "label": "Коэффициент долга", "value": round(debt_ratio, 2), "formula": "Обязательства / Активы", "norm": "< 0.5", "status": _kpi_status(debt_ratio, 0.5, lower_is_better=True), "standard": "both"},
+                {"key": "equity_ratio", "label": "Коэффициент автономии", "value": round(equity_ratio, 2), "formula": "Капитал / Активы", "norm": "> 0.5", "status": _kpi_status(equity_ratio, 0.5), "standard": "both"},
             ],
         },
         {
-            "group": "Деловая активность",
-            "items": [
-                {"name": "Оборачиваемость активов", "code": "asset_turnover", "value": _safe_div(rev, ta), "norm": "> 0.5", "unit": "x"},
-                {"name": "Оборачиваемость дебиторки", "code": "receivables_turnover", "value": _safe_div(rev, agg["receivables"]) if agg["receivables"] else 0, "norm": "> 4", "unit": "x"},
-                {"name": "Оборачиваемость запасов", "code": "inventory_turnover", "value": _safe_div(agg["expenses"], inv) if inv else 0, "norm": "> 4", "unit": "x"},
+            "title": "Деловая активность",
+            "icon": "🔄",
+            "metrics": [
+                {"key": "asset_turnover", "label": "Оборачиваемость активов", "value": round(asset_turnover, 2), "formula": "Выручка / Активы", "norm": "> 1.0", "status": _kpi_status(asset_turnover, 1.0), "standard": "both"},
+                {"key": "receivables_turnover", "label": "Оборачиваемость дебиторки", "value": round(receivables_turnover, 2), "formula": "Выручка / Дебиторская задолж.", "norm": "> 4.0", "status": _kpi_status(receivables_turnover, 4.0), "standard": "both"},
             ],
         },
     ]
@@ -151,6 +191,30 @@ async def get_kpi(standard: Optional[str] = "nsbu"):
     if agg is None:
         return JSONResponse({"groups": []})
     return JSONResponse({"groups": _calc_kpis(agg)})
+
+
+def _kpi_flat(agg: dict) -> dict:
+    """Return a flat dict of {key: value} from KPI groups for stress-test use."""
+    result = {}
+    for group in _calc_kpis(agg):
+        for m in group["metrics"]:
+            result[m["key"]] = m["value"]
+    return result
+
+
+def _kpi_labels() -> dict:
+    """Return a flat dict of {key: label} for human-readable metric names."""
+    # Use a dummy agg to get the structure
+    dummy = {k: 1.0 for k in [
+        "current_assets", "st_liabilities", "inventories", "cash",
+        "total_assets", "total_equity", "total_liabilities",
+        "net_profit", "revenue", "expenses", "receivables",
+    ]}
+    result = {}
+    for group in _calc_kpis(dummy):
+        for m in group["metrics"]:
+            result[m["key"]] = m["label"]
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -193,82 +257,85 @@ async def get_multiples():
 # ---------------------------------------------------------------------------
 
 class StressTestInput(BaseModel):
-    scenarios: List[Dict[str, Any]] = []
+    scenario: str = "crisis_2008"
+    severity: str = "moderate"
+    standard: str = "both"
 
 
-_DEFAULT_SCENARIOS = [
-    {"id": "crisis_2008", "name": "Кризис 2008", "revenue_shock": -0.30, "cost_shock": 0.10, "interest_shock": 0, "fx_shock": 0},
-    {"id": "covid_2020", "name": "COVID-2020", "revenue_shock": -0.20, "cost_shock": 0.05, "interest_shock": 0, "fx_shock": 0},
-    {"id": "rate_hike", "name": "Рост ставок", "revenue_shock": 0, "cost_shock": 0, "interest_shock": 0.50, "fx_shock": 0},
-    {"id": "currency_shock", "name": "Валютный шок", "revenue_shock": 0, "cost_shock": 0, "interest_shock": 0, "fx_shock": 2.0},
-    {"id": "commodity_drop", "name": "Рост цен на сырьё", "revenue_shock": 0, "cost_shock": 0.25, "interest_shock": 0, "fx_shock": 0},
-]
+_DEFAULT_SCENARIOS = {
+    "crisis_2008": {"name": "Кризис 2008", "revenue_shock": -0.30, "cost_shock": 0.10, "interest_shock": 0, "fx_shock": 0},
+    "covid_2020": {"name": "COVID-2020", "revenue_shock": -0.20, "cost_shock": 0.05, "interest_shock": 0, "fx_shock": 0},
+    "rate_hike": {"name": "Рост ставок", "revenue_shock": 0, "cost_shock": 0, "interest_shock": 0.50, "fx_shock": 0},
+    "currency_shock": {"name": "Валютный шок", "revenue_shock": 0, "cost_shock": 0, "interest_shock": 0, "fx_shock": 2.0},
+    "commodity_drop": {"name": "Рост цен на сырьё", "revenue_shock": 0, "cost_shock": 0.25, "interest_shock": 0, "fx_shock": 0},
+}
+
+_SEVERITY_MULTIPLIERS = {"mild": 0.5, "moderate": 1.0, "severe": 1.5, "extreme": 2.0}
+
+
+def _stress_status(delta_pct: float) -> str:
+    """Determine stress-test status from delta percentage."""
+    if abs(delta_pct) < 10:
+        return "ok"
+    elif abs(delta_pct) < 25:
+        return "warn"
+    return "bad"
 
 
 @router.post("/analytics/stress-test")
 async def run_stress_test(data: StressTestInput = StressTestInput()):
-    """Stress test: apply scenario shocks to baseline KPIs."""
+    """Stress test: apply single scenario shocks to baseline KPIs.
+
+    Accepts: scenario (string id), severity (mild/moderate/severe/extreme), standard (nsbu/ifrs/both).
+    Returns: flat results array with baseline/stressed values per standard.
+    """
     agg = _get_balance_aggregates()
     if agg is None:
         return JSONResponse({"results": [], "ai_summary": []})
 
-    baseline_groups = _calc_kpis(agg)
-    baseline_flat = {}
-    for g in baseline_groups:
-        for item in g["items"]:
-            baseline_flat[item["code"]] = item["value"]
+    sc = _DEFAULT_SCENARIOS.get(data.scenario, _DEFAULT_SCENARIOS["crisis_2008"])
+    severity_mult = _SEVERITY_MULTIPLIERS.get(data.severity, 1.0)
 
-    scenarios = data.scenarios if data.scenarios else _DEFAULT_SCENARIOS
+    rev_shock = sc["revenue_shock"] * severity_mult
+    cost_shock = sc["cost_shock"] * severity_mult
+    interest_shock = sc["interest_shock"] * severity_mult
+    fx_shock = sc["fx_shock"] * severity_mult
+
+    stressed_rev = agg["revenue"] * (1 + rev_shock)
+    stressed_exp = agg["expenses"] * (1 + cost_shock)
+    interest_extra = agg["lt_liabilities"] * interest_shock * 0.10
+    fx_extra = agg["total_assets"] * 0.05 * fx_shock
+    stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
+
+    stressed_agg = dict(agg)
+    stressed_agg["revenue"] = stressed_rev
+    stressed_agg["expenses"] = stressed_exp
+    stressed_agg["net_profit"] = stressed_np
+
+    baseline_flat = _kpi_flat(agg)
+    stressed_flat = _kpi_flat(stressed_agg)
+    labels = _kpi_labels()
+
     results = []
-
-    for sc in scenarios:
-        rev_shock = sc.get("revenue_shock", 0)
-        cost_shock = sc.get("cost_shock", 0)
-        interest_shock = sc.get("interest_shock", 0)
-        fx_shock = sc.get("fx_shock", 0)
-
-        stressed_rev = agg["revenue"] * (1 + rev_shock)
-        stressed_exp = agg["expenses"] * (1 + cost_shock)
-        # Interest increases hit long-term liabilities cost
-        interest_extra = agg["lt_liabilities"] * interest_shock * 0.10  # assume 10% base rate
-        # FX shock hits as additional expense
-        fx_extra = agg["total_assets"] * 0.05 * fx_shock  # assume 5% FX exposure
-        stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
-
-        stressed_agg = dict(agg)
-        stressed_agg["revenue"] = stressed_rev
-        stressed_agg["expenses"] = stressed_exp
-        stressed_agg["net_profit"] = stressed_np
-
-        stressed_groups = _calc_kpis(stressed_agg)
-        stressed_flat = {}
-        for g in stressed_groups:
-            for item in g["items"]:
-                stressed_flat[item["code"]] = item["value"]
-
-        kpi_comparison = []
-        for code, base_val in baseline_flat.items():
-            stressed_val = stressed_flat.get(code, 0)
-            kpi_comparison.append({
-                "code": code,
-                "baseline": base_val,
-                "stressed": stressed_val,
-                "delta": round(stressed_val - base_val, 4),
-            })
-
+    for key, base_val in baseline_flat.items():
+        stressed_val = stressed_flat.get(key, 0)
+        delta_pct = round((stressed_val - base_val) / base_val * 100, 1) if base_val else 0.0
         results.append({
-            "scenario_id": sc.get("id", ""),
-            "scenario_name": sc.get("name", ""),
-            "stressed_revenue": stressed_rev,
-            "stressed_expenses": stressed_exp,
-            "stressed_net_profit": stressed_np,
-            "kpis": kpi_comparison,
+            "metric": labels.get(key, key),
+            "baseline_nsbu": base_val,
+            "baseline_ifrs": base_val,
+            "stressed_nsbu": stressed_val,
+            "stressed_ifrs": stressed_val,
+            "delta_pct_nsbu": delta_pct,
+            "delta_pct_ifrs": delta_pct,
+            "status_nsbu": _stress_status(delta_pct),
+            "status_ifrs": _stress_status(delta_pct),
         })
 
     ai_summary = [
         "Базовые KPI рассчитаны из загруженной ОСВ.",
         f"Чистая прибыль базового сценария: {agg['net_profit']:,.0f}",
-        f"Наихудший сценарий: Кризис 2008 (выручка −30%, расходы +10%).",
+        f"Сценарий: {sc['name']} (severity: {data.severity}).",
     ]
 
     return JSONResponse({"results": results, "ai_summary": ai_summary})

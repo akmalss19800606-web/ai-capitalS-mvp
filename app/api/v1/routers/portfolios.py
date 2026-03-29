@@ -719,14 +719,99 @@ async def download_portfolio_template():
 
 @router.get("/export/excel")
 async def export_portfolio_excel():
-    """Export full NSBU + IFRS report as Excel."""
+    """Export full NSBU + IFRS report as Excel with real data from cache."""
     try:
         from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill
+
+        accounts = _portfolio_cache.get("accounts")
+        if not accounts:
+            # No data — return stub
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Отчёт НСБУ + МСФО"
+            ws.append(["Раздел", "Показатель", "НСБУ (тыс.сум)", "МСФО (тыс.сум)", "Разница"])
+            ws.append(["Пока нет данных", "", "", "", ""])
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            return StreamingResponse(
+                buf,
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                headers={"Content-Disposition": "attachment; filename=report_nsbu_ifrs.xlsx"},
+            )
+
+        pnl = _portfolio_cache.get("pnl")
+        company_info = _portfolio_cache.get("company_info", {})
+
+        bold = Font(bold=True)
+        header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+
         wb = Workbook()
-        ws = wb.active
-        ws.title = "Отчёт НСБУ + МСФО"
-        ws.append(["Раздел", "Показатель", "НСБУ (тыс.сум)", "МСФО (тыс.сум)", "Разница"])
-        ws.append(["Пока нет данных", "", "", "", ""])
+
+        # --- Sheet 1: НСБУ Баланс ---
+        ws1 = wb.active
+        ws1.title = "НСБУ Баланс"
+        if company_info:
+            ws1.append(["Компания:", company_info.get("name", "")])
+            ws1.append(["ИНН:", company_info.get("inn", "")])
+            ws1.append(["Период:", company_info.get("period", "")])
+            ws1.append([])
+        header_row = ["Код", "Статья", "Текущий период", "Прошлый период"]
+        ws1.append(header_row)
+        for cell in ws1[ws1.max_row]:
+            cell.font = bold
+            cell.fill = header_fill
+        for row in _build_nsbu_rows(accounts, pnl):
+            r = [row.get("code", ""), row.get("label", ""), row.get("current"), row.get("previous")]
+            ws1.append(r)
+            if row.get("isHeader"):
+                for cell in ws1[ws1.max_row]:
+                    cell.font = bold
+
+        # --- Sheet 2: МСФО Баланс ---
+        ws2 = wb.create_sheet("МСФО Баланс")
+        if company_info:
+            ws2.append(["Компания:", company_info.get("name", "")])
+            ws2.append(["ИНН:", company_info.get("inn", "")])
+            ws2.append(["Период:", company_info.get("period", "")])
+            ws2.append([])
+        header_row = ["Код", "Статья", "Текущий период", "Прошлый период", "Примечание"]
+        ws2.append(header_row)
+        for cell in ws2[ws2.max_row]:
+            cell.font = bold
+            cell.fill = header_fill
+        for row in _build_ifrs_rows(accounts, pnl):
+            r = [row.get("code", ""), row.get("label", ""), row.get("current"), row.get("previous"), row.get("note", "")]
+            ws2.append(r)
+            if row.get("isHeader"):
+                for cell in ws2[ws2.max_row]:
+                    cell.font = bold
+
+        # --- Sheet 3: Разница ---
+        ws3 = wb.create_sheet("Разница")
+        header_row = ["Статья", "НСБУ", "МСФО", "Разница", "Комментарий"]
+        ws3.append(header_row)
+        for cell in ws3[ws3.max_row]:
+            cell.font = bold
+            cell.fill = header_fill
+        for row in _build_diff_rows(accounts):
+            diff_val = round(row["ifrs"] - row["nsbu"], 2) if row["nsbu"] is not None and row["ifrs"] is not None else None
+            ws3.append([row["label"], row["nsbu"], row["ifrs"], diff_val, row.get("reason", "")])
+
+        # --- Sheet 4: KPI ---
+        from app.api.v1.routers.analytics_chapter import _get_balance_aggregates, _calc_kpis
+        agg = _get_balance_aggregates()
+        ws4 = wb.create_sheet("KPI")
+        header_row = ["Группа", "Показатель", "Значение", "Норма", "Статус"]
+        ws4.append(header_row)
+        for cell in ws4[ws4.max_row]:
+            cell.font = bold
+            cell.fill = header_fill
+        if agg:
+            for group in _calc_kpis(agg):
+                for m in group["metrics"]:
+                    ws4.append([group["title"], m["label"], m["value"], m["norm"], m["status"]])
 
         buf = io.BytesIO()
         wb.save(buf)
