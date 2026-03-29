@@ -2,6 +2,31 @@
 
 import React, { useEffect, useState } from 'react';
 
+// === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
+const C = {
+  // Светлая зона (заголовки, KPI-карточки, навигация)
+  pageBg: '#f8f8fc',
+  card: '#ffffff',
+  cardBorder: '#e2e8f0',
+  navActive: '#3b82f6',
+  navActiveText: '#ffffff',
+  navInactive: '#64748b',
+  badge_blue: 'bg-blue-100 text-blue-700',
+  badge_green: 'bg-green-100 text-green-700',
+  badge_red: 'bg-red-100 text-red-700',
+  badge_yellow: 'bg-yellow-100 text-yellow-700',
+  // Тёмная зона (таблицы результатов, графики, расчёты)
+  darkBg: 'bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900',
+  darkCard: 'bg-slate-800/60 border border-slate-700/50 rounded-2xl',
+  darkInput: 'bg-slate-900/60 border border-slate-600/50 rounded-xl',
+  tabActive: 'bg-violet-600 text-white shadow-lg shadow-violet-500/25',
+  tabInactive: 'text-slate-400 hover:text-white hover:bg-slate-700/40',
+  btnPrimary: 'bg-gradient-to-r from-violet-600 to-blue-600 rounded-2xl',
+  positive: 'text-emerald-400',
+  negative: 'text-red-400',
+  neutral: 'text-slate-400',
+};
+
 type ActiveTab = 'nsbu' | 'ifrs' | 'diff';
 
 interface NsbuRow {

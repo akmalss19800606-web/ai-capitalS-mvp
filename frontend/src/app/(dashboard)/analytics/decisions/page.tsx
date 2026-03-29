@@ -1,11 +1,29 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
+// === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
+  // Светлая зона (заголовки, KPI-карточки, навигация)
   pageBg: '#f8f8fc',
   card: '#ffffff',
   cardBorder: '#e2e8f0',
+  navActive: '#3b82f6',
+  navActiveText: '#ffffff',
+  navInactive: '#64748b',
+  badge_blue: 'bg-blue-100 text-blue-700',
+  badge_green: 'bg-green-100 text-green-700',
+  badge_red: 'bg-red-100 text-red-700',
+  badge_yellow: 'bg-yellow-100 text-yellow-700',
+  // Тёмная зона (таблицы результатов, графики, расчёты)
   darkBg: 'bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900',
+  darkCard: 'bg-slate-800/60 border border-slate-700/50 rounded-2xl',
+  darkInput: 'bg-slate-900/60 border border-slate-600/50 rounded-xl',
+  tabActive: 'bg-violet-600 text-white shadow-lg shadow-violet-500/25',
+  tabInactive: 'text-slate-400 hover:text-white hover:bg-slate-700/40',
+  btnPrimary: 'bg-gradient-to-r from-violet-600 to-blue-600 rounded-2xl',
+  positive: 'text-emerald-400',
+  negative: 'text-red-400',
+  neutral: 'text-slate-400',
 };
 
 type DecisionType = 'buy' | 'sell' | 'hold' | 'restructure' | 'hedge';
@@ -205,6 +223,10 @@ export default function DecisionsPage() {
             financing_method: form.financingMethod,
             justification: form.justification,
             tags: form.tags,
+            hedge_instrument: form.hedgeInstrument,
+            hedged_risk: form.hedgedRisk,
+            hedge_strike: form.hedgeStrike,
+            hedge_term: form.hedgeTerm,
           }),
         }
       );
@@ -314,11 +336,23 @@ export default function DecisionsPage() {
               <option value="debt">Заёмный капитал</option>
             </select>
           </div>
+          <div>
+            <label className="text-sm text-gray-600 block mb-1">География</label>
+            <input type="text" placeholder="Узбекистан, СНГ, Глобальный"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={e => setField('geography', e.target.value)} />
+          </div>
           <div className="md:col-span-2">
             <label className="text-sm text-gray-600 block mb-1">Обоснование</label>
             <textarea rows={3} placeholder="Укажите причину решения..."
               className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               onChange={e => setField('justification', e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm text-gray-600 block mb-1">Теги</label>
+            <input type="text" placeholder="исламский, долгосрочный, сукук"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={e => setField('tags', e.target.value)} />
           </div>
         </div>
 
@@ -336,7 +370,8 @@ export default function DecisionsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Инструмент хеджирования</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  onChange={e => setForm(f => ({...f, hedgeInstrument: e.target.value}))}>
                   <option value="">Выберите инструмент</option>
                   <option value="fra">FRA (Соглашение о будущей ставке)</option>
                   <option value="swap">Процентный своп (IRS)</option>
@@ -347,7 +382,8 @@ export default function DecisionsPage() {
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Хеджируемый риск</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  onChange={e => setForm(f => ({...f, hedgedRisk: e.target.value}))}>
                   <option value="">Тип риска</option>
                   <option value="interest_rate">Процентный риск</option>
                   <option value="currency">Валютный риск (USD/UZS)</option>
@@ -357,11 +393,13 @@ export default function DecisionsPage() {
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Страйк / Фиксированная ставка (%)</label>
-                <input type="number" step="0.01" placeholder="12.5" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                <input type="number" step="0.01" placeholder="12.5" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  onChange={e => setForm(f => ({...f, hedgeStrike: e.target.value}))} />
               </div>
               <div>
                 <label className="text-sm text-gray-600 block mb-1">Срок хеджирования</label>
-                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <select className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  onChange={e => setForm(f => ({...f, hedgeTerm: e.target.value}))}>
                   <option value="3m">3 месяца</option>
                   <option value="6m">6 месяцев</option>
                   <option value="1y">1 год</option>
