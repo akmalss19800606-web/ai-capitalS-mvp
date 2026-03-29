@@ -235,6 +235,9 @@ async def fe_monte_carlo(body: dict = Body(...), _u=Depends(get_current_user)):
             discount_rate=dr,
             n_simulations=min(n_sim, 50000),
         )
+                # Adapt histogram for frontend (bin_start -> lower_bound)
+        if "histogram" in result:
+            result["histogram"] = [{"lower_bound": b["bin_start"], "upper_bound": b["bin_end"], "count": b["count"]} for b in result["histogram"]]
         return result
     except Exception as e:
         logger.error("FE Monte Carlo error: %s", e)
