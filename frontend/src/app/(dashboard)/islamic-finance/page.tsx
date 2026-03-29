@@ -1,11 +1,11 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const STATS = [
-  { icon: '☪️', label: 'Стандарты', value: '15', sub: 'AAOIFI + IFSB' },
-  { icon: '📋', label: 'Терминов', value: '30+', sub: 'Глоссарий' },
+  { icon: '🌙', label: 'Стандарты', value: '15', sub: 'AAOIFI + IFSB' },
+  { icon: '📖', label: 'Терминов', value: '30+', sub: 'Глоссарий' },
   { icon: '🔍', label: 'Скрининг', value: 'SS No.62', sub: 'AAOIFI' },
   { icon: '🕌', label: 'Закят', value: 'Нисаб', sub: 'UZS/USD' },
   { icon: '🌍', label: 'Юрисдикция', value: 'UZ', sub: 'Узбекистан' },
@@ -15,7 +15,7 @@ const TOOLS = [
   { icon: '🕌', title: 'Закят', desc: 'Расчёт обязательного очищения имущества по нисабу', href: '/islamic-finance/zakat', color: 'text-green-600' },
   { icon: '🔍', title: 'Скрининг', desc: 'Проверка компаний по стандарту AAOIFI SS No. 62', href: '/islamic-finance/screening', color: 'text-blue-600' },
   { icon: '📖', title: 'Глоссарий', desc: '30+ терминов исламских финансов с определениями', href: '/islamic-finance/glossary', color: 'text-purple-600' },
-  { icon: '📜', title: 'Стандарты', desc: 'AAOIFI и IFSB — 15 стандартов с описанием', href: '/islamic-finance/standards', color: 'text-orange-600' },
+  { icon: '📋', title: 'Стандарты', desc: 'AAOIFI и IFSB — 15 стандартов с описанием', href: '/islamic-finance/standards', color: 'text-orange-600' },
 ]
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -54,30 +54,40 @@ export default function IslamicFinancePage() {
   const router = useRouter()
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token')
-    if (!token) return setLoading(false)
+    const savedMode = localStorage.getItem('islamic_mode')
+    if (savedMode) setMode(savedMode)
+
+    const token = localStorage.getItem('token')
     fetch('/api/v1/islamic/products', {
-      headers: { Authorization: Bearer +token }
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
       .then(r => r.json())
-      .then(data => { setProducts(Array.isArray(data) ? data : []); setLoading(false) })
+      .then(data => {
+        setProducts(Array.isArray(data) ? data : [])
+        setLoading(false)
+      })
       .catch(() => setLoading(false))
   }, [])
 
+  const handleModeChange = (newMode: string) => {
+    setMode(newMode)
+    localStorage.setItem('islamic_mode', newMode)
+  }
+
   const filteredProducts = products.filter(p =>
-    mode === 'individual' ? p.allowed_for !== 'professional' : p.allowed_for !== 'individual'
+    mode === 'individual' ? p.allowed_for !== 'professional' : true
   )
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">☪️ Исламские финансы</h1>
+          <h1 className="text-3xl font-bold text-gray-900">🕌 Исламские финансы</h1>
           <p className="text-gray-500 mt-1 text-sm">Инструменты для расчётов и анализа в соответствии с нормами шариата · Стандарты AAOIFI и IFSB · Узбекистан (UZS)</p>
         </div>
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
-          <button onClick={() => setMode('individual')} className={px-4 py-1.5 rounded-md text-sm font-medium transition-all +(mode === 'individual' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700')}>👤 Физлицо</button>
-          <button onClick={() => setMode('professional')} className={px-4 py-1.5 rounded-md text-sm font-medium transition-all +(mode === 'professional' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700')}>🏢 Профессионал</button>
+          <button onClick={() => handleModeChange('individual')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'individual' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>👤 Физлицо</button>
+          <button onClick={() => handleModeChange('professional')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${mode === 'professional' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>💼 Профессионал</button>
         </div>
       </div>
 
@@ -92,7 +102,6 @@ export default function IslamicFinancePage() {
         ))}
       </div>
 
-      {/* Продукты из API */}
       <div>
         <h2 className="text-lg font-semibold text-gray-800 mb-3">📦 Исламские финансовые продукты</h2>
         {loading ? (
@@ -102,13 +111,13 @@ export default function IslamicFinancePage() {
         ) : (
           <div className="grid grid-cols-3 gap-4">
             {filteredProducts.map(p => (
-              <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer" onClick={() => router.push('/islamic-finance/products/'+p.slug)}>
+              <div key={p.id} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer" onClick={() => router.push('/islamic-finance/products/' + p.slug)}>
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <p className="font-semibold text-gray-900">{p.name_ru}</p>
                     <p className="text-sm text-gray-400">{p.name_ar} · {p.transliteration}</p>
                   </div>
-                  <span className={	ext-xs px-2 py-0.5 rounded-full font-medium +(CATEGORY_COLORS[p.category] || 'bg-gray-100 text-gray-600')}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[p.category] || 'bg-gray-100 text-gray-600'}`}>
                     {CATEGORY_LABELS[p.category] || p.category}
                   </span>
                 </div>
@@ -128,7 +137,7 @@ export default function IslamicFinancePage() {
             <div className="flex items-start gap-4">
               <span className="text-3xl">{tool.icon}</span>
               <div>
-                <h3 className={	ext-lg font-semibold +tool.color+ group-hover:underline}>{tool.title}</h3>
+                <h3 className={`text-lg font-semibold ${tool.color} group-hover:underline`}>{tool.title}</h3>
                 <p className="text-sm text-gray-500 mt-1">{tool.desc}</p>
               </div>
             </div>
