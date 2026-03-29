@@ -4,8 +4,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Body
 from app.api.v1.deps import get_current_user
-from app.services.calculator_service import InvestmentCalculatorService, TAX_REGIMES
-
+from app.services.calculator_service import InvestmentCalculatorService, TAX_REGIMES, BENCHMARKS_UZ_2026
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calculator", tags=["Calculator Frontend"])
 calc = InvestmentCalculatorService
@@ -167,3 +166,76 @@ async def fe_sensitivity(body: dict = Body(...), _u=Depends(get_current_user)):
     except Exception as e:
         logger.error("FE Sensitivity error: %s", e)
         raise HTTPException(status_code=500, detail="Sensitivity error")
+
+
+@router.get("/benchmarks", summary="UZ Benchmarks List 2026")
+async def fe_benchmarks_list(_u=Depends(get_current_user)):
+    """Return benchmarks in frontend-expected format."""
+    items = []
+    risk_map = {"deposit": "Low", "bond": "Low-Medium", "equity": "High", "real_estate": "Medium", "macro": "N/A"}
+    liq_map = {"deposit": "High", "bond": "Medium", "equity": "High", "real_estate": "Low", "macro": "N/A"}
+    name_ru_map = {
+        "Deposit UZS": "Depozit UZS (22.5%)",
+        "Deposit USD": "Depozit USD (6%)",
+        "Gov Bond 3Y UZS": "Gos. obligatsii 3Y UZS",
+        "Gov Bond 10Y UZS": "Gos. obligatsii 10Y UZS",
+        "Eurobond 7Y USD": "Yevrobond 7Y USD",
+        "TSMI Index": "Indeks TSMI (birja)",
+        "Real Estate": "Nedvijimost",
+        "Inflation": "Inflyatsiya",
+        "CB Rate": "Stavka CB",
+    }
+    for key, bm in BENCHMARKS_UZ_2026.items():
+        items.append({
+            "name_ru": name_ru_map.get(bm["name"], bm["name"]),
+            "annual_return_pct": bm["rate"],
+            "risk_level": risk_map.get(bm["type"], "Medium"),
+            "liquidity": liq_map.get(bm["type"], "Medium"),
+            "notes": bm["type"].replace("_", " ").title(),
+        })
+    return {"benchmarks": items}
+
+
+@router.get("/tax-rates", summary="UZ Tax Rates 2026")
+async def fe_tax_rates(_u=Depends(get_current_user)):
+    """Return tax rates in frontend-expected format."""
+    g = TAX_REGIMES.get("general", {})
+    s = TAX_REGIMES.get("simplified", {})
+    return {
+        "cit_standard_pct": round(g.get("cit", 0.15) * 100),
+        "vat_pct": round(g.get("vat", 0.12) * 100),
+        "turnover_tax_simplified_pct": round(s.get("cit", 0.04) * 100),
+        "personal_income_tax_pct": 12,
+        "social_tax_pct": round(g.get("social", 0.12) * 100),
+        "property_tax_pct": 2,
+        "sez_exemption": {
+            "navoi": {"note": "Navoi", "years": 10},
+            "angren": {"note": "Angren", "years": 7},
+            "jizzakh": {"note": "Jizzakh", "years": 7},
+        },
+        "source": "CB RUz, Minfin, Tax Code 2026",
+    }
+
+
+@router.post("/monte-carlo", summary="Monte Carlo simulation (frontend format)")
+async def fe_monte_carlo(body: dict = Body(...), _u=Depends(get_current_user)):
+    """Adapt frontend params and run Monte Carlo simulation."""
+    try:
+        base = body.get("base_params", body)
+        cfs = base.get("cash_flows") or build_cash_flows(base)
+        inv = base.get("initial_investment", 0)
+        dr = base.get("discount_rate", 20) / 100 if base.get("discount_rate", 20) > 1 else base.get("discount_rate", 0.10)
+        pos_cfs = [c for c in cfs if c > 0]
+        if not pos_cfs:
+            pos_cfs = [10000]
+        n_sim = body.get("n_simulations", 10000)
+        result = calc.monte_carlo_npv(
+            initial_investment=inv,
+            base_cash_flows=pos_cfs,
+            discount_rate=dr,
+            n_simulations=min(n_sim, 50000),
+        )
+        return result
+    except Exception as e:
+        logger.error("FE Monte Carlo error: %s", e)
+        raise HTTPException(status_code=500, detail="Monte Carlo error")
