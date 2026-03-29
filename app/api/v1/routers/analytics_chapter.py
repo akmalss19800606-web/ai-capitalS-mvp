@@ -319,7 +319,10 @@ async def run_stress_test(data: StressTestInput = StressTestInput()):
     results = []
     for key, base_val in baseline_flat.items():
         stressed_val = stressed_flat.get(key, 0)
-        delta_pct = round((stressed_val - base_val) / base_val * 100, 1) if base_val else 0.0
+        if base_val != 0:
+            delta_pct = round((stressed_val - base_val) / base_val * 100, 1)
+        else:
+            delta_pct = 0.0
         results.append({
             "metric": labels.get(key, key),
             "baseline_nsbu": base_val,
@@ -337,6 +340,8 @@ async def run_stress_test(data: StressTestInput = StressTestInput()):
         f"Чистая прибыль базового сценария: {agg['net_profit']:,.0f}",
         f"Сценарий: {sc['name']} (severity: {data.severity}).",
     ]
+    if agg["revenue"] == 0 and agg["expenses"] == 0:
+        ai_summary.append("⚠️ Данные P&L (выручка, расходы) отсутствуют — рентабельность = 0.")
 
     return JSONResponse({"results": results, "ai_summary": ai_summary})
 
@@ -352,21 +357,22 @@ async def get_visualizations():
     if agg is None:
         return JSONResponse({})
 
-    # Waterfall: asset changes from start to end of period
+    # Waterfall: balance change flow — start → revenue → expenses → asset changes → end
+    inv_delta = (agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
+    working_cap_delta = (agg["current_assets"] - agg.get("current_assets_prev", 0))
     waterfall = {
         "type": "waterfall",
-        "title": "Изменение активов за период",
+        "title": "Движение баланса за период",
         "categories": [
-            "Начало", "ОС (нетто)", "Кап.вложения", "Запасы",
-            "Дебиторка", "Ден.средства", "Конец",
+            "Начало периода", "Выручка", "Расходы",
+            "Инвестиции (ОС)", "Оборотный капитал", "Конец периода",
         ],
         "values": [
             agg["total_assets_prev"],
-            agg["net_fa"] - (agg["non_current_assets_prev"] - agg.get("capex", 0)),
-            agg["capex"] - agg.get("capex", 0),
-            agg["inventories"] - agg["inventories_prev"],
-            agg["receivables"] - agg["receivables_prev"],
-            agg["cash"] - agg["cash_prev"],
+            agg["revenue"],
+            -agg["expenses"],
+            inv_delta,
+            working_cap_delta - agg["revenue"] + agg["expenses"] - inv_delta,
             agg["total_assets"],
         ],
     }
@@ -400,7 +406,7 @@ async def get_visualizations():
     }
 
     # Heatmap: monthly revenue distribution (estimated — split evenly with seasonal pattern)
-    monthly_rev = agg["revenue"] / 12
+    monthly_rev = agg["revenue"] / 12 if agg["revenue"] else 0
     seasonal = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8]
     heatmap = {
         "type": "heatmap",

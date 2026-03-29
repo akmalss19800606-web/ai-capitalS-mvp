@@ -3,6 +3,7 @@ import re
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -92,6 +93,46 @@ def delete_portfolio(
 
 
 # ---------------------------------------------------------------------------
+# Company registration (manual)
+# ---------------------------------------------------------------------------
+
+class CompanyRegistration(BaseModel):
+    name: str
+    inn: str = ""
+    oked: str = ""
+    address: str = ""
+    director: str = ""
+    accountant: str = ""
+    size: str = "medium"  # small/medium/large
+    org_type: str = "solo"  # solo/branch/holding
+
+
+@router.post("/register")
+async def register_company(data: CompanyRegistration):
+    """Register company manually (without file upload)."""
+    _portfolio_cache["company_info"] = {
+        "name": data.name,
+        "inn": data.inn,
+        "activity": data.oked,
+        "address": data.address,
+        "director": data.director,
+        "accountant": data.accountant,
+        "size": data.size,
+        "org_type": data.org_type,
+    }
+    return JSONResponse({"status": "ok", "message": "Организация зарегистрирована"})
+
+
+@router.get("/company-info")
+async def get_company_info():
+    """Return cached company info."""
+    info = _portfolio_cache.get("company_info")
+    if not info:
+        return JSONResponse({"status": "empty", "company_info": None})
+    return JSONResponse({"status": "ok", "company_info": info})
+
+
+# ---------------------------------------------------------------------------
 # Helper: parse a numeric value from a cell (handles None, str, float)
 # ---------------------------------------------------------------------------
 
@@ -115,7 +156,7 @@ def _detect_section(code_val, name_val) -> Optional[int]:
         if val is None:
             continue
         s = str(val).strip().upper()
-        m = re.search(r"РАЗДЕЛ\s*(I{1,3}|IV|V|VI{0,2}|VII)", s)
+        m = re.search(r"РАЗДЕЛ\s*(VII|VI|IV|V|III|II|I)\b", s)
         if m:
             roman = m.group(1)
             mapping = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7}
