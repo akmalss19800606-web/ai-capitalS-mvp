@@ -507,7 +507,7 @@ export default function DueDiligencePage() {
                 )}
                             {lookupResult && (
               <div style={{ marginTop: 12 }}>
-                <CompanyProfileCard company={lookupResult} />
+                <CompanyProfileCard data={lookupResult} onClose={() => setLookupResult(null)} />
               </div>
             )}
               </div>
