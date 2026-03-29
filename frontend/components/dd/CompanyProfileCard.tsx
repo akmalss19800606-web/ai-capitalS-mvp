@@ -1,147 +1,157 @@
 'use client';
 import React from 'react';
 
-// Color Palette (shared with DD page)
+// Color Palette (shared with DD page) - Task 1.1
 const C = {
-  bg: '#f8fafc',
-  text: '#1e293b',
-  textMuted: '#64748b',
-  textLight: '#94a3b8',
+  bg: '#f8f8fc',
+  card: '#ffffff',
   primary: '#3b82f6',
   primaryLight: '#eff6ff',
-  success: '#22c55e',
-  successLight: '#f0fdf4',
-  error: '#ef4444',
-  errorLight: '#fef2f2',
-  warning: '#f59e0b',
-  warningLight: '#fffbeb',
-  purple: '#8b5cf6',
-  purpleLight: '#f5f3ff',
-  cyan: '#06b6d4',
   border: '#e2e8f0',
-  white: '#ffffff',
-  cardShadow: '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-  muted: '#94a3b8',
+  text: '#1e293b',
+  muted: '#64748b',
+  success: '#22c55e',
+  successBg: '#f0fdf4',
+  successBorder: '#bbf7d0',
+  error: '#ef4444',
+  errorBg: '#fef2f2',
+  badgeBg: '#f1f5f9',
 } as const;
 
-interface CompanyInfo {
-  name: string;
-  inn?: string;
-  industry?: string;
-  geography?: string;
-  oked?: string;
-  address?: string;
-  region?: string;
-  employee_count?: number;
-  director?: string;
-  registration_date?: string;
-  status?: string;
-  authorized_capital?: number;
-  tax_id?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
+// Task 1.2 - Interface
+export interface CompanyProfileCardProps {
+  data: {
+    name?: string;
+    inn?: string;
+    oked?: string;
+    industry?: string;
+    founded_year?: string | number;
+    address?: string;
+    region?: string;
+    director?: string;
+    authorized_capital?: string | number;
+    status?: string;
+    employee_count?: string | number;
+    legal_form?: string;
+    phone?: string;
+    email?: string | null;
+  } | null;
+  onClose?: () => void;
 }
 
-interface ExternalLink {
-  label: string;
-  url: string;
-}
-
-interface CompanyProfileCardProps {
-  company: CompanyInfo | null;
-  loading?: boolean;
-}
-
-const card: React.CSSProperties = {
-  backgroundColor: C.white,
-  borderRadius: '12px',
-  boxShadow: C.cardShadow,
-  padding: '20px',
-};
-
-function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
-  if (!value) return null;
+// Task 1.4 - renderStatus
+function renderStatus(status?: string) {
+  if (!status) return null;
+  const s = status.toLowerCase();
+  if (s.includes('действ') || s.includes('active')) {
+    return (
+      <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.successBg, color: C.success, fontSize: 12, fontWeight: 600 }}>
+        {status}
+      </span>
+    );
+  }
+  if (s.includes('ликвид') || s.includes('liquidat')) {
+    return (
+      <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.errorBg, color: C.error, fontSize: 12, fontWeight: 600 }}>
+        {status}
+      </span>
+    );
+  }
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.bg}` }}>
-      <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, color: C.text, fontWeight: 600, textAlign: 'right', maxWidth: '60%' }}>{value}</span>
-    </div>
+    <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.badgeBg, color: C.muted, fontSize: 12, fontWeight: 600 }}>
+      {status}
+    </span>
   );
 }
 
-export default function CompanyProfileCard({ company, loading = false }: CompanyProfileCardProps) {
-  if (loading) {
-    return (
-      <div style={{ ...card, textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: 14, color: C.textMuted }}>Загрузка профиля компании...</div>
-      </div>
-    );
-  }
+// Task 1.5 - Styles
+const rowStyle: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: '160px 1fr',
+  gap: 12,
+  padding: '10px 20px',
+  alignItems: 'center',
+};
 
-  if (!company) {
-    return (
-      <div style={{ ...card, textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: 14, color: C.textLight }}>Выполните поиск компании для отображения профиля</div>
-      </div>
-    );
-  }
+const labelStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: C.muted,
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+};
 
-  const statusColor = company.status === 'active' || company.status === 'Действующий'
-    ? C.success
-    : company.status === 'liquidated' || company.status === 'Ликвидирован'
-    ? C.error
-    : C.warning;
+const valueStyle: React.CSSProperties = {
+  fontSize: 14,
+  color: C.text,
+  fontWeight: 500,
+};
 
-  const externalLinks: ExternalLink[] = [
-    { label: 'Реестр', url: `https://orginfo.uz/search?q=${encodeURIComponent(company.inn || company.name)}` },
-    { label: 'Налоговая', url: `https://my.soliq.uz/tax-debts/?tin=${company.inn || ''}` },
-    { label: 'Суды', url: `https://public.sud.uz/search?query=${encodeURIComponent(company.name)}` },
-  ];
+// Task 1.6 - External links
+const externalLinks = [
+  { label: 'Налоговая', url: 'https://soliq.uz' },
+  { label: 'Гос. услуги my.gov.uz', url: 'https://my.gov.uz/ru/service/77' },
+  { label: 'Госзакупки', url: 'https://zakupki.uz' },
+  { label: 'ЦБ Реестр', url: 'https://csbar.uz' },
+  { label: 'Суды', url: 'https://sud.uz' },
+  { label: 'ТИАЦ', url: 'https://www.tiac.uz' },
+];
+
+// Task 1.7 - Main component
+export default function CompanyProfileCard({ data, onClose }: CompanyProfileCardProps) {
+  if (!data) return null;
+
+  // Task 1.3 - rows
+  const rows = [
+    { label: 'Название', value: data.name },
+    { label: 'ИНН', value: data.inn },
+    { label: 'ОПФ', value: data.legal_form },
+    { label: 'ОКЭД', value: data.oked ?? data.industry },
+    { label: 'Директор', value: data.director },
+    { label: 'Год основания', value: data.founded_year },
+    { label: 'Адрес', value: data.address },
+    { label: 'Регион', value: data.region },
+    { label: 'Уставной капитал', value: data.authorized_capital },
+    { label: 'Сотрудников', value: data.employee_count },
+    { label: 'Телефон', value: data.phone },
+    { label: 'Email', value: data.email },
+  ].filter(row => row.value !== undefined && row.value !== null && row.value !== '');
 
   return (
-    <div style={card}>
+    <div style={{ borderRadius: 12, border: `1px solid ${C.border}`, backgroundColor: C.card, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+      <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.border}`, backgroundColor: C.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 4 }}>{company.name}</div>
-          {company.inn && (
-            <div style={{ fontSize: 12, color: C.textMuted }}>ИНН: {company.inn}</div>
-          )}
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{'Профиль компании'}</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{'Данные из реестра'}</div>
         </div>
-        {company.status && (
-          <span style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: statusColor,
-            backgroundColor: statusColor === C.success ? C.successLight : statusColor === C.error ? C.errorLight : C.warningLight,
-            padding: '3px 10px',
-            borderRadius: 6,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}>
-            {company.status}
-          </span>
+        {onClose && (
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: C.muted, lineHeight: 1, padding: '4px 8px', borderRadius: 6 }}>
+            {'\u00d7'}
+          </button>
         )}
       </div>
 
-      {/* Info Rows */}
-      <div style={{ marginBottom: 16 }}>
-        <InfoRow label="Отрасль" value={company.industry || company.oked} />
-        <InfoRow label="География" value={company.geography || company.address || company.region} />
-        <InfoRow label="Директор" value={company.director} />
-        <InfoRow label="Дата регистрации" value={company.registration_date} />
-        <InfoRow label="Уставной капитал" value={company.authorized_capital ? `${company.authorized_capital.toLocaleString()} сум` : undefined} />
-        <InfoRow label="Сотрудников" value={company.employee_count} />
-        <InfoRow label="Телефон" value={company.phone} />
-        <InfoRow label="Email" value={company.email} />
-        <InfoRow label="Веб-сайт" value={company.website} />
-      </div>
+      {/* Data rows with alternating background */}
+      {rows.map((row, i) => (
+        <div key={i} style={{ ...rowStyle, backgroundColor: i % 2 === 0 ? C.card : C.bg }}>
+          <span style={labelStyle}>{row.label}</span>
+          <span style={valueStyle}>{row.value}</span>
+        </div>
+      ))}
 
-      {/* External Links */}
+      {/* Status row */}
+      {data.status && (
+        <div style={{ ...rowStyle, backgroundColor: rows.length % 2 === 0 ? C.card : C.bg }}>
+          <span style={labelStyle}>{'Статус'}</span>
+          <span>{renderStatus(data.status)}</span>
+        </div>
+      )}
+
+      {/* External links - Task 1.6 */}
       <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, backgroundColor: C.bg }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 10 }}>
-          внешние источники
+          {'Внешние источники'}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
           {externalLinks.map((link, i) => (
