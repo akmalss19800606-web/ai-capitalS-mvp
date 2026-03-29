@@ -7,7 +7,7 @@ export default function AnalyticsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f8f8fc' }}>
+    <div className="-m-6" style={{ backgroundColor: '#f8f8fc' }}>
       {/* Заголовок */}
       <div className="bg-white border-b border-[#e2e8f0] px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
