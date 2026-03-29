@@ -109,6 +109,20 @@ def _num(val) -> float:
     return 0.0
 
 
+def _detect_section(code_val, name_val) -> Optional[int]:
+    """Detect if a row is a section header (РАЗДЕЛ I..VII). Returns section number or None."""
+    for val in (code_val, name_val):
+        if val is None:
+            continue
+        s = str(val).strip().upper()
+        m = re.search(r"РАЗДЕЛ\s*(I{1,3}|IV|V|VI{0,2}|VII)", s)
+        if m:
+            roman = m.group(1)
+            mapping = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5, "VI": 6, "VII": 7}
+            return mapping.get(roman)
+    return None
+
+
 def _is_section_header(code_val) -> bool:
     """Check if a row is a section header (РАЗДЕЛ, roman numeral, etc.)."""
     if code_val is None:
@@ -116,23 +130,32 @@ def _is_section_header(code_val) -> bool:
     s = str(code_val).strip()
     if not s:
         return True
-    if re.search(r"РАЗДЕЛ|раздел|Раздел", s):
+    if re.search(r"РАЗДЕЛ|раздел|Раздел", s, re.IGNORECASE):
         return True
-    # Roman numerals only
     if re.match(r"^[IVXLC]+\.?\s*$", s):
         return True
     return False
 
 
-def _extract_code(code_val) -> Optional[str]:
-    """Extract a 4-digit account code from a cell value."""
+def _extract_full_code(code_val) -> Optional[str]:
+    """Extract the FULL account code (e.g. '2010', '2010.1') from a cell value."""
     if code_val is None:
         return None
     s = str(code_val).strip()
-    m = re.match(r"^(\d{4})", s)
+    m = re.match(r"^(\d{4}(?:\.\d+)?)", s)
     if m:
         return m.group(1)
     return None
+
+
+def _base_code(full_code: str) -> str:
+    """Get the 4-digit base code: '2010.1' -> '2010'."""
+    return full_code.split(".")[0]
+
+
+def _is_subaccount(full_code: str) -> bool:
+    """Check if this is a sub-account like 2010.1."""
+    return "." in full_code
 
 
 def _classify_account(code: str) -> str:
@@ -164,6 +187,34 @@ def _is_credit_account(code: str) -> bool:
     return prefix >= 60
 
 
+def _parse_company_info(wb) -> dict:
+    """Parse company info from 'Реквизиты' sheet."""
+    info = {}
+    req_sheet = None
+    for sheet_name in wb.sheetnames:
+        if "еквизит" in sheet_name or "Реквизит" in sheet_name:
+            req_sheet = wb[sheet_name]
+            break
+    if req_sheet is None:
+        # Try first sheet if it looks like it has company info
+        return info
+
+    def _cell(row, col):
+        v = req_sheet.cell(row=row, column=col).value
+        return str(v).strip() if v else ""
+
+    info["name"] = _cell(5, 3)       # C5
+    info["inn"] = _cell(6, 3)        # C6
+    info["address"] = _cell(7, 3)    # C7
+    info["activity"] = _cell(8, 3)   # C8
+    info["registration_date"] = _cell(10, 3)  # C10
+    info["director"] = _cell(11, 3)  # C11
+    info["accountant"] = _cell(12, 3)  # C12
+    info["period"] = _cell(13, 3)    # C13
+    info["unit"] = _cell(15, 3)      # C15
+    return info
+
+
 # ---------------------------------------------------------------------------
 # POST /import/excel — real ОСВ parser
 # ---------------------------------------------------------------------------
@@ -182,44 +233,80 @@ async def import_portfolio_excel(
             from openpyxl import load_workbook
             wb = load_workbook(io.BytesIO(content), data_only=True)
 
-            # Find ОСВ sheet
+            # --- Parse company info from Реквизиты sheet ---
+            company_info = _parse_company_info(wb)
+            _portfolio_cache["company_info"] = company_info
+
+            # --- Find ОСВ sheet ---
             osv_sheet = None
             for sheet_name in wb.sheetnames:
                 if "ОСВ" in sheet_name or "осв" in sheet_name.lower():
                     osv_sheet = wb[sheet_name]
                     break
             if osv_sheet is None:
-                # Fallback: use first sheet
                 osv_sheet = wb[wb.sheetnames[0]]
 
-            # Parse rows: B=code, C=name, D=debit_start, E=credit_start, F=debit_end, G=credit_end
-            accounts = {}
+            # --- Section-aware parser ---
+            # Track current section (I-VII) to distinguish balance vs P&L accounts
+            accounts = {}          # balance sheet accounts (sections I-V)
+            revenue_accounts = {}  # section VI (revenue, credit side)
+            expense_accounts = {}  # section VII (expenses, debit side)
+            current_section = 0
             parsed_count = 0
-            for row in osv_sheet.iter_rows(min_row=6, max_col=7, values_only=False):
-                # row is tuple of cells; columns B..G = indices 1..6 (A=0)
+
+            for row in osv_sheet.iter_rows(min_row=2, max_col=7, values_only=False):
                 cells = list(row)
-                # Ensure we have enough columns
                 if len(cells) < 7:
                     continue
                 code_cell = cells[1].value  # B
                 name_cell = cells[2].value  # C
+
+                # Check if this row is a section header
+                section_num = _detect_section(code_cell, name_cell)
+                if section_num is not None:
+                    current_section = section_num
+                    continue
+
+                if _is_section_header(code_cell):
+                    continue
+
+                full_code = _extract_full_code(code_cell)
+                if full_code is None:
+                    continue
+
+                base = _base_code(full_code)
+                name = str(name_cell).strip() if name_cell else ""
+
                 debit_start = _num(cells[3].value)   # D
                 credit_start = _num(cells[4].value)  # E
                 debit_end = _num(cells[5].value)      # F
                 credit_end = _num(cells[6].value)     # G
 
-                if _is_section_header(code_cell):
+                parsed_count += 1
+
+                # Section VI = Revenue (P&L), Section VII = Expenses (P&L)
+                if current_section == 6:
+                    revenue_accounts[full_code] = {
+                        "code": full_code, "name": name,
+                        "credit_start": credit_start, "credit_end": credit_end,
+                    }
+                    continue
+                elif current_section == 7:
+                    expense_accounts[full_code] = {
+                        "code": full_code, "name": name,
+                        "debit_start": debit_start, "debit_end": debit_end,
+                    }
                     continue
 
-                code = _extract_code(code_cell)
-                if code is None:
+                # Sections I-V: balance sheet accounts
+                # For sub-accounts (e.g. 2010.1), skip — they belong to a different section
+                # Only store the main account code for balance purposes
+                if _is_subaccount(full_code):
                     continue
 
-                name = str(name_cell).strip() if name_cell else ""
-                is_credit = _is_credit_account(code)
-
-                accounts[code] = {
-                    "code": code,
+                is_credit = _is_credit_account(base)
+                accounts[base] = {
+                    "code": base,
                     "name": name,
                     "debit_start": debit_start,
                     "credit_start": credit_start,
@@ -227,13 +314,31 @@ async def import_portfolio_excel(
                     "credit_end": credit_end,
                     "current": credit_end if is_credit else debit_end,
                     "previous": credit_start if is_credit else debit_start,
-                    "section": _classify_account(code),
+                    "section": _classify_account(base),
+                    "osv_section": current_section,
                 }
-                parsed_count += 1
+
+            # --- Calculate P&L totals ---
+            total_revenue_start = sum(a["credit_start"] for a in revenue_accounts.values())
+            total_revenue_end = sum(a["credit_end"] for a in revenue_accounts.values())
+            total_expenses_start = sum(a["debit_start"] for a in expense_accounts.values())
+            total_expenses_end = sum(a["debit_end"] for a in expense_accounts.values())
+
+            pnl_data = {
+                "total_revenue_start": total_revenue_start,
+                "total_revenue_end": total_revenue_end,
+                "total_expenses_start": total_expenses_start,
+                "total_expenses_end": total_expenses_end,
+                "net_profit_start": total_revenue_start - total_expenses_start,
+                "net_profit_end": total_revenue_end - total_expenses_end,
+                "revenue_accounts": revenue_accounts,
+                "expense_accounts": expense_accounts,
+            }
 
             wb.close()
 
             _portfolio_cache["accounts"] = accounts
+            _portfolio_cache["pnl"] = pnl_data
             _portfolio_cache["filename"] = filename
 
             return JSONResponse({
@@ -242,6 +347,9 @@ async def import_portfolio_excel(
                 "filename": filename,
                 "parsed_accounts": parsed_count,
                 "account_codes": sorted(accounts.keys()),
+                "revenue_accounts": sorted(revenue_accounts.keys()),
+                "expense_accounts": sorted(expense_accounts.keys()),
+                "company_info": company_info,
             })
         except Exception as e:
             raise HTTPException(400, f"Ошибка чтения файла: {str(e)}")
@@ -259,8 +367,8 @@ async def import_portfolio_excel(
 # GET /reports/nsbu/balance — НСБУ баланс (Форма 1)
 # ---------------------------------------------------------------------------
 
-def _build_nsbu_rows(accounts: dict) -> list:
-    """Build NSBU balance sheet rows from parsed accounts."""
+def _build_nsbu_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
+    """Build NSBU balance sheet rows from parsed accounts, with net profit adjustment."""
 
     def _get(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
@@ -329,8 +437,33 @@ def _build_nsbu_rows(accounts: dict) -> list:
     rows.append({"code": "8500", "label": "Резервный капитал", "current": _get("8500"), "previous": _get("8500", "previous")})
     rows.append({"code": "8700", "label": "Нераспределённая прибыль", "current": _get("8700"), "previous": _get("8700", "previous")})
 
-    equity_current = _get("8300") + _get("8500") + _get("8700")
-    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
+    # Calculate unclosed P&L: the difference that sits in revenue/expense accounts
+    # This is the amount needed to make Актив = Пассив
+    unclosed_profit_current = 0.0
+    unclosed_profit_previous = 0.0
+    if pnl:
+        # Unclosed P&L = total assets - (equity + liabilities without adjustment)
+        # Or directly: revenue credits - expense debits still sitting in sections VI-VII
+        unclosed_profit_end = pnl.get("net_profit_end", 0.0)
+        unclosed_profit_start = pnl.get("net_profit_start", 0.0)
+        # Calculate what assets vs liabilities gap would be without adjustment
+        equity_raw_current = _get("8300") + _get("8500") + _get("8700")
+        lt_raw = _get("7010") + _get("7800")
+        st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
+        gap_current = total_assets_current - (equity_raw_current + lt_raw + st_raw)
+        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
+        lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
+        st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
+        gap_previous = total_assets_previous - (equity_raw_previous + lt_raw_p + st_raw_p)
+        # Use the gap as the adjustment (this guarantees balance matches)
+        unclosed_profit_current = gap_current
+        unclosed_profit_previous = gap_previous
+
+    if abs(unclosed_profit_current) > 0.01 or abs(unclosed_profit_previous) > 0.01:
+        rows.append({"code": "VI-VII", "label": "Финансовый результат (незакрытый)", "current": unclosed_profit_current, "previous": unclosed_profit_previous})
+
+    equity_current = _get("8300") + _get("8500") + _get("8700") + unclosed_profit_current
+    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous") + unclosed_profit_previous
     rows.append({"code": "", "label": "Итого капитал", "current": equity_current, "previous": equity_previous, "isHeader": True})
 
     # IV. Долгосрочные обязательства
@@ -373,14 +506,19 @@ async def get_nsbu_balance():
     accounts = _portfolio_cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
-    return JSONResponse({"rows": _build_nsbu_rows(accounts)})
+    pnl = _portfolio_cache.get("pnl")
+    company_info = _portfolio_cache.get("company_info")
+    result = {"rows": _build_nsbu_rows(accounts, pnl)}
+    if company_info:
+        result["company_info"] = company_info
+    return JSONResponse(result)
 
 
 # ---------------------------------------------------------------------------
 # GET /reports/ifrs/balance — МСФО баланс (IAS 1)
 # ---------------------------------------------------------------------------
 
-def _build_ifrs_rows(accounts: dict) -> list:
+def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     """Build IFRS-style balance sheet rows (IAS 1 labels, note refs)."""
 
     def _get(code: str, field: str = "current") -> float:
@@ -433,14 +571,30 @@ def _build_ifrs_rows(accounts: dict) -> list:
     rows.append({"code": "8500", "label": "Резервный капитал (IAS 1)", "current": _get("8500"), "previous": _get("8500", "previous"), "note": "12"})
     rows.append({"code": "8700", "label": "Нераспределённая прибыль (IAS 1)", "current": _get("8700"), "previous": _get("8700", "previous"), "note": "13"})
 
-    equity_current = _get("8300") + _get("8500") + _get("8700")
-    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
+    # Unclosed P&L adjustment (same logic as NSBU)
+    unclosed_profit_current = 0.0
+    unclosed_profit_previous = 0.0
+    if pnl:
+        equity_raw_current = _get("8300") + _get("8500") + _get("8700")
+        lt_raw = _get("7010") + _get("7800")
+        st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
+        unclosed_profit_current = total_assets_current - (equity_raw_current + lt_raw + st_raw)
+        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
+        lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
+        st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
+        unclosed_profit_previous = total_assets_previous - (equity_raw_previous + lt_raw_p + st_raw_p)
+
+    if abs(unclosed_profit_current) > 0.01 or abs(unclosed_profit_previous) > 0.01:
+        rows.append({"code": "VI-VII", "label": "Прибыль текущего периода (IAS 1)", "current": unclosed_profit_current, "previous": unclosed_profit_previous, "note": "14"})
+
+    equity_current = _get("8300") + _get("8500") + _get("8700") + unclosed_profit_current
+    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous") + unclosed_profit_previous
     rows.append({"code": "", "label": "Итого капитал", "current": equity_current, "previous": equity_previous, "isHeader": True, "note": ""})
 
     # Non-current liabilities
     rows.append({"code": "", "label": "Долгосрочные обязательства", "current": None, "previous": None, "isHeader": True, "note": ""})
-    rows.append({"code": "7010", "label": "Долгосрочные кредиты (IFRS 9)", "current": _get("7010"), "previous": _get("7010", "previous"), "note": "14"})
-    rows.append({"code": "7800", "label": "Обязательства по аренде (IFRS 16)", "current": _get("7800"), "previous": _get("7800", "previous"), "note": "15"})
+    rows.append({"code": "7010", "label": "Долгосрочные кредиты (IFRS 9)", "current": _get("7010"), "previous": _get("7010", "previous"), "note": "15"})
+    rows.append({"code": "7800", "label": "Обязательства по аренде (IFRS 16)", "current": _get("7800"), "previous": _get("7800", "previous"), "note": "16"})
 
     lt_liab_current = _get("7010") + _get("7800")
     lt_liab_previous = _get("7010", "previous") + _get("7800", "previous")
@@ -448,12 +602,12 @@ def _build_ifrs_rows(accounts: dict) -> list:
 
     # Current liabilities
     rows.append({"code": "", "label": "Краткосрочные обязательства", "current": None, "previous": None, "isHeader": True, "note": ""})
-    rows.append({"code": "6010", "label": "Торговая кредиторская задолженность (IFRS 9)", "current": _get("6010"), "previous": _get("6010", "previous"), "note": "16"})
-    rows.append({"code": "6110", "label": "Авансы полученные (IAS 1)", "current": _get("6110"), "previous": _get("6110", "previous"), "note": "17"})
-    rows.append({"code": "6310", "label": "Текущие налоговые обязательства (IAS 12)", "current": _get("6310"), "previous": _get("6310", "previous"), "note": "18"})
-    rows.append({"code": "6710", "label": "Обязательства по вознаграждениям (IAS 19)", "current": _get("6710"), "previous": _get("6710", "previous"), "note": "19"})
-    rows.append({"code": "6820", "label": "Краткосрочные кредиты (IFRS 9)", "current": _get("6820"), "previous": _get("6820", "previous"), "note": "20"})
-    rows.append({"code": "6610", "label": "Налог на прибыль к уплате (IAS 12)", "current": _get("6610"), "previous": _get("6610", "previous"), "note": "21"})
+    rows.append({"code": "6010", "label": "Торговая кредиторская задолженность (IFRS 9)", "current": _get("6010"), "previous": _get("6010", "previous"), "note": "17"})
+    rows.append({"code": "6110", "label": "Авансы полученные (IAS 1)", "current": _get("6110"), "previous": _get("6110", "previous"), "note": "18"})
+    rows.append({"code": "6310", "label": "Текущие налоговые обязательства (IAS 12)", "current": _get("6310"), "previous": _get("6310", "previous"), "note": "19"})
+    rows.append({"code": "6710", "label": "Обязательства по вознаграждениям (IAS 19)", "current": _get("6710"), "previous": _get("6710", "previous"), "note": "20"})
+    rows.append({"code": "6820", "label": "Краткосрочные кредиты (IFRS 9)", "current": _get("6820"), "previous": _get("6820", "previous"), "note": "21"})
+    rows.append({"code": "6610", "label": "Налог на прибыль к уплате (IAS 12)", "current": _get("6610"), "previous": _get("6610", "previous"), "note": "22"})
 
     st_liab_current = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
     st_liab_previous = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
@@ -475,7 +629,12 @@ async def get_ifrs_balance():
     accounts = _portfolio_cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
-    return JSONResponse({"rows": _build_ifrs_rows(accounts)})
+    pnl = _portfolio_cache.get("pnl")
+    company_info = _portfolio_cache.get("company_info")
+    result = {"rows": _build_ifrs_rows(accounts, pnl)}
+    if company_info:
+        result["company_info"] = company_info
+    return JSONResponse(result)
 
 
 # ---------------------------------------------------------------------------

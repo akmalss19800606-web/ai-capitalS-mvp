@@ -67,6 +67,7 @@ function NsbuReport() {
   const [rows, setRows] = useState<NsbuRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [balanceOk, setBalanceOk] = useState<boolean | null>(null);
+  const [companyInfo, setCompanyInfo] = useState<any>(null);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
 
@@ -81,6 +82,7 @@ function NsbuReport() {
           const totalLiab = data.rows.filter((r: NsbuRow) => r.isTotalLiability)?.[0]?.current ?? 0;
           setBalanceOk(Math.abs(totalAsset - totalLiab) < 1);
         }
+        if (data?.company_info) setCompanyInfo(data.company_info);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -97,6 +99,19 @@ function NsbuReport() {
 
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0]">
+      {companyInfo && (
+        <div className="mb-0 mx-6 mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <h4 className="font-bold text-blue-900">{companyInfo.name}</h4>
+          <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-blue-800">
+            <p>ИНН: {companyInfo.inn}</p>
+            <p>Деятельность: {companyInfo.activity}</p>
+            <p>Директор: {companyInfo.director}</p>
+            <p>Период: {companyInfo.period}</p>
+            {companyInfo.unit && <p>Единица: {companyInfo.unit}</p>}
+            {companyInfo.accountant && <p>Гл. бухгалтер: {companyInfo.accountant}</p>}
+          </div>
+        </div>
+      )}
       {balanceOk !== null && (
         <div className={`mb-0 mx-6 mt-4 p-3 rounded-lg text-sm font-medium ${
           balanceOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
