@@ -7,7 +7,7 @@ export default function AnalyticsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="-m-6" style={{ backgroundColor: '#f8f8fc' }}>
+    <div className="-mx-6 -mt-6 -mb-6" style={{ backgroundColor: '#f8f8fc', minHeight: '100%' }}>
       {/* Заголовок */}
       <div className="bg-white border-b border-[#e2e8f0] px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
         <div>
@@ -18,7 +18,7 @@ export default function AnalyticsLayout({
         </div>
         <a
           href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/export/excel`}
-          className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 flex items-center gap-2"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 w-fit"
         >
           📥 Скачать НСБУ + МСФО
         </a>
