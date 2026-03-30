@@ -16,6 +16,7 @@ from app.api.v1.routers.decisions import router as decisions_router
 from app.api.v1.routers.ai import router as ai_router
 from app.api.v1.routers.roles import router as roles_router
 from app.api.v1.routers.dashboard import router as dashboard_router, builder_router as dashboard_builder_router
+from app.api.v1.routers.news import router as news_router
 from app.api.v1.routers.audit import router as audit_router
 from app.api.v1.routers.relationships import router as relationships_router
 from app.api.v1.routers.consolidation_router import router as consolidation_router
@@ -283,3 +284,4 @@ app.include_router(company_admin_router,     prefix="/api/v1",                  
 # Islamic Finance Reference Data
 from app.api.v1.routers.islamic_products_ref_router import router as islamic_ref_router
 app.include_router(islamic_ref_router,         prefix="/api/v1/islamic",          tags=["Islamic: Reference Data"])
+app.include_router(news_router, prefix="/api/v1")
