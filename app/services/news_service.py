@@ -30,7 +30,11 @@ RSS_SOURCES = [
 def fetch_rss(url: str, timeout: float = 10.0) -> Optional[str]:
     """Загрузить RSS-ленту по URL."""
     try:
-        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        }
+        with httpx.Client(timeout=timeout, follow_redirects=True, headers=headers) as client:
             resp = client.get(url)
             resp.raise_for_status()
             return resp.text
