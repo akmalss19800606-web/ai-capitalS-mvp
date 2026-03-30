@@ -12,7 +12,6 @@ interface TickerItem {
   sparkline: number[];
   updated_at: string | null;
 }
-
 interface HeatmapStock {
   ticker: string;
   name: string;
@@ -21,13 +20,11 @@ interface HeatmapStock {
   change_percent: number;
   market_cap: number;
 }
-
 interface HeatmapSector {
   name: string;
   stocks: HeatmapStock[];
   total_change_percent: number;
 }
-
 interface Sector {
   name: string;
   code: string;
@@ -36,12 +33,20 @@ interface Sector {
   stocks_count: number;
   top_stocks: string[];
 }
-
 interface MacroData {
   refinancing_rate: number;
   industrial_growth: number;
   trade_balance: number;
   updated_at: string | null;
+}
+interface NewsItem {
+  id: number;
+  title: string;
+  summary: string;
+  url: string;
+  source: string;
+  category: string;
+  published_at: string;
 }
 
 // === Helpers ===
@@ -58,6 +63,14 @@ async function fetchAPI(path: string) {
     headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`API error ${res.status}`);
+  return res.json();
+}
+
+async function fetchNewsAPI() {
+  const res = await fetch(`${API}/api/v1/news?limit=6`, {
+    headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`News API error ${res.status}`);
   return res.json();
 }
 
@@ -160,7 +173,7 @@ function CurrencyWidget({ items }: { items: TickerItem[] }) {
   );
 }
 
-// === I: Macro Widget ===
+// === Macro Widget ===
 function MacroWidget({ data }: { data: MacroData | null }) {
   if (!data) return <div className="h-20" />;
   const items = [
@@ -181,21 +194,132 @@ function MacroWidget({ data }: { data: MacroData | null }) {
   );
 }
 
-// === Quick Tools ===
+// === News Widget (NEW) ===
+const CATEGORY_LABELS: Record<string, string> = {
+  all: "Все",
+  official: "Официальные",
+  market: "Рынок",
+  banks: "Банки",
+  investment: "Инвестиции",
+};
+
+const SOURCE_COLORS: Record<string, string> = {
+  "cbu.uz": "bg-blue-100 text-blue-700",
+  "gazeta.uz": "bg-orange-100 text-orange-700",
+  "mf.uz": "bg-green-100 text-green-700",
+  default: "bg-gray-100 text-gray-600",
+};
+
+function NewsWidget({ items, loading }: { items: NewsItem[]; loading: boolean }) {
+  const [filter, setFilter] = useState("all");
+
+  const filtered = filter === "all" ? items : items.filter(n => n.category === filter);
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="h-16 bg-gray-100 animate-pulse rounded-lg" />
+        ))}
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <div className="text-center text-gray-400 py-8">
+        <div className="text-3xl mb-2">📰</div>
+        <div className="text-sm">Новости загружаются...</div>
+      </div>
+    );
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins} мин назад`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} ч назад`;
+    const days = Math.floor(hours / 24);
+    return `${days} дн назад`;
+  }
+
+  return (
+    <div>
+      {/* Filter tabs */}
+      <div className="flex gap-1 mb-3 flex-wrap">
+        {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`px-2 py-0.5 rounded-full text-xs transition-colors ${
+              filter === key
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* News list */}
+      <div className="space-y-2 max-h-80 overflow-y-auto">
+        {filtered.slice(0, 6).map(news => (
+          <a
+            key={news.id}
+            href={news.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block p-2 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+          >
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 line-clamp-2 leading-tight">
+                  {news.title}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${SOURCE_COLORS[news.source] || SOURCE_COLORS.default}`}>
+                    {news.source}
+                  </span>
+                  <span className="text-xs text-gray-400">{timeAgo(news.published_at)}</span>
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 pt-2 border-t border-gray-100 flex justify-between items-center">
+        <span className="text-xs text-gray-400">
+          Обновлено {items.length > 0 ? timeAgo(items[0].published_at) : "—"}
+        </span>
+        <a href="/uz-market" className="text-xs text-blue-600 hover:underline">
+          Все новости →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// === Quick Tools (UPDATED) ===
 function QuickTools() {
   const tools = [
-    { name: "Калькулятор", href: "/calculator", icon: "🧮" },
+    { name: "Инвесткалькулятор", href: "/calculator", icon: "🧮" },
     { name: "Портфели", href: "/portfolios", icon: "💼" },
-    { name: "Решения", href: "/decisions", icon: "⚖️" },
-    { name: "Ислам. финансы", href: "/islamic-finance", icon: "🅌" },
-    { name: "Организации", href: "/organizations", icon: "🏢" },
+    { name: "Исламские финансы", href: "/islamic-finance", icon: "🕌" },
+    { name: "Рынок UZ", href: "/market-uz", icon: "📊" },
+    { name: "Стресс-тест", href: "/stress-testing", icon: "🔬" },
     { name: "AI Ассистент", href: "/ai-assistant", icon: "🤖" },
+    { name: "Аналитика", href: "/analytics", icon: "📈" },
+    { name: "Due Diligence", href: "/due-diligence", icon: "🔍" },
   ];
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {tools.map(t => (
-        <a key={t.name} href={t.href} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm">
-          <span>{t.icon}</span>
+        <a key={t.name} href={t.href} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm border border-gray-100">
+          <span className="text-lg">{t.icon}</span>
           <span>{t.name}</span>
         </a>
       ))}
@@ -209,7 +333,9 @@ export default function DashboardPage() {
   const [heatmap, setHeatmap] = useState<HeatmapSector[]>([]);
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [macro, setMacro] = useState<MacroData | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newsLoading, setNewsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -233,11 +359,29 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const loadNews = useCallback(async () => {
+    try {
+      setNewsLoading(true);
+      const data = await fetchNewsAPI();
+      setNews(data.items || []);
+    } catch {
+      // News are non-critical, fail silently
+      setNews([]);
+    } finally {
+      setNewsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 300000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+    loadNews();
+    const dataInterval = setInterval(loadData, 300000);  // 5 min
+    const newsInterval = setInterval(loadNews, 900000);  // 15 min
+    return () => {
+      clearInterval(dataInterval);
+      clearInterval(newsInterval);
+    };
+  }, [loadData, loadNews]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
@@ -247,7 +391,7 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900">AI Capital Management</h1>
           <p className="text-sm text-gray-500">Главная панель управления активами</p>
         </div>
-        <button onClick={loadData} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button onClick={() => { loadData(); loadNews(); }} className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           Обновить
         </button>
       </div>
@@ -266,20 +410,28 @@ export default function DashboardPage() {
 
       {/* Row 3: Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Col 1 */}
+        {/* Heatmap - wide */}
         <WidgetCard title="📈 Тепловая карта биржи UZSE" className="md:col-span-2 xl:col-span-2">
           {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded" /> : <HeatmapWidget sectors={heatmap} />}
         </WidgetCard>
 
+        {/* Currency */}
         <WidgetCard title="💱 Курсы валют">
           {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded" /> : <CurrencyWidget items={ticker} />}
         </WidgetCard>
 
+        {/* Sectors */}
         <WidgetCard title="🟦 Сектора экономики">
           {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded" /> : <SectorsWidget sectors={sectors} />}
         </WidgetCard>
 
-        <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2">
+        {/* NEWS WIDGET - NEW */}
+        <WidgetCard title="📰 Экономические новости UZ" className="xl:col-span-2">
+          <NewsWidget items={news} loading={newsLoading} />
+        </WidgetCard>
+
+        {/* Quick Tools - full width */}
+        <WidgetCard title="⚡ Быстрые инструменты" className="md:col-span-2 xl:col-span-3">
           <QuickTools />
         </WidgetCard>
       </div>

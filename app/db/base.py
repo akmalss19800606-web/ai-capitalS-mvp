@@ -83,3 +83,6 @@ from app.db.models.islamic_stage2 import (
     IncomePurificationCase,
     CompanyImportBatch,
 )
+
+# === Economic News ===
+from app.db.models.economic_news import EconomicNews
