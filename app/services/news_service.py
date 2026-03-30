@@ -1,5 +1,4 @@
 """Сервис сбора экономических новостей из RSS-источников Узбекистана."""
-import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
@@ -7,7 +6,7 @@ from xml.etree import ElementTree
 
 import httpx
 from sqlalchemy import select, desc
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.db.models.economic_news import EconomicNews
@@ -28,11 +27,11 @@ RSS_SOURCES = [
 ]
 
 
-async def fetch_rss(url: str, timeout: float = 10.0) -> Optional[str]:
+def fetch_rss(url: str, timeout: float = 10.0) -> Optional[str]:
     """Загрузить RSS-ленту по URL."""
     try:
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-            resp = await client.get(url)
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            resp = client.get(url)
             resp.raise_for_status()
             return resp.text
     except Exception as e:
@@ -77,15 +76,13 @@ def parse_rss(xml_text: str, source: str, category: str) -> List[Dict]:
     return items
 
 
-async def refresh_news(db: AsyncSession) -> int:
+def refresh_news(db: Session) -> int:
     """Обновить новости из всех RSS-источников. Возвращает число новых записей."""
     all_items: List[Dict] = []
 
-    tasks = [fetch_rss(src["url"]) for src in RSS_SOURCES]
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    for src, result in zip(RSS_SOURCES, results):
-        if isinstance(result, str) and result:
+    for src in RSS_SOURCES:
+        result = fetch_rss(src["url"])
+        if result:
             parsed = parse_rss(result, src["name"], src["category"])
             all_items.extend(parsed)
 
@@ -98,16 +95,16 @@ async def refresh_news(db: AsyncSession) -> int:
         stmt = pg_insert(EconomicNews).values(**item).on_conflict_do_nothing(
             index_elements=["url"]
         )
-        result = await db.execute(stmt)
+        result = db.execute(stmt)
         inserted += result.rowcount
 
-    await db.commit()
+    db.commit()
     logger.info(f"News refresh: {inserted} new items from {len(all_items)} total")
     return inserted
 
 
-async def get_latest_news(
-    db: AsyncSession,
+def get_latest_news(
+    db: Session,
     limit: int = 10,
     category: Optional[str] = None,
 ) -> List[EconomicNews]:
@@ -115,5 +112,5 @@ async def get_latest_news(
     q = select(EconomicNews).order_by(desc(EconomicNews.published_at)).limit(limit)
     if category and category != "all":
         q = q.where(EconomicNews.category == category)
-    result = await db.execute(q)
+    result = db.execute(q)
     return list(result.scalars().all())
