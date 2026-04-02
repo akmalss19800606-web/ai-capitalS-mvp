@@ -394,7 +394,7 @@ export default function PortfoliosPage() {
           // Auto-fill AnalyticsContext so ContextBar updates immediately
           const orgName = data.company_info.name || '';
           const orgInn = data.company_info.inn || '';
-          if (orgName) {
+          if (orgName || orgInn) {
             setActiveOrg(orgInn || 'org', orgName);
           }
         }
@@ -448,6 +448,7 @@ export default function PortfoliosPage() {
         // Mark NSBU as ready and set standard
         setActiveStandard('nsbu');
         setNsbuReady(true);
+
         if (data.warnings?.length) {
           setImportStatus(prev => prev + ` | Предупреждения: ${data.warnings.join(', ')}`);
         }
