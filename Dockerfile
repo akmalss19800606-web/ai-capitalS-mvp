@@ -28,7 +28,8 @@ RUN pip install --no-cache-dir \
     openpyxl \
     pdfplumber \
     python-telegram-bot \
-    numpy-financial
+    numpy-financial \
+    feedparser
     COPY ./seeds /app/seeds
 COPY ./app /app/app
 COPY ./alembic /app/alembic

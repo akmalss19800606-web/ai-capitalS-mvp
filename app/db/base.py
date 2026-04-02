@@ -86,3 +86,6 @@ from app.db.models.islamic_stage2 import (
 
 # === IFRS Models (E0-05) ===
 from app.db.models.ifrs import IFRSAdjustment, FinancialStatement
+
+# === News Models (E1-02) ===
+from app.db.models.news import NewsArticle

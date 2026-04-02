@@ -39,3 +39,6 @@ from app.db.models.recommendation_rules import ProductRecommendationRule
 
 # IFRS Models (E0-05)
 from app.db.models.ifrs import IFRSAdjustment, FinancialStatement
+
+# News Models (E1-02)
+from app.db.models.news import NewsArticle

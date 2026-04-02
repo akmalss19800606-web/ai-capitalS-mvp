@@ -90,6 +90,9 @@ from app.api.v1.routers.analytics_chapter import router as analytics_chapter_rou
 # Phase 5: Demo seed data
 from app.api.v1.routers import demo as demo_router
 
+# E1-02/E1-03: News router
+from app.api.v1.routers.news import router as news_router
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup / shutdown: Redis + Telegram Bot + Auto-create tables."""
@@ -121,6 +124,29 @@ async def lifespan(app: FastAPI):
         logger.info("Telegram Bot started")
     else:
         logger.info("Telegram Bot not started (token not configured or lib missing)")
+
+    # Startup — News background refresh (E1-02)
+    import threading
+
+    def _news_refresh_loop():
+        """Fetch news on startup, then every 60 minutes."""
+        import time
+        from app.db.session import SessionLocal
+        from app.services.news_service import NewsService
+        news_svc = NewsService()
+        while True:
+            try:
+                db = SessionLocal()
+                added = news_svc.fetch_and_store_news(db)
+                db.close()
+                logger.info("News refresh: %d new articles added", added)
+            except Exception as exc:
+                logger.error("News refresh error: %s", exc)
+            time.sleep(3600)  # 60 minutes
+
+    news_thread = threading.Thread(target=_news_refresh_loop, daemon=True)
+    news_thread.start()
+    logger.info("News background refresh thread started (every 60 min)")
 
     yield
 
@@ -287,3 +313,5 @@ app.include_router(company_admin_router,     prefix="/api/v1",                  
 # Islamic Finance Reference Data
 from app.api.v1.routers.islamic_products_ref_router import router as islamic_ref_router
 app.include_router(islamic_ref_router,         prefix="/api/v1/islamic",          tags=["Islamic: Reference Data"])
+# E1-02/E1-03: News
+app.include_router(news_router, prefix="/api/v1")
