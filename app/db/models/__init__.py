@@ -36,3 +36,6 @@ from app.db.models.islamic_stage3 import (
 from app.db.models.islamic_products import IslamicProduct
 from app.db.models.posc_rules import PoSCRuleSeed
 from app.db.models.recommendation_rules import ProductRecommendationRule
+
+# IFRS Models (E0-05)
+from app.db.models.ifrs import IFRSAdjustment, FinancialStatement

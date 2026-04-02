@@ -83,3 +83,6 @@ from app.db.models.islamic_stage2 import (
     IncomePurificationCase,
     CompanyImportBatch,
 )
+
+# === IFRS Models (E0-05) ===
+from app.db.models.ifrs import IFRSAdjustment, FinancialStatement
