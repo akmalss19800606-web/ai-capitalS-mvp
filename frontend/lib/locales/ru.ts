@@ -486,6 +486,91 @@
   },
 
 
+  /* ─── Analytics KPI page ─── */
+  analyticsPage: {
+    title: 'Аналитика',
+    kpiTitle: 'Финансовые коэффициенты (32 KPI)',
+    groups: {
+      liquidity: 'Показатели ликвидности',
+      profitability: 'Рентабельность',
+      solvency: 'Платёжеспособность',
+      efficiency: 'Эффективность',
+    },
+    metrics: {
+      currentRatio: 'Коэфф. текущей ликвидности',
+      quickRatio: 'Коэфф. быстрой ликвидности',
+      netProfitMargin: 'Чистая рентабельность',
+      roe: 'Рентабельность СК (ROE)',
+      roa: 'Рентабельность активов (ROA)',
+      debtToEquity: 'Долг к капиталу (D/E)',
+      interestCoverage: 'Покрытие процентов',
+      assetTurnover: 'Оборачиваемость активов',
+    },
+    standard: 'Стандарт',
+    selectOrg: 'Выберите организацию',
+    revenue: 'Выручка',
+    netIncome: 'Чистая прибыль',
+    totalAssets: 'Итого активов',
+    totalLiabilities: 'Итого обязательств',
+    equity: 'Собственный капитал',
+    dcf: {
+      title: 'DCF-оценка (Discounted Cash Flow)',
+      ev: 'Стоимость компании (EV)',
+      equityValue: 'Собственный капитал',
+      intrinsicValue: 'Справедливая стоимость / акция',
+      pvFcff: 'Приведённая стоимость FCFF',
+      terminalValue: 'Терминальная стоимость',
+      upside: 'Потенциал роста / снижения',
+    },
+    multipliers: {
+      title: 'Рыночные мультипликаторы',
+      divYield: 'Див. доходность',
+    },
+  },
+
+  /* ─── Stress-test page ─── */
+  stressTest: {
+    title: 'Стресс-тест',
+    scenarios: {
+      crisis2008: 'Финансовый кризис 2008 г.',
+      covid19: 'Пандемия COVID-19 (2020 г.)',
+      rateHike: 'Рост ставки ЦБ',
+      currencyShock: 'Валютный шок',
+      commodity: 'Сырьевой шок',
+      custom: 'Пользовательский сценарий',
+    },
+    severity: {
+      mild: 'Лёгкий',
+      moderate: 'Умеренный',
+      severe: 'Тяжёлый',
+      extreme: 'Катастрофический',
+    },
+    totalLoss: 'Общие потери',
+    assetImpact: 'Влияние на активы',
+    equityImpact: 'Влияние на капитал',
+    runTest: 'Запустить тест',
+    results: 'Результаты',
+  },
+
+  /* ─── Visualizations page ─── */
+  visualizations: {
+    title: 'Визуализации',
+    tabs: {
+      waterfall: 'Каскад (Waterfall)',
+      tornado: 'Торнадо',
+      bubble: 'Пузырьковая',
+      heatmap: 'Тепловая карта',
+    },
+  },
+
+  /* ─── NextStepBanner labels ─── */
+  nextStep: {
+    toAnalytics: 'Перейти к Аналитике KPI →',
+    toStressTest: 'Запустить стресс-тест →',
+    toVisualizations: 'Просмотреть визуализации →',
+    toAnalyticsFromDecisions: 'Проверить влияние в Аналитике →',
+  },
+
   /* ─── Этап 2, Сессия 2.2: Фондовая биржа ─── */
   stockPage: {
     title: 'Фондовая биржа UZSE',

@@ -35,10 +35,10 @@ const C = {
 type VizTab = 'waterfall' | 'tornado' | 'bubble' | 'heatmap';
 
 const TABS: { key: VizTab; label: string }[] = [
-  { key: 'waterfall', label: '📊 Waterfall' },
-  { key: 'tornado', label: '🌪️ Tornado' },
-  { key: 'bubble', label: '🧠 Bubble' },
-  { key: 'heatmap', label: '🔥 Heatmap' },
+  { key: 'waterfall', label: '📊 Каскад (Waterfall)' },
+  { key: 'tornado', label: '🌪️ Торнадо' },
+  { key: 'bubble', label: '🧠 Пузырьковая' },
+  { key: 'heatmap', label: '🔥 Тепловая карта' },
 ];
 
 interface WaterfallItem {
@@ -110,7 +110,7 @@ function WaterfallChartView({ data }: { data: WaterfallItem[] }) {
 
   return (
     <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-2xl p-6">
-      <h4 className="text-white font-bold mb-4">📊 Waterfall --- Движение баланса (UZS)</h4>
+      <h4 className="text-white font-bold mb-4">📊 Каскадная диаграмма — Движение баланса (UZS)</h4>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -141,7 +141,7 @@ function TornadoChartView({ data }: { data: TornadoItem[] }) {
   const sorted = [...data].sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
   return (
     <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-2xl p-6">
-      <h4 className="text-white font-bold mb-4">🌪️ Диаграмма Торнадо --- чувствительность к факторам (%)</h4>
+      <h4 className="text-white font-bold mb-4">🌪️ Диаграмма Торнадо — чувствительность к факторам (%)</h4>
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={sorted} layout="vertical" margin={{ top: 5, right: 20, left: 120, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -165,7 +165,7 @@ function TornadoChartView({ data }: { data: TornadoItem[] }) {
 function BubbleChartView({ data }: { data: BubbleItem[] }) {
   return (
     <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-2xl p-6">
-      <h4 className="text-white font-bold mb-2">🧠 Bubble Chart --- Риск / Доходность / Объём</h4>
+      <h4 className="text-white font-bold mb-2">🧠 Пузырьковая диаграмма — Риск / Доходность / Объём</h4>
       <p className="text-slate-400 text-xs mb-4">Ось X = Риск (%), Ось Y = Доходность (%), Размер = Объём позиции</p>
       <ResponsiveContainer width="100%" height={320}>
         <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
@@ -280,7 +280,7 @@ export default function VisualizationsPage() {
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-1">📊 Визуализации</h2>
-        <p className="text-sm text-gray-500">4 типа диаграмм: Waterfall, Tornado, Bubble Chart, Тепловая карта</p>
+        <p className="text-sm text-gray-500">4 типа диаграмм: Каскад, Торнадо, Пузырьковая, Тепловая карта</p>
       </div>
 
       <div className="bg-white rounded-xl border border-[#e2e8f0]">

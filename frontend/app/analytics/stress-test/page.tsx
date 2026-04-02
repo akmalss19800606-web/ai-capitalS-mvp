@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -28,19 +29,19 @@ const C = {
 };
 
 const SCENARIOS = [
-  { value: 'crisis_2008', label: '🟥 Кризис 2008' },
-  { value: 'covid_2020', label: '🦠 COVID-19 2020' },
-  { value: 'rate_hike', label: '📈 Рост ставок' },
+  { value: 'crisis_2008', label: '🟥 Финансовый кризис 2008 г.' },
+  { value: 'covid_2020', label: '🦠 Пандемия COVID-19 (2020 г.)' },
+  { value: 'rate_hike', label: '📈 Рост ставки ЦБ' },
   { value: 'currency_shock', label: '💱 Валютный шок' },
-  { value: 'commodity_drop', label: '⛏️ Падение сырья' },
-  { value: 'custom', label: '⚙️ Пользовательский' },
+  { value: 'commodity_drop', label: '⛏️ Сырьевой шок' },
+  { value: 'custom', label: '⚙️ Пользовательский сценарий' },
 ];
 
 const SEVERITIES = [
   { value: 'mild', label: '🟡 Лёгкий' },
   { value: 'moderate', label: '🟠 Умеренный' },
   { value: 'severe', label: '🔴 Тяжёлый' },
-  { value: 'extreme', label: '⚫ Экстремальный' },
+  { value: 'extreme', label: '⚫ Катастрофический' },
 ];
 
 interface StressResult {
@@ -260,6 +261,12 @@ export default function StressTestPage() {
           </div>
         </div>
       )}
+
+      <NextStepBanner
+        label="Просмотреть визуализации →"
+        href="/analytics/visualizations"
+        description="Каскадные, торнадо и пузырьковые диаграммы"
+      />
     </div>
   );
 }

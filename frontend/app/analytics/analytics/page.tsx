@@ -4,6 +4,7 @@ import { formatCurrencyUZS } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -146,13 +147,13 @@ function DcfBlock() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
             { label: 'WACC', value: `${(dcf.wacc * 100).toFixed(1)}%` },
-            { label: 'EV (Enterprise Value)', value: formatCurrencyUZS(dcf.enterprise_value) },
-            { label: 'Equity Value', value: formatCurrencyUZS(dcf.equity_value) },
-            { label: 'Intrinsic Value / акция', value: formatCurrencyUZS(dcf.intrinsic_value_per_share) },
-            { label: 'PV of FCFF', value: formatCurrencyUZS(dcf.pv_fcff) },
-            { label: 'Terminal Value', value: formatCurrencyUZS(dcf.terminal_value) },
+            { label: 'Стоимость компании (EV)', value: formatCurrencyUZS(dcf.enterprise_value) },
+            { label: 'Собственный капитал', value: formatCurrencyUZS(dcf.equity_value) },
+            { label: 'Справедливая стоимость / акция', value: formatCurrencyUZS(dcf.intrinsic_value_per_share) },
+            { label: 'Приведённая стоимость FCFF', value: formatCurrencyUZS(dcf.pv_fcff) },
+            { label: 'Терминальная стоимость', value: formatCurrencyUZS(dcf.terminal_value) },
             {
-              label: 'Upside / Downside',
+              label: 'Потенциал роста / снижения',
               value: dcf.upside_pct != null ? `${dcf.upside_pct > 0 ? '+' : ''}${dcf.upside_pct.toFixed(1)}%` : '---',
               special: dcf.upside_pct,
             },
@@ -192,7 +193,7 @@ function MultipliersBlock() {
     { key: 'ev_ebitda', label: 'EV/EBITDA', bench: '< 8x', desc: 'Стоимость / EBITDA', suffix: 'x' },
     { key: 'ev_revenue', label: 'EV/Выручка', bench: '< 3x', desc: 'Стоимость / Выручка', suffix: 'x' },
     { key: 'ps', label: 'P/S', bench: '< 2x', desc: 'Цена / Выручка', suffix: 'x' },
-    { key: 'dividend_yield', label: 'Div Yield', bench: '> 3%', desc: 'Дивидендная доходность', suffix: '%' },
+    { key: 'dividend_yield', label: 'Див. доходность', bench: '> 3%', desc: 'Дивидендная доходность', suffix: '%' },
   ];
 
   if (loading) return <LoadingCard rows={3} />;
@@ -291,6 +292,12 @@ export default function AnalyticsAnalyticsPage() {
           📥 Скачать полный отчёт Excel (НСБУ + МСФО)
         </a>
       </div>
+
+      <NextStepBanner
+        label="Запустить стресс-тест →"
+        href="/analytics/stress-test"
+        description="Анализ устойчивости к кризисным сценариям"
+      />
     </div>
   );
 }

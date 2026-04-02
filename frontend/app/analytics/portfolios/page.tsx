@@ -5,6 +5,7 @@ import { formatCurrencyUZS } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -561,6 +562,12 @@ export default function PortfoliosPage() {
       {activeTab === 'nsbu' && <NsbuReport />}
       {activeTab === 'ifrs' && <IfrsReport />}
       {activeTab === 'diff' && <DiffReport />}
+
+      <NextStepBanner
+        label="Перейти к Аналитике KPI →"
+        href="/analytics/analytics"
+        description="Финансовые коэффициенты и DCF-оценка"
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { formatCurrencyUZS, formatNumber, formatDateRu } from '@/lib/formatters'
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
+import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -484,6 +485,12 @@ export default function DecisionsPage() {
           </div>
         )}
       </div>
+
+      <NextStepBanner
+        label="Проверить влияние в Аналитике →"
+        href="/analytics/analytics"
+        description="Финансовые коэффициенты и DCF-оценка"
+      />
     </div>
   );
 }
