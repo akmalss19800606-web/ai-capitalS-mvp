@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { formatCurrencyUZS } from '@/lib/formatters';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -58,11 +61,6 @@ interface DiffRow {
   reason?: string;
 }
 
-function fmtUZS(n: number | null | undefined): string {
-  if (n === null || n === undefined) return '---';
-  return new Intl.NumberFormat('ru-UZ', { style: 'decimal', maximumFractionDigits: 0 }).format(n) + ' UZS';
-}
-
 function NsbuReport() {
   const [rows, setRows] = useState<NsbuRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,13 +86,13 @@ function NsbuReport() {
       .catch(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div className="text-center py-8 text-gray-400">⏳ Загружаем НСБУ...</div>;
+  if (loading) return <LoadingCard rows={5} />;
   if (!rows.length) return (
-    <div className="text-center py-12 bg-white rounded-xl border border-[#e2e8f0]">
-      <div className="text-4xl mb-3">📄</div>
-      <p className="text-gray-500">Нет данных НСБУ</p>
-      <p className="text-sm text-gray-400 mt-1">Сначала загрузите данные из 1С или Excel</p>
-    </div>
+    <EmptyState
+      icon={<span>📄</span>}
+      title="Нет данных НСБУ"
+      description="Сначала загрузите данные из 1С или Excel"
+    />
   );
 
   return (
@@ -138,8 +136,8 @@ function NsbuReport() {
               }`}>
                 <td className={`py-2 px-4 ${row.isHeader ? 'pl-4' : 'pl-8'}`}>{row.label}</td>
                 <td className="py-2 px-4 text-center text-gray-400">{row.code}</td>
-                <td className="py-2 px-4 text-right">{fmtUZS(row.current)}</td>
-                <td className="py-2 px-4 text-right text-gray-500">{fmtUZS(row.previous)}</td>
+                <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.current)}</td>
+                <td className="py-2 px-4 text-right text-gray-500">{formatCurrencyUZS(row.previous)}</td>
               </tr>
             ))}
           </tbody>
@@ -163,13 +161,13 @@ function IfrsReport() {
       .catch(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div className="text-center py-8 text-gray-400">⏳ Загружаем МСФО...</div>;
+  if (loading) return <LoadingCard rows={5} />;
   if (!rows.length) return (
-    <div className="text-center py-12 bg-white rounded-xl border border-[#e2e8f0]">
-      <div className="text-4xl mb-3">🌍</div>
-      <p className="text-gray-500">Нет данных МСФО</p>
-      <p className="text-sm text-gray-400 mt-1">Сначала загрузите данные из 1С или Excel</p>
-    </div>
+    <EmptyState
+      icon={<span>🌍</span>}
+      title="Нет данных МСФО"
+      description="Сначала загрузите данные из 1С или Excel"
+    />
   );
 
   return (
@@ -193,8 +191,8 @@ function IfrsReport() {
               }`}>
                 <td className={`py-2 px-4 ${row.isHeader ? 'pl-4' : 'pl-8'}`}>{row.label}</td>
                 <td className="py-2 px-4 text-center text-gray-400">{row.note || '---'}</td>
-                <td className="py-2 px-4 text-right">{fmtUZS(row.current)}</td>
-                <td className="py-2 px-4 text-right text-gray-500">{fmtUZS(row.previous)}</td>
+                <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.current)}</td>
+                <td className="py-2 px-4 text-right text-gray-500">{formatCurrencyUZS(row.previous)}</td>
               </tr>
             ))}
           </tbody>
@@ -218,9 +216,12 @@ function DiffReport() {
       .catch(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div className="text-center py-8 text-gray-400">⏳ Загружаем разницу...</div>;
+  if (loading) return <LoadingCard rows={4} />;
   if (!rows.length) return (
-    <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-[#e2e8f0] p-6">Данные по разнице НСБУ / МСФО пока отсутствуют</div>
+    <EmptyState
+      icon={<span>Δ</span>}
+      title="Данные по разнице НСБУ / МСФО пока отсутствуют"
+    />
   );
 
   return (
@@ -247,11 +248,11 @@ function DiffReport() {
               return (
                 <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-2 px-4">{row.label}</td>
-                  <td className="py-2 px-4 text-right">{fmtUZS(row.nsbu)}</td>
-                  <td className="py-2 px-4 text-right">{fmtUZS(row.ifrs)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.nsbu)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.ifrs)}</td>
                   <td className={`py-2 px-4 text-right font-medium ${
                     delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-gray-400'
-                  }`}>{delta !== 0 ? fmtUZS(delta) : '—'}</td>
+                  }`}>{delta !== 0 ? formatCurrencyUZS(delta) : '—'}</td>
                   <td className={`py-2 px-4 text-right ${
                     delta > 0 ? 'text-emerald-600' : delta < 0 ? 'text-red-600' : 'text-gray-400'
                   }`}>{deltaPct !== '---' ? deltaPct + '%' : '---'}</td>

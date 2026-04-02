@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ScatterChart, Scatter, ZAxis, Cell,
 } from 'recharts';
+import { formatCurrencyUZS } from '@/lib/formatters';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -101,8 +102,8 @@ const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'];
 
 function WaterfallChartView({ data }: { data: WaterfallItem[] }) {
   const fmt = (v: number) => {
-    if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(0)}м`;
-    if (Math.abs(v) >= 1_000) return `${(v / 1_000).toFixed(0)}т`;
+    if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(0)} млн`;
+    if (Math.abs(v) >= 1_000) return `${(v / 1_000).toFixed(0)} тыс`;
     return v.toString();
   };
 
@@ -115,7 +116,7 @@ function WaterfallChartView({ data }: { data: WaterfallItem[] }) {
           <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} />
           <YAxis tickFormatter={fmt} tick={{ fill: '#94a3b8', fontSize: 11 }} />
           <Tooltip
-            formatter={(val: number) => [new Intl.NumberFormat('ru-UZ').format(val) + ' UZS', 'Сумма']}
+            formatter={(val: number) => [formatCurrencyUZS(val), 'Сумма']}
             contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8, color: '#f1f5f9' }}
           />
           <Bar dataKey="value" radius={[6, 6, 0, 0]}>

@@ -1,5 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { formatCurrencyUZS } from '@/lib/formatters';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -54,11 +57,6 @@ interface DcfResult {
   intrinsic_value_per_share: number;
   market_value?: number;
   upside_pct?: number;
-}
-
-function fmtUZS(n: number | null | undefined): string {
-  if (n === null || n === undefined) return '---';
-  return new Intl.NumberFormat('ru-UZ', { style: 'decimal', maximumFractionDigits: 0 }).format(n) + ' UZS';
 }
 
 function KpiCard({ metric }: { metric: KpiMetric }) {
@@ -147,11 +145,11 @@ function DcfBlock() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {[
             { label: 'WACC', value: `${(dcf.wacc * 100).toFixed(1)}%` },
-            { label: 'EV (Enterprise Value)', value: fmtUZS(dcf.enterprise_value) },
-            { label: 'Equity Value', value: fmtUZS(dcf.equity_value) },
-            { label: 'Intrinsic Value / акция', value: fmtUZS(dcf.intrinsic_value_per_share) },
-            { label: 'PV of FCFF', value: fmtUZS(dcf.pv_fcff) },
-            { label: 'Terminal Value', value: fmtUZS(dcf.terminal_value) },
+            { label: 'EV (Enterprise Value)', value: formatCurrencyUZS(dcf.enterprise_value) },
+            { label: 'Equity Value', value: formatCurrencyUZS(dcf.equity_value) },
+            { label: 'Intrinsic Value / акция', value: formatCurrencyUZS(dcf.intrinsic_value_per_share) },
+            { label: 'PV of FCFF', value: formatCurrencyUZS(dcf.pv_fcff) },
+            { label: 'Terminal Value', value: formatCurrencyUZS(dcf.terminal_value) },
             {
               label: 'Upside / Downside',
               value: dcf.upside_pct != null ? `${dcf.upside_pct > 0 ? '+' : ''}${dcf.upside_pct.toFixed(1)}%` : '---',
@@ -196,7 +194,7 @@ function MultipliersBlock() {
     { key: 'dividend_yield', label: 'Div Yield', bench: '> 3%', desc: 'Дивидендная доходность', suffix: '%' },
   ];
 
-  if (loading) return <div className="text-center py-4 text-gray-400">⏳ Загружаем мультипликаторы...</div>;
+  if (loading) return <LoadingCard rows={3} />;
 
   return (
     <div>
@@ -260,13 +258,13 @@ export default function AnalyticsAnalyticsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">⏳ Рассчитываем коэффициенты...</div>
+        <LoadingCard rows={4} />
       ) : kpiGroups.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-200">
-          <div className="text-5xl mb-4">📊</div>
-          <p className="text-gray-500 font-medium">Коэффициенты рассчитываются автоматически</p>
-          <p className="text-sm text-gray-400 mt-1">Сначала загрузите финансовые данные в разделе «Портфели»</p>
-        </div>
+        <EmptyState
+          icon={<span>📊</span>}
+          title="Коэффициенты рассчитываются автоматически"
+          description="Сначала загрузите финансовые данные в разделе «Портфели»"
+        />
       ) : (
         kpiGroups.map((group, gi) => (
           <div key={gi}>

@@ -7,6 +7,8 @@ import {
   ResponsiveContainer, Cell, Legend,
 } from 'recharts';
 import { ddScoring, decisions, companyLookup, ddDocuments } from '@/lib/api';
+import { EmptyState as EmptyStateUI } from '@/components/ui/EmptyState';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 import {
   CompanyProfileCard,
   DueDiligenceLayout,
@@ -145,12 +147,7 @@ const IconTrend = () => (
 
 // ─── Shared UI Components ───────────────────────────────────────────────────
 function LoadingState({ text = 'Вычисление...' }: { text?: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '14px' }}>
-      <IconSpinner />
-      <span style={{ color: C.textMuted, fontSize: '14px', fontWeight: 500 }}>{text}</span>
-    </div>
-  );
+  return <LoadingCard rows={4} />;
 }
 
 function ErrorState({ message }: { message: string }) {
@@ -166,12 +163,7 @@ function ErrorState({ message }: { message: string }) {
 }
 
 function EmptyState({ text = 'Введите параметры и запустите DD-скоринг' }: { text?: string }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', gap: '14px' }}>
-      <IconEmpty />
-      <span style={{ color: C.textMuted, fontSize: '14px', textAlign: 'center', maxWidth: '300px', lineHeight: 1.6 }}>{text}</span>
-    </div>
-  );
+  return <EmptyStateUI title={text} />;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

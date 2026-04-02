@@ -8,6 +8,6 @@ export default function AnalyticsIndex() {
     router.replace('/analytics/portfolios');
   }, [router]);
   return (
-    <div className="p-6 text-gray-400 text-sm">⏳ Перенаправляем...</div>
+    <div className="p-6 text-gray-400 text-sm">Перенаправляем...</div>
   );
 }

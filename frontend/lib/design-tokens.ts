@@ -268,6 +268,23 @@ export const componentStyles = {
   },
 } as const;
 
+/* ─── E0-02: Shorthand Design Tokens ─── */
+export const COLORS = {
+  primary: '#1D4ED8',
+  primaryLight: '#DBEAFE',
+  success: '#16A34A',
+  danger: '#DC2626',
+  warning: '#D97706',
+  neutral: '#6B7280',
+  nsbu: '#3B82F6',
+  ifrs: '#8B5CF6',
+  islamic: '#059669',
+} as const;
+
+export const SPACING = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
+export const RADIUS = { sm: 6, md: 8, lg: 12, xl: 16 } as const;
+export const FONT_SIZE = { xs: 11, sm: 12, md: 14, lg: 16, xl: 20, xxl: 24 } as const;
+
 /* ─── Status Badge Colors ─── */
 export const statusColors: Record<string, { bg: string; text: string; border: string }> = {
   active:      { bg: colors.success[50],  text: colors.success[700], border: colors.success[200] },

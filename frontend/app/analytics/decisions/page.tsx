@@ -1,5 +1,8 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { formatCurrencyUZS, formatNumber, formatDateRu } from '@/lib/formatters';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingCard } from '@/components/ui/LoadingCard';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -71,11 +74,6 @@ const TYPE_CONFIG: Record<DecisionType, { label: string; color: string; icon: st
   hedge: { label: 'Хеджировать', color: 'bg-purple-500', icon: '🟣' },
 };
 
-function fmtUZS(n: number | null | undefined): string {
-  if (n === null || n === undefined) return '---';
-  return new Intl.NumberFormat('ru-UZ', { style: 'decimal', maximumFractionDigits: 0 }).format(n) + ' UZS';
-}
-
 function ImpactCalculator({ form }: { form: Partial<Decision> }) {
   const [impact, setImpact] = useState<ImpactRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,7 +113,7 @@ function ImpactCalculator({ form }: { form: Partial<Decision> }) {
   useEffect(() => { fetchImpact(); }, [fetchImpact]);
 
   if (!form.assetName || !form.quantity || !form.pricePerUnit) return null;
-  if (loading) return <div className="p-4 text-slate-400 text-sm">⏳ Пересчитываем показатели...</div>;
+  if (loading) return <LoadingCard rows={3} />;
   if (!impact.length) return null;
 
   return (
@@ -359,7 +357,7 @@ export default function DecisionsPage() {
         {totalAmount > 0 && (
           <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <p className="text-sm text-blue-700">
-              <span className="font-semibold">💰 Общая сумма сделки:</span> {fmtUZS(totalAmount)}
+              <span className="font-semibold">💰 Общая сумма сделки:</span> {formatCurrencyUZS(totalAmount)}
             </p>
           </div>
         )}
@@ -438,12 +436,12 @@ export default function DecisionsPage() {
             className="text-xs px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">Обновить</button>
         </div>
         {histLoading ? (
-          <p className="text-sm text-gray-400">⏳ Загружаем историю...</p>
+          <LoadingCard rows={3} />
         ) : history.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-4xl mb-2">📚</p>
-            <p className="text-gray-500 text-sm">Решения ещё не создавались</p>
-          </div>
+          <EmptyState
+            icon={<span>📚</span>}
+            title="Решения ещё не создавались"
+          />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -471,10 +469,10 @@ export default function DecisionsPage() {
                       </span>
                     </td>
                     <td className="py-2 pr-4 text-gray-800">{item.asset_name} {item.ticker && <span className="text-gray-400">({item.ticker})</span>}</td>
-                    <td className="py-2 pr-4 text-right">{item.quantity?.toLocaleString('ru-UZ')}</td>
-                    <td className="py-2 pr-4 text-right">{fmtUZS(item.price_per_unit)}</td>
+                    <td className="py-2 pr-4 text-right">{item.quantity != null ? formatNumber(item.quantity) : '---'}</td>
+                    <td className="py-2 pr-4 text-right">{formatCurrencyUZS(item.price_per_unit)}</td>
                     <td className="py-2 text-right text-gray-400 text-xs">
-                      {item.created_at ? new Date(item.created_at).toLocaleDateString('ru-RU') : '—'}
+                      {item.created_at ? formatDateRu(item.created_at, { format: 'short' }) : '—'}
                     </td>
                   </tr>
                 ))}
