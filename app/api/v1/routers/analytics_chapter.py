@@ -4,7 +4,7 @@ Uses real data from _portfolio_cache when available.
 E2-08: Full NSBU+IFRS Excel export endpoint.
 """
 import io
-from fastapi import APIRouter, Depends, Form, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
@@ -447,9 +447,13 @@ async def calculate_impact(data: ImpactInput = ImpactInput()):
 # POST /analytics/export/full-report — E2-08: Full NSBU+IFRS Excel export
 # ---------------------------------------------------------------------------
 
+class ExportRequest(BaseModel):
+    portfolio_id: int = 0
+
+
 @router.post("/analytics/export/full-report")
 def export_full_report(
-    portfolio_id: int = Form(0),
+    req: ExportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -763,7 +767,7 @@ def export_full_report(
 
     org_name = company_info.get("name", "portfolio") if company_info else "portfolio"
     safe_name = "".join(c for c in org_name if c.isalnum() or c in " _-").strip()[:30] or "report"
-    filename = f"report_{safe_name}_{portfolio_id}.xlsx"
+    filename = f"report_{safe_name}_{req.portfolio_id}.xlsx"
 
     return StreamingResponse(
         output,

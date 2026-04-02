@@ -18,7 +18,7 @@ class ShockParameter(BaseModel):
 
 
 class StressTestRequest(BaseModel):
-    portfolio_id: int
+    portfolio_id: Optional[int] = None
     scenario: str = Field(
         default="financial_crisis",
         description="Один из: financial_crisis, pandemic, rate_hike, currency_shock, stagflation, custom"

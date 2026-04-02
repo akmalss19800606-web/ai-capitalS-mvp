@@ -75,18 +75,26 @@ def create_stress_test(
 ):
     """Запуск стресс-теста портфеля."""
     try:
-        portfolio = db.query(Portfolio).filter(
-            Portfolio.id == req.portfolio_id
-        ).first()
+        # Resolve portfolio: use provided id or fall back to first available
+        portfolio_id = req.portfolio_id
+        if portfolio_id is not None:
+            portfolio = db.query(Portfolio).filter(
+                Portfolio.id == portfolio_id
+            ).first()
+        else:
+            portfolio = db.query(Portfolio).order_by(Portfolio.id).first()
+
         if not portfolio:
             raise HTTPException(status_code=404, detail="Портфель не найден")
 
+        portfolio_id = portfolio.id
+
         # Собираем активы из решений портфеля
         decisions = db.query(InvestmentDecision).filter(
-            InvestmentDecision.portfolio_id == req.portfolio_id,
+            InvestmentDecision.portfolio_id == portfolio_id,
         ).all()
 
-        logger.info(f"StressTest: portfolio_id={req.portfolio_id}, decisions={len(decisions)}, scenario={req.scenario}")
+        logger.info(f"StressTest: portfolio_id={portfolio_id}, decisions={len(decisions)}, scenario={req.scenario}")
 
         assets = []
         for d in decisions:
@@ -110,7 +118,7 @@ def create_stress_test(
         )
 
         st = StressTest(
-            portfolio_id=req.portfolio_id,
+            portfolio_id=portfolio_id,
             user_id=current_user.id,
             scenario_name=result["scenario_name"],
             scenario_description=result["scenario_description"],
@@ -181,15 +189,23 @@ def run_dual_stress_test(
     3. Вернуть оба результата + сравнение
     """
     try:
-        portfolio = db.query(Portfolio).filter(
-            Portfolio.id == req.portfolio_id
-        ).first()
+        # Resolve portfolio: use provided id or fall back to first available
+        portfolio_id = req.portfolio_id
+        if portfolio_id is not None:
+            portfolio = db.query(Portfolio).filter(
+                Portfolio.id == portfolio_id
+            ).first()
+        else:
+            portfolio = db.query(Portfolio).order_by(Portfolio.id).first()
+
         if not portfolio:
             raise HTTPException(status_code=404, detail="Портфель не найден")
 
+        portfolio_id = portfolio.id
+
         # ── НСБУ: собираем активы из решений портфеля ──
         decisions = db.query(InvestmentDecision).filter(
-            InvestmentDecision.portfolio_id == req.portfolio_id,
+            InvestmentDecision.portfolio_id == portfolio_id,
         ).all()
 
         nsbu_assets = []
@@ -205,7 +221,7 @@ def run_dual_stress_test(
         if req.custom_shocks:
             custom_shocks = [s.model_dump() for s in req.custom_shocks]
 
-        logger.info(f"DualStressTest: portfolio_id={req.portfolio_id}, nsbu_assets={len(nsbu_assets)}, scenario={req.scenario}")
+        logger.info(f"DualStressTest: portfolio_id={portfolio_id}, nsbu_assets={len(nsbu_assets)}, scenario={req.scenario}")
 
         # Запуск НСБУ стресс-теста
         nsbu_result = run_stress_test(
@@ -217,7 +233,7 @@ def run_dual_stress_test(
 
         # ── МСФО: ищем данные в financial_statements ──
         ifrs_stmt = db.query(FinancialStatement).filter(
-            FinancialStatement.portfolio_id == req.portfolio_id,
+            FinancialStatement.portfolio_id == portfolio_id,
             FinancialStatement.standard == "ifrs",
         ).order_by(FinancialStatement.created_at.desc()).first()
 

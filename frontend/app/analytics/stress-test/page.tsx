@@ -339,7 +339,7 @@ export default function StressTestPage() {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ scenario, severity: severity === 'mild' ? 0.5 : severity === 'moderate' ? 1.0 : severity === 'severe' ? 1.5 : 2.0 }),
+            body: JSON.stringify({ scenario, severity: severity === 'mild' ? 0.5 : severity === 'moderate' ? 1.0 : severity === 'severe' ? 1.5 : 2.0, portfolio_id: 1 }),
           }
         );
         if (res.ok) {

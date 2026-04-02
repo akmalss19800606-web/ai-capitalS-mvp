@@ -22,13 +22,13 @@ export function ExportFullReportButton({ portfolioId, disabled }: ExportFullRepo
         : '';
 
     try {
-      const form = new FormData();
-      form.append('portfolio_id', String(portfolioId));
-
       const res = await fetch(`${apiBase}/api/v1/analytics/export/full-report`, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ portfolio_id: portfolioId }),
       });
 
       if (!res.ok) {
