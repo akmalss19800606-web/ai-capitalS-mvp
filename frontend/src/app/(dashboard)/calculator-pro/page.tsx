@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { apiRequest } from '@/lib/api'
 import { 
   Calculator, BarChart2, GitCompare, Activity, Dice6,
   TrendingUp, Loader2, Download, RefreshCw, Plus, Trash2,
@@ -116,17 +117,20 @@ export default function CalculatorProPage() {
   const [nSimulations, setNSimulations] = useState(10000)
 
   const token = () => typeof window !== 'undefined' ? localStorage.getItem('token') || '' : ''
-  const authHeader = () => ({ 'Authorization': `Bearer \${token()}`, 'Content-Type': 'application/json' })
 
   useEffect(() => {
     const load = async () => {
-      const [bmRes, prRes, txRes] = await Promise.all([
-        fetch('/api/v1/calculator/benchmarks', { headers: authHeader() }).then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/presets').then(r => r.json()).catch(() => ({})),
-        fetch('/api/v1/calculator/tax-rates').then(r => r.json()).catch(() => ({})),
+      const [bmRes, txRes] = await Promise.all([
+        apiRequest('/calculator/benchmarks').catch(() => ({})),
+        apiRequest('/calculator/tax-rates').catch(() => ({})),
       ])
       setBenchmarks(bmRes.benchmarks || [])
-      setPresets(prRes.presets || [])
+      setPresets([
+        { id: 'small_trade', name_ru: 'Малый бизнес — торговля', description: 'Розница, 3 года', prefilled: { initial_investment: 50000, horizon_years: 3, revenue_year1: 80000, revenue_growth_rate: 10, operating_margin: 15 } },
+        { id: 'medium_mfg', name_ru: 'Среднее производство', description: 'Фабрика, 7 лет', prefilled: { initial_investment: 500000, horizon_years: 7, revenue_year1: 300000, revenue_growth_rate: 12, operating_margin: 20 } },
+        { id: 'it_startup', name_ru: 'IT-стартап', description: 'SaaS, 5 лет', prefilled: { initial_investment: 200000, horizon_years: 5, revenue_year1: 150000, revenue_growth_rate: 25, operating_margin: 30 } },
+        { id: 'agriculture', name_ru: 'Сельское хозяйство', description: 'Ферма, 10 лет', prefilled: { initial_investment: 300000, horizon_years: 10, revenue_year1: 200000, revenue_growth_rate: 8, operating_margin: 18 } },
+      ])
       setTaxRates(txRes)
     }
     load()
@@ -152,11 +156,10 @@ export default function CalculatorProPage() {
         ...(dcfParams.discount_rate_mode === 'wacc' ? { wacc_params: waccParams } : {}),
         salvage_value: dcfParams.salvage_value || null,
       }
-      const res = await fetch('/api/v1/calculator/dcf', {
-        method: 'POST', headers: authHeader(), body: JSON.stringify(body)
+      const data = await apiRequest('/calculator/dcf', {
+        method: 'POST', body: JSON.stringify(body)
       })
-      const data = await res.json()
-      if (data.detail) throw new Error(data.detail)
+      if (data?.detail) throw new Error(data.detail)
       setDcfResult(data)
     } catch (e: any) { alert('Ошибка: ' + e.message) }
     finally { setDcfLoading(false) }
@@ -165,12 +168,10 @@ export default function CalculatorProPage() {
   const calcCompare = async () => {
     setCompareLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/compare', {
-        method: 'POST', headers: authHeader(),
-        body: JSON.stringify({ projects: compareProjects, project_names: compareNames })
+      const data = await apiRequest('/calculator/compare', {
+        method: 'POST', body: JSON.stringify({ projects: compareProjects, project_names: compareNames })
       })
-      const data = await res.json()
-      if (data.detail) throw new Error(data.detail)
+      if (data?.detail) throw new Error(data.detail)
       setCompareResult(data)
     } catch (e: any) { alert('Ошибка: ' + e.message) }
     finally { setCompareLoading(false) }
@@ -179,11 +180,9 @@ export default function CalculatorProPage() {
   const calcSensitivity = async () => {
     setSensitLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/sensitivity', {
-        method: 'POST', headers: authHeader(),
-        body: JSON.stringify({ base_params: dcfParams, mode: sensitMode, variation_range_pct: 20 })
+      const data = await apiRequest('/calculator/sensitivity', {
+        method: 'POST', body: JSON.stringify({ base_params: dcfParams, mode: sensitMode, variation_pct: 20 })
       })
-      const data = await res.json()
       setSensitResult(data)
     } catch (e: any) { alert('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
@@ -192,12 +191,10 @@ export default function CalculatorProPage() {
   const calcMonteCarlo = async () => {
     setMcLoading(true)
     try {
-      const res = await fetch('/api/v1/calculator/monte-carlo', {
-        method: 'POST', headers: authHeader(),
-        body: JSON.stringify({ base_params: dcfParams, n_simulations: nSimulations })
+      const data = await apiRequest('/calculator/monte-carlo', {
+        method: 'POST', body: JSON.stringify({ base_params: dcfParams, n_simulations: nSimulations })
       })
-      const data = await res.json()
-      if (data.detail) throw new Error(data.detail)
+      if (data?.detail) throw new Error(data.detail)
       setMcResult(data)
     } catch (e: any) { alert('Ошибка: ' + e.message) }
     finally { setMcLoading(false) }
@@ -677,17 +674,17 @@ export default function CalculatorProPage() {
                 <p className="text-slate-400 text-sm mb-4">Базовый NPV: {formatMoney(sensitResult.base_npv)} | Варьируем ±20%</p>
                 <div className="space-y-3">
                   {sensitResult.tornado.map((item: any) => {
-                    const maxImpact = Math.max(...sensitResult.tornado.map((i: any) => i.impact))
-                    const barWidth = (item.impact / maxImpact) * 100
-                    const isPositive = item.high_npv > item.low_npv
+                    const maxImpact = Math.max(...sensitResult.tornado.map((i: any) => i.npv_range))
+                    const barWidth = (item.npv_range / maxImpact) * 100
+                    const isPositive = item.npv_high > item.npv_low
                     return (
                       <div key={item.variable}>
                         <div className="flex justify-between text-xs text-slate-400 mb-1">
-                          <span>{item.label}</span>
-                          <span>Влияние: {formatMoney(item.impact)}</span>
+                          <span>{item.variable}</span>
+                          <span>Влияние: {formatMoney(item.npv_range)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="w-20 text-right text-xs text-red-400">{formatMoney(item.low_npv)}</div>
+                          <div className="w-20 text-right text-xs text-red-400">{formatMoney(item.npv_low)}</div>
                           <div className="flex-1 h-6 bg-slate-700/50 rounded-lg overflow-hidden relative">
                             <div className="absolute inset-y-0 left-1/2 w-0.5 bg-slate-500" />
                             <div
@@ -698,7 +695,7 @@ export default function CalculatorProPage() {
                               }}
                             />
                           </div>
-                          <div className="w-20 text-xs text-emerald-400">{formatMoney(item.high_npv)}</div>
+                          <div className="w-20 text-xs text-emerald-400">{formatMoney(item.npv_high)}</div>
                         </div>
                       </div>
                     )

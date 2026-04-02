@@ -217,13 +217,17 @@ function CalculatorProPageInner() {
   const [darkMode, setDarkMode] = useState(false)
   useEffect(() => {
     const load = async () => {
-      const [bmRes, prRes, txRes] = await Promise.all([
-        apiRequest('/calculator/benchmarks', { headers: authHeader() }).catch(() => ({})),
-        apiRequest('/calculator/presets', { headers: authHeader() }).catch(() => ({})),
-        apiRequest('/calculator/tax-rates', { headers: authHeader() }).catch(() => ({})),
+      const [bmRes, txRes] = await Promise.all([
+        apiRequest('/calculator/benchmarks').catch(() => ({})),
+        apiRequest('/calculator/tax-rates').catch(() => ({})),
       ])
       setBenchmarks(bmRes.benchmarks || [])
-      setPresets(prRes.presets || [])
+      setPresets([
+        { id: 'small_trade', name_ru: 'Малый бизнес — торговля', description: 'Розница, 3 года', prefilled: { initial_investment: 50000, horizon_years: 3, revenue_year1: 80000, revenue_growth_rate: 10, operating_margin: 15 } },
+        { id: 'medium_mfg', name_ru: 'Среднее производство', description: 'Фабрика, 7 лет', prefilled: { initial_investment: 500000, horizon_years: 7, revenue_year1: 300000, revenue_growth_rate: 12, operating_margin: 20 } },
+        { id: 'it_startup', name_ru: 'IT-стартап', description: 'SaaS, 5 лет', prefilled: { initial_investment: 200000, horizon_years: 5, revenue_year1: 150000, revenue_growth_rate: 25, operating_margin: 30 } },
+        { id: 'agriculture', name_ru: 'Сельское хозяйство', description: 'Ферма, 10 лет', prefilled: { initial_investment: 300000, horizon_years: 10, revenue_year1: 200000, revenue_growth_rate: 8, operating_margin: 18 } },
+      ])
       setTaxRates(txRes)
     }
     load()
@@ -703,7 +707,7 @@ const printResults = () => window.print()
               </button>
             </div>
 
-            <div className={`grid grid-cols-1 md:grid-cols-${compareProjects.length} gap-4`}>
+            <div className={`grid grid-cols-1 ${({1:'grid-cols-1',2:'md:grid-cols-2',3:'md:grid-cols-3',4:'md:grid-cols-4',5:'md:grid-cols-5'} as Record<number,string>)[compareProjects.length] || 'md:grid-cols-3'} gap-4`}>
               {compareProjects.map((proj, idx) => (
                 <div key={idx} className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between">

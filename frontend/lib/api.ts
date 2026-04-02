@@ -303,9 +303,16 @@ export const stockExchange = {
 };
 
 export const calculatorPro = {
-  calculate: (data: unknown) => apiRequest('/calculator/calculate', { method: 'POST', body: JSON.stringify(data) }),
-  templates: () => apiRequest('/calculator/templates'),
+  dcf: (data: unknown) => apiRequest('/calculator/dcf', { method: 'POST', body: JSON.stringify(data) }),
+  compare: (data: unknown) => apiRequest('/calculator/compare', { method: 'POST', body: JSON.stringify(data) }),
+  sensitivity: (data: unknown) => apiRequest('/calculator/sensitivity', { method: 'POST', body: JSON.stringify(data) }),
+  monteCarlo: (data: unknown) => apiRequest('/calculator/monte-carlo', { method: 'POST', body: JSON.stringify(data) }),
+  benchmarks: () => apiRequest('/calculator/benchmarks'),
+  taxRates: () => apiRequest('/calculator/tax-rates'),
   history: () => apiRequest('/calculator/history'),
+  historyItem: (id: number) => apiRequest(`/calculator/history/${id}`),
+  exportPdf: (id: number) => apiRequest(`/calculator/history/${id}/pdf`),
+  exportXlsx: (id: number) => apiRequest(`/calculator/history/${id}/xlsx`),
 };
 
 export const aiAnalytics = {
