@@ -6,6 +6,7 @@ import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 import { AlertSignalList } from '@/components/analytics/AlertSignalList';
+import { ExportFullReportButton } from '@/components/analytics/ExportFullReportButton';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -299,12 +300,7 @@ export default function AnalyticsAnalyticsPage() {
       <MultipliersBlock />
 
       <div className="flex justify-end">
-        <a
-          href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/export/excel`}
-          className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl text-sm font-medium hover:opacity-90"
-        >
-          📥 Скачать полный отчёт Excel (НСБУ + МСФО)
-        </a>
+        <ExportFullReportButton portfolioId={0} />
       </div>
 
       <NextStepBanner

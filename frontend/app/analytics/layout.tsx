@@ -2,6 +2,7 @@ import React from 'react';
 import AnalyticsNav from './AnalyticsNav';
 import { AnalyticsProvider } from '@/contexts/AnalyticsContext';
 import ContextBar from '@/components/analytics/ContextBar';
+import HeaderExportButton from '@/components/analytics/HeaderExportButton';
 
 export default function AnalyticsLayout({
   children,
@@ -19,12 +20,7 @@ export default function AnalyticsLayout({
               Финансовый анализ по стандартам НСБУ и МСФО
             </p>
           </div>
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/export/excel`}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 flex items-center gap-2 w-fit"
-          >
-            📥 Скачать НСБУ + МСФО
-          </a>
+          <HeaderExportButton />
         </div>
 
         {/* Навигация (клиентский компонент) */}

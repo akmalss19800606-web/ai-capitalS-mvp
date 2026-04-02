@@ -458,23 +458,27 @@ def export_full_report(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generate a comprehensive Excel report with NSBU balance, IFRS balance,
-    adjustments, P&L, KPI summary, and stress-test sheets.
+    Generate a comprehensive 15-sheet Excel report covering NSBU + IFRS
+    balance, P&L, cash flow, equity, fixed assets, adjustments, KPIs,
+    stress tests, and investment decisions.
     """
+    from datetime import date as _date
     from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.hyperlink import Hyperlink
 
-    # --- Styling helpers ---
-    BLUE_FILL = PatternFill(start_color="1F4E79", end_color="1F4E79", fill_type="solid")
-    PURPLE_FILL = PatternFill(start_color="5B2C6F", end_color="5B2C6F", fill_type="solid")
+    # --- Styling constants ---
+    BLUE_FILL = PatternFill(start_color="1D4ED8", end_color="1D4ED8", fill_type="solid")
+    PURPLE_FILL = PatternFill(start_color="8B5CF6", end_color="8B5CF6", fill_type="solid")
     GREEN_FILL = PatternFill(start_color="1E8449", end_color="1E8449", fill_type="solid")
     AMBER_FILL = PatternFill(start_color="B7950B", end_color="B7950B", fill_type="solid")
     RED_FILL = PatternFill(start_color="922B21", end_color="922B21", fill_type="solid")
-    GRAY_FILL = PatternFill(start_color="566573", end_color="566573", fill_type="solid")
+    GRAY_FILL = PatternFill(start_color="374151", end_color="374151", fill_type="solid")
     LIGHT_BLUE = PatternFill(start_color="D6EAF8", end_color="D6EAF8", fill_type="solid")
     LIGHT_PURPLE = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")
     WHITE_FONT = Font(bold=True, color="FFFFFF", size=11)
+    TITLE_FONT = Font(bold=True, size=14)
     BOLD = Font(bold=True, size=10)
     NORMAL = Font(size=10)
     HEADER_ALIGN = Alignment(horizontal="center", vertical="center", wrap_text=True)
@@ -509,11 +513,46 @@ def export_full_report(
                 max_len = max(max_len, len(val))
             ws.column_dimensions[col_letter].width = min(max_len + 4, 45)
 
-    def write_no_data(ws, fill):
-        ws.append(["Нет данных. Импортируйте файл 1С."])
+    def write_no_data(ws, _fill=None):
+        ws.append(["Нет данных. Импортируйте файл 1С и запустите конвертацию МСФО."])
         ws.merge_cells(start_row=ws.max_row, start_column=1, end_row=ws.max_row, end_column=4)
         ws[ws.max_row][0].font = Font(italic=True, size=11, color="7F8C8D")
         ws[ws.max_row][0].alignment = Alignment(horizontal="center")
+
+    def write_sheet_header(ws, title, fill, company_info_d):
+        """Write standard rows 1-3 (title, org+period, blank) then row 4 handled by caller."""
+        ws.append([title])
+        ws[ws.max_row][0].font = TITLE_FONT
+        org = company_info_d.get("name", "") if company_info_d else ""
+        period = company_info_d.get("period", "") if company_info_d else ""
+        ws.append([f"Организация: {org}   |   Период: {period}"])
+        ws[ws.max_row][0].font = BOLD
+        ws.append([])  # blank row 3
+
+    def _write_financial_stmt(ws, fill, light_fill, stmt_type, standard, headers, row_builder_fn, row_builder_args):
+        """Generic helper to write a financial statement sheet from DB or cache."""
+        from app.db.models.ifrs import FinancialStatement as FS
+        ws.append(headers)
+        style_header_row(ws, ws.max_row, fill)
+        stmts = db.query(FS).filter(FS.statement_type == stmt_type, FS.standard == standard).order_by(FS.created_at.desc()).limit(2).all()
+        if stmts and stmts[0].data:
+            data = stmts[0].data
+            rows_list = data if isinstance(data, list) else [{k: v} for k, v in data.items()] if isinstance(data, dict) else []
+            for item in rows_list:
+                if isinstance(item, dict):
+                    ws.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+                    r = ws.max_row
+                    is_hdr = item.get("isHeader") or item.get("isTotal")
+                    style_data_cell(ws.cell(r, 1), is_bold=is_hdr)
+                    style_data_cell(ws.cell(r, 2), is_number=True, is_bold=is_hdr)
+                    style_data_cell(ws.cell(r, 3), is_number=True, is_bold=is_hdr)
+                    if item.get("isHeader") and light_fill:
+                        for ci in range(len(headers)):
+                            ws.cell(r, ci + 1).fill = light_fill
+        elif row_builder_fn:
+            row_builder_fn(ws, *row_builder_args)
+        else:
+            write_no_data(ws, fill)
 
     # --- Get cached data ---
     cache = _user_cache(current_user.id)
@@ -523,59 +562,65 @@ def export_full_report(
 
     wb = Workbook()
 
-    # ===================================================================
-    # SHEET 1: Сводка (KPI НСБУ и МСФО)
-    # ===================================================================
-    ws_summary = wb.active
-    ws_summary.title = "Сводка"
-    ws_summary.sheet_properties.tabColor = "1F4E79"
-
-    if company_info:
-        ws_summary.append(["Организация:", company_info.get("name", "")])
-        ws_summary[ws_summary.max_row][0].font = BOLD
-        ws_summary[ws_summary.max_row][1].font = BOLD
-        ws_summary.append(["Период:", company_info.get("period", "")])
-        ws_summary[ws_summary.max_row][0].font = BOLD
-        ws_summary.append([])
-
-    ws_summary.append(["Показатель", "Группа", "Значение", "Норма", "Статус"])
-    style_header_row(ws_summary, ws_summary.max_row, BLUE_FILL)
-
-    agg = _get_balance_aggregates()
-    if agg:
-        for group in _calc_kpis(agg):
-            for m in group["metrics"]:
-                ws_summary.append([
-                    m["label"], group["title"], m["value"], m["norm"], m["status"]
-                ])
-                r = ws_summary.max_row
-                for ci in range(5):
-                    style_data_cell(ws_summary.cell(r, ci + 1), is_number=(ci == 2))
-                # Color status cell
-                status_cell = ws_summary.cell(r, 5)
-                if m["status"] == "ok":
-                    status_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
-                elif m["status"] == "warn":
-                    status_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
-                elif m["status"] == "bad":
-                    status_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
-    else:
-        write_no_data(ws_summary, BLUE_FILL)
-
-    auto_width(ws_summary)
+    # Sheet names (15 total) — order matters for hyperlinks in TOC
+    SHEET_NAMES = [
+        "Содержание",
+        "Баланс НСБУ",
+        "ОПиУ НСБУ",
+        "ДДС НСБУ",
+        "Капитал НСБУ",
+        "Движение ОС",
+        "Баланс МСФО",
+        "Совокупный доход",
+        "ДДС МСФО",
+        "Капитал МСФО",
+        "Корректировки",
+        "Коэффициенты",
+        "Стресс-тест НСБУ",
+        "Стресс-тест МСФО",
+        "Решения",
+    ]
 
     # ===================================================================
-    # SHEET 2: Баланс НСБУ
+    # SHEET 1: Содержание (Table of Contents)
+    # ===================================================================
+    ws_toc = wb.active
+    ws_toc.title = "Содержание"
+    ws_toc.sheet_properties.tabColor = "374151"
+
+    ws_toc.append(["Полный финансовый отчёт"])
+    ws_toc[1][0].font = Font(bold=True, size=16)
+    org_name_display = company_info.get("name", "—") if company_info else "—"
+    inn_display = company_info.get("inn", "—") if company_info else "—"
+    period_display = company_info.get("period", "—") if company_info else "—"
+    ws_toc.append([f"Организация: {org_name_display}"])
+    ws_toc[2][0].font = BOLD
+    ws_toc.append([f"ИНН: {inn_display}"])
+    ws_toc[3][0].font = BOLD
+    ws_toc.append([f"Период: {period_display}"])
+    ws_toc[4][0].font = BOLD
+    ws_toc.append([f"Дата генерации: {_date.today().strftime('%d.%m.%Y')}"])
+    ws_toc[5][0].font = BOLD
+    ws_toc.append([])
+    ws_toc.append(["Содержание:"])
+    ws_toc[7][0].font = Font(bold=True, size=12)
+
+    for idx, sname in enumerate(SHEET_NAMES):
+        row_num = 8 + idx
+        ws_toc.append([f"{idx + 1}. {sname}"])
+        cell = ws_toc.cell(row=row_num, column=1)
+        cell.font = Font(color="1D4ED8", underline="single", size=11)
+        cell.hyperlink = Hyperlink(ref=cell.coordinate, location=f"'{sname}'!A1", display=f"{idx + 1}. {sname}")
+
+    ws_toc.column_dimensions["A"].width = 50
+    auto_width(ws_toc)
+
+    # ===================================================================
+    # SHEET 2: Баланс НСБУ (Form 1)
     # ===================================================================
     ws_nsbu = wb.create_sheet("Баланс НСБУ")
-    ws_nsbu.sheet_properties.tabColor = "2E86C1"
-
-    if company_info:
-        ws_nsbu.append(["Компания:", company_info.get("name", "")])
-        ws_nsbu[ws_nsbu.max_row][0].font = BOLD
-        ws_nsbu.append(["ИНН:", company_info.get("inn", "")])
-        ws_nsbu.append(["Период:", company_info.get("period", "")])
-        ws_nsbu.append([])
+    ws_nsbu.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_nsbu, "Баланс (Форма 1) — НСБУ", BLUE_FILL, company_info)
 
     ws_nsbu.append(["Показатель", "Код", "Текущий период", "Предыдущий период"])
     style_header_row(ws_nsbu, ws_nsbu.max_row, BLUE_FILL)
@@ -594,21 +639,167 @@ def export_full_report(
                     ws_nsbu.cell(r, ci + 1).fill = LIGHT_BLUE
     else:
         write_no_data(ws_nsbu, BLUE_FILL)
-
     auto_width(ws_nsbu)
 
     # ===================================================================
-    # SHEET 3: Баланс МСФО
+    # SHEET 3: ОПиУ НСБУ (Form 2)
+    # ===================================================================
+    ws_pnl_nsbu = wb.create_sheet("ОПиУ НСБУ")
+    ws_pnl_nsbu.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_pnl_nsbu, "Отчёт о прибылях и убытках (Форма 2) — НСБУ", BLUE_FILL, company_info)
+
+    ws_pnl_nsbu.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_pnl_nsbu, ws_pnl_nsbu.max_row, BLUE_FILL)
+
+    from app.db.models.ifrs import FinancialStatement
+    pnl_nsbu_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "P&L",
+        FinancialStatement.standard == "nsbu",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    pnl_nsbu_written = False
+    if pnl_nsbu_stmts and pnl_nsbu_stmts[0].data:
+        stmt_data = pnl_nsbu_stmts[0].data
+        if isinstance(stmt_data, list):
+            for item in stmt_data:
+                ws_pnl_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+                r = ws_pnl_nsbu.max_row
+                is_hdr = item.get("isHeader") or item.get("isTotal")
+                style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=is_hdr)
+                style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+                style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+            pnl_nsbu_written = True
+
+    if not pnl_nsbu_written:
+        # Also try generic P&L statements or cache
+        pnl_generic = db.query(FinancialStatement).filter(
+            FinancialStatement.statement_type == "P&L"
+        ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+        if pnl_generic and pnl_generic[0].data:
+            stmt_data = pnl_generic[0].data
+            if isinstance(stmt_data, list):
+                for item in stmt_data:
+                    ws_pnl_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+                    r = ws_pnl_nsbu.max_row
+                    is_hdr = item.get("isHeader") or item.get("isTotal")
+                    style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=is_hdr)
+                    style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+                    style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+                pnl_nsbu_written = True
+
+    if not pnl_nsbu_written and pnl and (pnl.get("total_revenue_end", 0) or pnl.get("total_expenses_end", 0)):
+        pnl_rows = [
+            ("Выручка (доходы)", pnl.get("total_revenue_end", 0), pnl.get("total_revenue_begin", 0), True),
+            ("Себестоимость (расходы)", pnl.get("total_expenses_end", 0), pnl.get("total_expenses_begin", 0), False),
+            ("Валовая прибыль",
+             pnl.get("total_revenue_end", 0) - pnl.get("total_expenses_end", 0),
+             pnl.get("total_revenue_begin", 0) - pnl.get("total_expenses_begin", 0),
+             True),
+        ]
+        for label, cur, prev, is_hdr in pnl_rows:
+            ws_pnl_nsbu.append([label, cur, prev])
+            r = ws_pnl_nsbu.max_row
+            style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+        pnl_nsbu_written = True
+
+    if not pnl_nsbu_written:
+        write_no_data(ws_pnl_nsbu, BLUE_FILL)
+    auto_width(ws_pnl_nsbu)
+
+    # ===================================================================
+    # SHEET 4: ДДС НСБУ (Form 4 — Cash Flow Statement)
+    # ===================================================================
+    ws_cf_nsbu = wb.create_sheet("ДДС НСБУ")
+    ws_cf_nsbu.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_cf_nsbu, "Отчёт о движении денежных средств (Форма 4) — НСБУ", BLUE_FILL, company_info)
+
+    ws_cf_nsbu.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_cf_nsbu, ws_cf_nsbu.max_row, BLUE_FILL)
+
+    cf_nsbu_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "CF",
+        FinancialStatement.standard == "nsbu",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    if cf_nsbu_stmts and cf_nsbu_stmts[0].data and isinstance(cf_nsbu_stmts[0].data, list):
+        for item in cf_nsbu_stmts[0].data:
+            ws_cf_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_cf_nsbu.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+    else:
+        write_no_data(ws_cf_nsbu, BLUE_FILL)
+    auto_width(ws_cf_nsbu)
+
+    # ===================================================================
+    # SHEET 5: Капитал НСБУ (Form 5 — Changes in Equity)
+    # ===================================================================
+    ws_eq_nsbu = wb.create_sheet("Капитал НСБУ")
+    ws_eq_nsbu.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_eq_nsbu, "Отчёт об изменениях в капитале (Форма 5) — НСБУ", BLUE_FILL, company_info)
+
+    ws_eq_nsbu.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_eq_nsbu, ws_eq_nsbu.max_row, BLUE_FILL)
+
+    eq_nsbu_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "Equity",
+        FinancialStatement.standard == "nsbu",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    if eq_nsbu_stmts and eq_nsbu_stmts[0].data and isinstance(eq_nsbu_stmts[0].data, list):
+        for item in eq_nsbu_stmts[0].data:
+            ws_eq_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_eq_nsbu.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_eq_nsbu.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_eq_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_eq_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+    else:
+        write_no_data(ws_eq_nsbu, BLUE_FILL)
+    auto_width(ws_eq_nsbu)
+
+    # ===================================================================
+    # SHEET 6: Движение ОС (Form 3 — Fixed Assets Movement)
+    # ===================================================================
+    ws_fa = wb.create_sheet("Движение ОС")
+    ws_fa.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_fa, "Движение основных средств (Форма 3) — НСБУ", BLUE_FILL, company_info)
+
+    ws_fa.append(["Группа ОС", "На начало", "Поступило", "Выбыло", "На конец", "Амортизация"])
+    style_header_row(ws_fa, ws_fa.max_row, BLUE_FILL)
+
+    if accounts:
+        gross_fa = accounts.get("0100", {})
+        depr = accounts.get("0200", {})
+        capex_acc = accounts.get("0800", {})
+        fa_begin = (gross_fa.get("previous") or 0)
+        fa_end = (gross_fa.get("current") or 0)
+        depr_begin = (depr.get("previous") or 0)
+        depr_end = (depr.get("current") or 0)
+        capex_val = (capex_acc.get("current") or 0) - (capex_acc.get("previous") or 0)
+        disposed = fa_begin + capex_val - fa_end if fa_begin + capex_val > fa_end else 0
+        ws_fa.append(["Основные средства", fa_begin, max(capex_val, 0), disposed, fa_end, depr_end])
+        r = ws_fa.max_row
+        for ci in range(6):
+            style_data_cell(ws_fa.cell(r, ci + 1), is_number=(ci > 0))
+        ws_fa.append(["Начислено амортизации за период", None, None, None, None, depr_end - depr_begin])
+        r = ws_fa.max_row
+        style_data_cell(ws_fa.cell(r, 1), is_bold=True)
+        style_data_cell(ws_fa.cell(r, 6), is_number=True, is_bold=True)
+    else:
+        write_no_data(ws_fa, BLUE_FILL)
+    auto_width(ws_fa)
+
+    # ===================================================================
+    # SHEET 7: Баланс МСФО (IAS 1 — Financial Position)
     # ===================================================================
     ws_ifrs = wb.create_sheet("Баланс МСФО")
-    ws_ifrs.sheet_properties.tabColor = "7D3C98"
-
-    if company_info:
-        ws_ifrs.append(["Компания:", company_info.get("name", "")])
-        ws_ifrs[ws_ifrs.max_row][0].font = BOLD
-        ws_ifrs.append(["ИНН:", company_info.get("inn", "")])
-        ws_ifrs.append(["Период:", company_info.get("period", "")])
-        ws_ifrs.append([])
+    ws_ifrs.sheet_properties.tabColor = "8B5CF6"
+    write_sheet_header(ws_ifrs, "Отчёт о финансовом положении (IAS 1) — МСФО", PURPLE_FILL, company_info)
 
     ws_ifrs.append(["Показатель", "Примечание", "Текущий период", "Предыдущий период"])
     style_header_row(ws_ifrs, ws_ifrs.max_row, PURPLE_FILL)
@@ -627,14 +818,115 @@ def export_full_report(
                     ws_ifrs.cell(r, ci + 1).fill = LIGHT_PURPLE
     else:
         write_no_data(ws_ifrs, PURPLE_FILL)
-
     auto_width(ws_ifrs)
 
     # ===================================================================
-    # SHEET 4: Корректировки НСБУ → МСФО
+    # SHEET 8: Совокупный доход (IAS 1 — P&L + OCI)
+    # ===================================================================
+    ws_oci = wb.create_sheet("Совокупный доход")
+    ws_oci.sheet_properties.tabColor = "8B5CF6"
+    write_sheet_header(ws_oci, "Отчёт о совокупном доходе (IAS 1) — МСФО", PURPLE_FILL, company_info)
+
+    ws_oci.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_oci, ws_oci.max_row, PURPLE_FILL)
+
+    oci_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "P&L",
+        FinancialStatement.standard == "ifrs",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    if oci_stmts and oci_stmts[0].data and isinstance(oci_stmts[0].data, list):
+        for item in oci_stmts[0].data:
+            ws_oci.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_oci.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_oci.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_oci.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_oci.cell(r, 3), is_number=True, is_bold=is_hdr)
+            if item.get("isHeader"):
+                for ci in range(3):
+                    ws_oci.cell(r, ci + 1).fill = LIGHT_PURPLE
+    elif pnl and (pnl.get("total_revenue_end", 0) or pnl.get("total_expenses_end", 0)):
+        rev_e = pnl.get("total_revenue_end", 0)
+        exp_e = pnl.get("total_expenses_end", 0)
+        rev_b = pnl.get("total_revenue_begin", 0)
+        exp_b = pnl.get("total_expenses_begin", 0)
+        for label, cur, prev, hdr in [
+            ("Выручка", rev_e, rev_b, True),
+            ("Себестоимость", exp_e, exp_b, False),
+            ("Операционная прибыль", rev_e - exp_e, rev_b - exp_b, True),
+            ("Прочий совокупный доход (OCI)", 0, 0, False),
+            ("Итого совокупный доход", rev_e - exp_e, rev_b - exp_b, True),
+        ]:
+            ws_oci.append([label, cur, prev])
+            r = ws_oci.max_row
+            style_data_cell(ws_oci.cell(r, 1), is_bold=hdr)
+            style_data_cell(ws_oci.cell(r, 2), is_number=True, is_bold=hdr)
+            style_data_cell(ws_oci.cell(r, 3), is_number=True, is_bold=hdr)
+    else:
+        write_no_data(ws_oci, PURPLE_FILL)
+    auto_width(ws_oci)
+
+    # ===================================================================
+    # SHEET 9: ДДС МСФО (IAS 7)
+    # ===================================================================
+    ws_cf_ifrs = wb.create_sheet("ДДС МСФО")
+    ws_cf_ifrs.sheet_properties.tabColor = "8B5CF6"
+    write_sheet_header(ws_cf_ifrs, "Отчёт о движении денежных средств (IAS 7) — МСФО", PURPLE_FILL, company_info)
+
+    ws_cf_ifrs.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_cf_ifrs, ws_cf_ifrs.max_row, PURPLE_FILL)
+
+    cf_ifrs_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "CF",
+        FinancialStatement.standard == "ifrs",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    if cf_ifrs_stmts and cf_ifrs_stmts[0].data and isinstance(cf_ifrs_stmts[0].data, list):
+        for item in cf_ifrs_stmts[0].data:
+            ws_cf_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_cf_ifrs.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_cf_ifrs.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_cf_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_cf_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
+    else:
+        write_no_data(ws_cf_ifrs, PURPLE_FILL)
+    auto_width(ws_cf_ifrs)
+
+    # ===================================================================
+    # SHEET 10: Капитал МСФО (IAS 1 — Changes in Equity)
+    # ===================================================================
+    ws_eq_ifrs = wb.create_sheet("Капитал МСФО")
+    ws_eq_ifrs.sheet_properties.tabColor = "8B5CF6"
+    write_sheet_header(ws_eq_ifrs, "Отчёт об изменениях в капитале (IAS 1) — МСФО", PURPLE_FILL, company_info)
+
+    ws_eq_ifrs.append(["Показатель", "Текущий период", "Предыдущий период"])
+    style_header_row(ws_eq_ifrs, ws_eq_ifrs.max_row, PURPLE_FILL)
+
+    eq_ifrs_stmts = db.query(FinancialStatement).filter(
+        FinancialStatement.statement_type == "Equity",
+        FinancialStatement.standard == "ifrs",
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+
+    if eq_ifrs_stmts and eq_ifrs_stmts[0].data and isinstance(eq_ifrs_stmts[0].data, list):
+        for item in eq_ifrs_stmts[0].data:
+            ws_eq_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_eq_ifrs.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_eq_ifrs.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_eq_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_eq_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
+    else:
+        write_no_data(ws_eq_ifrs, PURPLE_FILL)
+    auto_width(ws_eq_ifrs)
+
+    # ===================================================================
+    # SHEET 11: Корректировки НСБУ → МСФО
     # ===================================================================
     ws_adj = wb.create_sheet("Корректировки")
     ws_adj.sheet_properties.tabColor = "B7950B"
+    write_sheet_header(ws_adj, "Корректировки НСБУ → МСФО", AMBER_FILL, company_info)
 
     ws_adj.append(["Тип", "Счёт", "Сумма НСБУ", "Сумма МСФО", "Разница", "Описание"])
     style_header_row(ws_adj, ws_adj.max_row, AMBER_FILL)
@@ -663,7 +955,6 @@ def export_full_report(
             for ci in range(6):
                 style_data_cell(ws_adj.cell(r, ci + 1), is_number=(ci in (2, 3, 4)))
     elif accounts:
-        # Fall back to diff rows from cache
         for row in _build_diff_rows(accounts):
             diff_val = round(row["ifrs"] - row["nsbu"], 2) if row["nsbu"] is not None and row["ifrs"] is not None else None
             ws_adj.append(["", "", row["nsbu"], row["ifrs"], diff_val, row.get("reason", "")])
@@ -672,93 +963,200 @@ def export_full_report(
                 style_data_cell(ws_adj.cell(r, ci + 1), is_number=(ci in (2, 3, 4)))
     else:
         write_no_data(ws_adj, AMBER_FILL)
-
     auto_width(ws_adj)
 
     # ===================================================================
-    # SHEET 5: ОПиУ (Отчёт о прибылях и убытках)
+    # SHEET 12: Коэффициенты (KPIs — НСБУ и МСФО рядом)
     # ===================================================================
-    ws_pnl = wb.create_sheet("ОПиУ")
-    ws_pnl.sheet_properties.tabColor = "1E8449"
+    ws_kpi = wb.create_sheet("Коэффициенты")
+    ws_kpi.sheet_properties.tabColor = "1E8449"
+    write_sheet_header(ws_kpi, "Финансовые коэффициенты (НСБУ и МСФО)", GREEN_FILL, company_info)
 
-    ws_pnl.append(["Показатель", "Текущий период", "Предыдущий период"])
-    style_header_row(ws_pnl, ws_pnl.max_row, GREEN_FILL)
+    ws_kpi.append(["Показатель", "Группа", "Значение", "Норма", "Статус"])
+    style_header_row(ws_kpi, ws_kpi.max_row, GREEN_FILL)
 
-    from app.db.models.ifrs import FinancialStatement
-    pnl_statements = db.query(FinancialStatement).filter(
-        FinancialStatement.statement_type == "P&L"
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
-
-    if pnl_statements and pnl_statements[0].data:
-        stmt_data = pnl_statements[0].data
-        if isinstance(stmt_data, list):
-            for item in stmt_data:
-                ws_pnl.append([
-                    item.get("label", ""),
-                    item.get("current", item.get("amount")),
-                    item.get("previous", None),
+    agg = _get_balance_aggregates()
+    if agg:
+        for group in _calc_kpis(agg):
+            for m in group["metrics"]:
+                ws_kpi.append([
+                    m["label"], group["title"], m["value"], m["norm"], m["status"]
                 ])
-                r = ws_pnl.max_row
-                is_hdr = item.get("isHeader") or item.get("isTotal")
-                style_data_cell(ws_pnl.cell(r, 1), is_bold=is_hdr)
-                style_data_cell(ws_pnl.cell(r, 2), is_number=True, is_bold=is_hdr)
-                style_data_cell(ws_pnl.cell(r, 3), is_number=True, is_bold=is_hdr)
-        elif isinstance(stmt_data, dict):
-            for key, val in stmt_data.items():
-                ws_pnl.append([key, val, None])
-                r = ws_pnl.max_row
-                for ci in range(3):
-                    style_data_cell(ws_pnl.cell(r, ci + 1), is_number=(ci > 0))
-    elif pnl and (pnl.get("total_revenue_end", 0) or pnl.get("total_expenses_end", 0)):
-        # Build from cache PnL data
-        pnl_rows = [
-            ("Выручка (доходы)", pnl.get("total_revenue_end", 0), pnl.get("total_revenue_begin", 0), True),
-            ("Себестоимость (расходы)", pnl.get("total_expenses_end", 0), pnl.get("total_expenses_begin", 0), False),
-            ("Валовая прибыль",
-             pnl.get("total_revenue_end", 0) - pnl.get("total_expenses_end", 0),
-             pnl.get("total_revenue_begin", 0) - pnl.get("total_expenses_begin", 0),
-             True),
-        ]
-        for label, cur, prev, is_hdr in pnl_rows:
-            ws_pnl.append([label, cur, prev])
-            r = ws_pnl.max_row
-            style_data_cell(ws_pnl.cell(r, 1), is_bold=is_hdr)
-            style_data_cell(ws_pnl.cell(r, 2), is_number=True, is_bold=is_hdr)
-            style_data_cell(ws_pnl.cell(r, 3), is_number=True, is_bold=is_hdr)
+                r = ws_kpi.max_row
+                for ci in range(5):
+                    style_data_cell(ws_kpi.cell(r, ci + 1), is_number=(ci == 2))
+                status_cell = ws_kpi.cell(r, 5)
+                if m["status"] == "ok":
+                    status_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+                elif m["status"] == "warn":
+                    status_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
+                elif m["status"] == "bad":
+                    status_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
     else:
-        write_no_data(ws_pnl, GREEN_FILL)
-
-    auto_width(ws_pnl)
+        write_no_data(ws_kpi, GREEN_FILL)
+    auto_width(ws_kpi)
 
     # ===================================================================
-    # SHEET 6: Стресс-тест
+    # SHEET 13: Стресс-тест НСБУ
     # ===================================================================
-    ws_stress = wb.create_sheet("Стресс-тест")
-    ws_stress.sheet_properties.tabColor = "922B21"
+    ws_stress_nsbu = wb.create_sheet("Стресс-тест НСБУ")
+    ws_stress_nsbu.sheet_properties.tabColor = "922B21"
+    write_sheet_header(ws_stress_nsbu, "Стресс-тест — НСБУ", RED_FILL, company_info)
 
-    ws_stress.append(["Сценарий", "Стоимость до", "Стоимость после", "Потеря %", "Макс. потеря актива %", "Восстановление (мес.)"])
-    style_header_row(ws_stress, ws_stress.max_row, RED_FILL)
+    ws_stress_nsbu.append(["Показатель", "Базовое значение", "Стресс-значение", "Изменение %", "Статус"])
+    style_header_row(ws_stress_nsbu, ws_stress_nsbu.max_row, RED_FILL)
 
-    from app.db.models.stress_retrospective import StressTest as StressTestModel
-    stress_tests = db.query(StressTestModel).order_by(StressTestModel.created_at.desc()).limit(20).all()
+    if agg:
+        for sc_key, sc in _DEFAULT_SCENARIOS.items():
+            ws_stress_nsbu.append([f"--- {sc['name']} ---", "", "", "", ""])
+            r = ws_stress_nsbu.max_row
+            for ci in range(5):
+                ws_stress_nsbu.cell(r, ci + 1).font = BOLD
+                ws_stress_nsbu.cell(r, ci + 1).fill = PatternFill(start_color="F5B7B1", end_color="F5B7B1", fill_type="solid")
 
-    if stress_tests:
-        for st in stress_tests:
-            ws_stress.append([
-                st.scenario_name or "",
-                st.portfolio_value_before,
-                st.portfolio_value_after,
-                round(st.total_loss_pct, 2) if st.total_loss_pct is not None else None,
-                round(st.max_single_asset_loss_pct, 2) if st.max_single_asset_loss_pct is not None else None,
-                round(st.recovery_time_months, 1) if st.recovery_time_months is not None else None,
+            stressed_rev = agg["revenue"] * (1 + sc["revenue_shock"])
+            stressed_exp = agg["expenses"] * (1 + sc["cost_shock"])
+            interest_extra = agg["lt_liabilities"] * sc["interest_shock"] * 0.10
+            fx_extra = agg["total_assets"] * 0.05 * sc["fx_shock"]
+            stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
+            stressed_agg = dict(agg)
+            stressed_agg["revenue"] = stressed_rev
+            stressed_agg["expenses"] = stressed_exp
+            stressed_agg["net_profit"] = stressed_np
+
+            baseline_flat = _kpi_flat(agg)
+            stressed_flat = _kpi_flat(stressed_agg)
+            labels = _kpi_labels()
+
+            for key, base_val in baseline_flat.items():
+                stressed_val = stressed_flat.get(key, 0)
+                delta_pct = round((stressed_val - base_val) / base_val * 100, 1) if base_val != 0 else 0.0
+                ws_stress_nsbu.append([
+                    labels.get(key, key), round(base_val, 4), round(stressed_val, 4),
+                    delta_pct, _stress_status(delta_pct),
+                ])
+                r = ws_stress_nsbu.max_row
+                for ci in range(5):
+                    style_data_cell(ws_stress_nsbu.cell(r, ci + 1), is_number=(ci in (1, 2, 3)))
+                st_cell = ws_stress_nsbu.cell(r, 5)
+                status_val = _stress_status(delta_pct)
+                if status_val == "ok":
+                    st_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+                elif status_val == "warn":
+                    st_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
+                elif status_val == "bad":
+                    st_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+    else:
+        # Fallback: DB stress tests
+        from app.db.models.stress_retrospective import StressTest as StressTestModel
+        stress_tests = db.query(StressTestModel).order_by(StressTestModel.created_at.desc()).limit(20).all()
+        if stress_tests:
+            # Rewrite headers for DB data
+            ws_stress_nsbu.delete_rows(ws_stress_nsbu.max_row)
+            ws_stress_nsbu.append(["Сценарий", "Стоимость до", "Стоимость после", "Потеря %", "Макс. потеря актива %"])
+            style_header_row(ws_stress_nsbu, ws_stress_nsbu.max_row, RED_FILL)
+            for st in stress_tests:
+                ws_stress_nsbu.append([
+                    st.scenario_name or "", st.portfolio_value_before, st.portfolio_value_after,
+                    round(st.total_loss_pct, 2) if st.total_loss_pct is not None else None,
+                    round(st.max_single_asset_loss_pct, 2) if st.max_single_asset_loss_pct is not None else None,
+                ])
+                r = ws_stress_nsbu.max_row
+                for ci in range(5):
+                    style_data_cell(ws_stress_nsbu.cell(r, ci + 1), is_number=(ci > 0))
+        else:
+            write_no_data(ws_stress_nsbu, RED_FILL)
+    auto_width(ws_stress_nsbu)
+
+    # ===================================================================
+    # SHEET 14: Стресс-тест МСФО
+    # ===================================================================
+    ws_stress_ifrs = wb.create_sheet("Стресс-тест МСФО")
+    ws_stress_ifrs.sheet_properties.tabColor = "922B21"
+    write_sheet_header(ws_stress_ifrs, "Стресс-тест — МСФО", RED_FILL, company_info)
+
+    ws_stress_ifrs.append(["Показатель", "Базовое значение", "Стресс-значение", "Изменение %", "Статус"])
+    style_header_row(ws_stress_ifrs, ws_stress_ifrs.max_row, RED_FILL)
+
+    if agg:
+        for sc_key, sc in _DEFAULT_SCENARIOS.items():
+            ws_stress_ifrs.append([f"--- {sc['name']} ---", "", "", "", ""])
+            r = ws_stress_ifrs.max_row
+            for ci in range(5):
+                ws_stress_ifrs.cell(r, ci + 1).font = BOLD
+                ws_stress_ifrs.cell(r, ci + 1).fill = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")
+
+            stressed_rev = agg["revenue"] * (1 + sc["revenue_shock"])
+            stressed_exp = agg["expenses"] * (1 + sc["cost_shock"])
+            interest_extra = agg["lt_liabilities"] * sc["interest_shock"] * 0.10
+            fx_extra = agg["total_assets"] * 0.05 * sc["fx_shock"]
+            stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
+            stressed_agg = dict(agg)
+            stressed_agg["revenue"] = stressed_rev
+            stressed_agg["expenses"] = stressed_exp
+            stressed_agg["net_profit"] = stressed_np
+
+            baseline_flat = _kpi_flat(agg)
+            stressed_flat = _kpi_flat(stressed_agg)
+            labels = _kpi_labels()
+
+            for key, base_val in baseline_flat.items():
+                stressed_val = stressed_flat.get(key, 0)
+                delta_pct = round((stressed_val - base_val) / base_val * 100, 1) if base_val != 0 else 0.0
+                ws_stress_ifrs.append([
+                    labels.get(key, key), round(base_val, 4), round(stressed_val, 4),
+                    delta_pct, _stress_status(delta_pct),
+                ])
+                r = ws_stress_ifrs.max_row
+                for ci in range(5):
+                    style_data_cell(ws_stress_ifrs.cell(r, ci + 1), is_number=(ci in (1, 2, 3)))
+                st_cell = ws_stress_ifrs.cell(r, 5)
+                status_val = _stress_status(delta_pct)
+                if status_val == "ok":
+                    st_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+                elif status_val == "warn":
+                    st_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
+                elif status_val == "bad":
+                    st_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+    else:
+        write_no_data(ws_stress_ifrs, RED_FILL)
+    auto_width(ws_stress_ifrs)
+
+    # ===================================================================
+    # SHEET 15: Решения (Investment Decisions)
+    # ===================================================================
+    ws_dec = wb.create_sheet("Решения")
+    ws_dec.sheet_properties.tabColor = "374151"
+    write_sheet_header(ws_dec, "Инвестиционные решения", GRAY_FILL, company_info)
+
+    ws_dec.append(["Актив", "Тип", "Статус", "Приоритет", "Категория", "Сумма", "Цена", "Итого", "Дата"])
+    style_header_row(ws_dec, ws_dec.max_row, GRAY_FILL)
+
+    from app.db.models.investment_decision import InvestmentDecision
+    decisions = db.query(InvestmentDecision).filter(
+        InvestmentDecision.created_by == current_user.id,
+    ).order_by(InvestmentDecision.created_at.desc()).limit(100).all()
+
+    if decisions:
+        for d in decisions:
+            total_val = (d.amount or 0) * (d.price or 0)
+            ws_dec.append([
+                d.asset_name or "",
+                d.decision_type.value if d.decision_type else "",
+                d.status.value if d.status else "",
+                d.priority.value if d.priority else "",
+                d.category.value if d.category else "",
+                d.amount,
+                d.price,
+                round(total_val, 2) if total_val else None,
+                d.created_at.strftime("%d.%m.%Y") if d.created_at else "",
             ])
-            r = ws_stress.max_row
-            for ci in range(6):
-                style_data_cell(ws_stress.cell(r, ci + 1), is_number=(ci > 0))
+            r = ws_dec.max_row
+            for ci in range(9):
+                style_data_cell(ws_dec.cell(r, ci + 1), is_number=(ci in (5, 6, 7)))
     else:
-        write_no_data(ws_stress, RED_FILL)
-
-    auto_width(ws_stress)
+        write_no_data(ws_dec, GRAY_FILL)
+    auto_width(ws_dec)
 
     # --- Save and return ---
     output = io.BytesIO()
