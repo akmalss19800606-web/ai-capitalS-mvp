@@ -135,13 +135,16 @@ async def lifespan(app: FastAPI):
         from app.services.news_service import NewsService
         news_svc = NewsService()
         while True:
+            db = None
             try:
                 db = SessionLocal()
                 added = news_svc.fetch_and_store_news(db)
-                db.close()
                 logger.info("News refresh: %d new articles added", added)
             except Exception as exc:
                 logger.error("News refresh error: %s", exc)
+            finally:
+                if db is not None:
+                    db.close()
             time.sleep(3600)  # 60 minutes
 
     news_thread = threading.Thread(target=_news_refresh_loop, daemon=True)

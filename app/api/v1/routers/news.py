@@ -1,6 +1,7 @@
 """
 E1-03: News API endpoints — /dashboard/news (GET) + /dashboard/news/refresh (POST).
 """
+import logging
 import threading
 
 from fastapi import APIRouter, Depends, Query
@@ -11,9 +12,24 @@ from app.db.models.user import User
 from app.db.session import SessionLocal
 from app.services.news_service import NewsService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/dashboard/news", tags=["News"])
 
 _news_service = NewsService()
+
+
+def _refresh_news_background():
+    """Run news refresh in a background thread with its own DB session."""
+    db = SessionLocal()
+    try:
+        service = NewsService()
+        added = service.fetch_and_store_news(db)
+        logger.info("Background news refresh: %d new articles", added)
+    except Exception as exc:
+        logger.error("Background news refresh failed: %s", exc)
+    finally:
+        db.close()
 
 
 @router.get("")
@@ -25,9 +41,20 @@ def get_dashboard_news(
     current_user: User = Depends(get_current_user),
 ):
     """Получить последние новости для дашборда."""
-    articles = _news_service.get_latest_news(
-        db, limit=limit, category=category, source=source
-    )
+    try:
+        articles = _news_service.get_latest_news(
+            db, limit=limit, category=category, source=source
+        )
+    except Exception as exc:
+        logger.error("Error reading news from DB: %s", exc)
+        return {"articles": [], "total": 0}
+
+    # Auto-trigger background refresh when DB has no articles yet
+    if len(articles) == 0:
+        logger.info("No news in DB — auto-triggering background refresh")
+        thread = threading.Thread(target=_refresh_news_background, daemon=True)
+        thread.start()
+
     return {
         "articles": [
             {
@@ -43,16 +70,6 @@ def get_dashboard_news(
         ],
         "total": len(articles),
     }
-
-
-def _refresh_news_background():
-    """Run news refresh in a background thread with its own DB session."""
-    db = SessionLocal()
-    try:
-        service = NewsService()
-        service.fetch_and_store_news(db)
-    finally:
-        db.close()
 
 
 @router.post("/refresh", status_code=202)

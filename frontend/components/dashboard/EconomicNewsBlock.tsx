@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { formatDateRu } from '@/lib/formatters';
@@ -61,6 +61,8 @@ export default function EconomicNewsBlock({ className = '' }: EconomicNewsBlockP
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const fetchNews = useCallback(async () => {
     try {
       setLoading(true);
@@ -69,8 +71,16 @@ export default function EconomicNewsBlock({ className = '' }: EconomicNewsBlockP
       });
       if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
-      setArticles(data.articles || []);
+      const fetched = data.articles || [];
+      setArticles(fetched);
       setError(null);
+      // Auto-retry once after 10s if backend returned empty (it triggers RSS refresh)
+      if (fetched.length === 0 && !retryRef.current) {
+        retryRef.current = setTimeout(() => {
+          retryRef.current = null;
+          fetchNews();
+        }, 10000);
+      }
     } catch {
       setError('Ошибка загрузки новостей');
     } finally {
@@ -97,7 +107,10 @@ export default function EconomicNewsBlock({ className = '' }: EconomicNewsBlockP
   useEffect(() => {
     fetchNews();
     const interval = setInterval(fetchNews, 1800000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (retryRef.current) clearTimeout(retryRef.current);
+    };
   }, [fetchNews]);
 
   return (
@@ -137,13 +150,13 @@ export default function EconomicNewsBlock({ className = '' }: EconomicNewsBlockP
         />
       )}
 
-      {/* Empty */}
+      {/* Empty — backend auto-triggers RSS refresh, retry shortly */}
       {!loading && !error && articles.length === 0 && (
         <EmptyState
           icon="📰"
-          title="Новости временно недоступны"
-          description="Новости появятся после обновления RSS"
-          action={{ label: 'Обновить', onClick: handleRefresh }}
+          title="Загрузка новостей..."
+          description="Идёт обновление RSS-лент. Новости появятся через несколько секунд."
+          action={{ label: 'Обновить сейчас', onClick: handleRefresh }}
         />
       )}
 
