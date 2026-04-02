@@ -55,9 +55,9 @@ interface TornadoItem {
 
 interface BubbleItem {
   name: string;
-  risk: number;
-  return: number;
-  volume: number;
+  x: number;
+  y: number;
+  size: number;
 }
 
 interface HeatCell {
@@ -84,22 +84,22 @@ const DEMO_TORNADO: TornadoItem[] = [
 ];
 
 const DEMO_BUBBLE: BubbleItem[] = [
-  { name: 'Акции', risk: 35, return: 18, volume: 120 },
-  { name: 'Облигации', risk: 10, return: 8, volume: 200 },
-  { name: 'Недвижимость', risk: 15, return: 12, volume: 300 },
-  { name: 'Депозиты', risk: 5, return: 5, volume: 500 },
-  { name: 'Товары', risk: 50, return: 25, volume: 80 },
-  { name: 'Ислам сукук', risk: 8, return: 11, volume: 150 },
+  { name: 'Основные средства', x: 15000000, y: 5, size: 15000000 },
+  { name: 'Запасы', x: 8000000, y: 12, size: 8000000 },
+  { name: 'Дебиторка', x: 5000000, y: 8, size: 5000000 },
+  { name: 'Денежные средства', x: 3000000, y: 2, size: 3000000 },
+  { name: 'Кап. вложения', x: 2000000, y: 15, size: 2000000 },
 ];
 
 const DEMO_HEATMAP = [
-  ['Акции', 12.5, -3.2, 8.1, 15.4, -2.1, 6.8],
-  ['Облигации', 5.2, 4.8, 6.1, -1.2, 7.3, 5.5],
-  ['Недвижимость', 3.1, 8.5, -0.5, 4.2, 9.1, 7.0],
-  ['Депозиты', 2.0, 2.1, 2.2, 2.0, 2.3, 2.1],
-  ['Сукук', 6.5, 5.8, 7.2, 6.0, 5.5, 6.9],
+  ['Выручка', 100, 85, 70, 60, 50, 40],
+  ['Себестоимость', 85, 100, 60, 55, 45, 35],
+  ['Чист. прибыль', 70, 60, 100, 50, 40, 30],
+  ['Активы', 60, 55, 50, 100, 80, 70],
+  ['Капитал', 50, 45, 40, 80, 100, -60],
+  ['Обязательства', 40, 35, 30, 70, -60, 100],
 ];
-const MONTHS = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'];
+const DEMO_HEATMAP_MONTHS = ['Выручка', 'Себестоимость', 'Чист. прибыль', 'Активы', 'Капитал', 'Обязательства'];
 
 function WaterfallChartView({ data }: { data: WaterfallItem[] }) {
   const fmt = (v: number) => {
@@ -163,16 +163,22 @@ function TornadoChartView({ data }: { data: TornadoItem[] }) {
 }
 
 function BubbleChartView({ data }: { data: BubbleItem[] }) {
+  const fmtAxis = (v: number) => {
+    if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(0)} млн`;
+    if (Math.abs(v) >= 1_000) return `${(v / 1_000).toFixed(0)} тыс`;
+    return v.toString();
+  };
+
   return (
     <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-2xl p-6">
-      <h4 className="text-white font-bold mb-2">🧠 Пузырьковая диаграмма — Риск / Доходность / Объём</h4>
-      <p className="text-slate-400 text-xs mb-4">Ось X = Риск (%), Ось Y = Доходность (%), Размер = Объём позиции</p>
+      <h4 className="text-white font-bold mb-2">🧠 Пузырьковая диаграмма — Стоимость актива / Доходность / Объём</h4>
+      <p className="text-slate-400 text-xs mb-4">Ось X = Стоимость актива (UZS), Ось Y = Доходность (%), Размер = Объём</p>
       <ResponsiveContainer width="100%" height={320}>
-        <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+        <ScatterChart margin={{ top: 10, right: 10, bottom: 10, left: 60 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-          <XAxis dataKey="risk" name="Риск" unit="%" tick={{ fill: '#94a3b8', fontSize: 11 }} label={{ value: 'Риск (%)', fill: '#94a3b8', position: 'insideBottom', offset: -5 }} />
-          <YAxis dataKey="return" name="Доходность" unit="%" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-          <ZAxis dataKey="volume" range={[40, 400]} />
+          <XAxis dataKey="x" name="Стоимость" tickFormatter={fmtAxis} tick={{ fill: '#94a3b8', fontSize: 11 }} label={{ value: 'Стоимость актива (UZS)', fill: '#94a3b8', position: 'insideBottom', offset: -5 }} />
+          <YAxis dataKey="y" name="Доходность" unit="%" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+          <ZAxis dataKey="size" range={[40, 400]} />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
             content={({ payload }) => {
@@ -181,7 +187,7 @@ function BubbleChartView({ data }: { data: BubbleItem[] }) {
               return (
                 <div style={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: 8, padding: '8px 12px' }}>
                   <p style={{ color: '#f1f5f9', fontWeight: 600 }}>{d.name}</p>
-                  <p style={{ color: '#94a3b8', fontSize: 12 }}>Риск: {d.risk}% | Доходность: {d.return}%</p>
+                  <p style={{ color: '#94a3b8', fontSize: 12 }}>Стоимость: {formatCurrencyUZS(d.x)} | Доходность: {d.y}%</p>
                 </div>
               );
             }}
@@ -207,18 +213,18 @@ function BubbleChartView({ data }: { data: BubbleItem[] }) {
 
 function HeatmapView({ data, months }: { data: (string | number)[][]; months: string[] }) {
   const getColor = (val: number) => {
-    if (val > 0) return `rgba(16, 185, 129, ${Math.min(val / 20, 1)})`;
-    return `rgba(239, 68, 68, ${Math.min(Math.abs(val) / 20, 1)})`;
+    if (val > 0) return `rgba(16, 185, 129, ${Math.min(val / 100, 1)})`;
+    return `rgba(239, 68, 68, ${Math.min(Math.abs(val) / 100, 1)})`;
   };
 
   return (
     <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 rounded-2xl p-6">
-      <h4 className="text-white font-bold mb-4">🔥 Тепловая карта доходности (%)</h4>
+      <h4 className="text-white font-bold mb-4">🔥 Тепловая карта — корреляция финансовых показателей</h4>
       <div className="overflow-x-auto">
         <table className="text-xs border-collapse w-full">
           <thead>
             <tr>
-              <th className="text-left text-slate-400 pr-4 py-2">Актив</th>
+              <th className="text-left text-slate-400 pr-4 py-2">Показатель</th>
               {months.map(m => (
                 <th key={m} className="text-center text-slate-400 px-2 py-2 font-medium">{m}</th>
               ))}
@@ -234,10 +240,10 @@ function HeatmapView({ data, months }: { data: (string | number)[][]; months: st
                     className="w-14 h-10 text-center rounded-lg mx-0.5"
                     style={{
                       backgroundColor: getColor(cell),
-                      color: Math.abs(cell) > 8 ? 'white' : '#94a3b8',
+                      color: Math.abs(cell) > 40 ? 'white' : '#94a3b8',
                     }}
                   >
-                    {cell > 0 ? '+' : ''}{cell.toFixed(1)}%
+                    {cell > 0 ? '+' : ''}{cell.toFixed(0)}
                   </td>
                 ))}
               </tr>
@@ -245,7 +251,7 @@ function HeatmapView({ data, months }: { data: (string | number)[][]; months: st
           </tbody>
         </table>
       </div>
-      <p className="text-slate-500 text-xs mt-3">🟢 Положительная доходность &nbsp; 🔴 Отрицательная доходность</p>
+      <p className="text-slate-500 text-xs mt-3">🟢 Положительная корреляция &nbsp; 🔴 Отрицательная корреляция &nbsp; Диапазон: -100 … +100</p>
     </div>
   );
 }
@@ -256,22 +262,43 @@ export default function VisualizationsPage() {
   const [tornadoData, setTornadoData] = useState<TornadoItem[]>(DEMO_TORNADO);
   const [bubbleData, setBubbleData] = useState<BubbleItem[]>(DEMO_BUBBLE);
   const [heatmapData, setHeatmapData] = useState<(string | number)[][]>(DEMO_HEATMAP);
+  const [heatmapMonths, setHeatmapMonths] = useState<string[]>(DEMO_HEATMAP_MONTHS);
+  const [isRealData, setIsRealData] = useState(false);
   const { activeStandard } = useAnalytics();
 
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
 
   useEffect(() => {
-    // Попытка загрузить реальные данные из API (fallback на demo)
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/analytics/visualizations`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (!d) return;
-        if (d.waterfall?.length) setWaterfallData(d.waterfall);
-        if (d.tornado?.length) setTornadoData(d.tornado);
-        if (d.bubble?.length) setBubbleData(d.bubble);
-        if (d.heatmap?.length) setHeatmapData(d.heatmap);
+        if (!d || Object.keys(d).length === 0) return;
+
+        // Waterfall: array of WaterfallItem
+        if (Array.isArray(d.waterfall) && d.waterfall.length) {
+          setWaterfallData(d.waterfall);
+          setIsRealData(true);
+        }
+
+        // Tornado: array of TornadoItem
+        if (Array.isArray(d.tornado) && d.tornado.length) {
+          setTornadoData(d.tornado);
+        }
+
+        // Bubble: array of BubbleItem
+        if (Array.isArray(d.bubble) && d.bubble.length) {
+          setBubbleData(d.bubble);
+        }
+
+        // Heatmap: array of arrays
+        if (Array.isArray(d.heatmap) && d.heatmap.length) {
+          setHeatmapData(d.heatmap);
+        }
+        if (Array.isArray(d.heatmap_months) && d.heatmap_months.length) {
+          setHeatmapMonths(d.heatmap_months);
+        }
       })
       .catch(() => { /* остаёмся на demo */ });
   }, [token]);
@@ -279,8 +306,17 @@ export default function VisualizationsPage() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-1">📊 Визуализации</h2>
-        <p className="text-sm text-gray-500">4 типа диаграмм: Каскад, Торнадо, Пузырьковая, Тепловая карта</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">📊 Визуализации</h2>
+            <p className="text-sm text-gray-500">4 типа диаграмм: Каскад, Торнадо, Пузырьковая, Тепловая карта</p>
+          </div>
+          {isRealData ? (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Данные из 1С</span>
+          ) : (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Демо-данные</span>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-[#e2e8f0]">
@@ -303,7 +339,7 @@ export default function VisualizationsPage() {
           {activeTab === 'waterfall' && <WaterfallChartView data={waterfallData} />}
           {activeTab === 'tornado' && <TornadoChartView data={tornadoData} />}
           {activeTab === 'bubble' && <BubbleChartView data={bubbleData} />}
-          {activeTab === 'heatmap' && <HeatmapView data={heatmapData} months={MONTHS} />}
+          {activeTab === 'heatmap' && <HeatmapView data={heatmapData} months={heatmapMonths} />}
         </div>
       </div>
     </div>

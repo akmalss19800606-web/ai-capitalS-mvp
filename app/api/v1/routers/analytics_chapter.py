@@ -4,6 +4,7 @@ Uses real data from _portfolio_cache when available.
 E2-08: Full NSBU+IFRS Excel export endpoint.
 """
 import io
+import math
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -357,74 +358,113 @@ async def run_stress_test(data: StressTestInput = StressTestInput()):
 
 @router.get("/analytics/visualizations")
 async def get_visualizations():
-    """Chart/visualization data from real balance data."""
+    """Chart/visualization data from real balance data.
+
+    Returns arrays ready for Recharts consumption:
+    - waterfall: WaterfallItem[] with cumulative values
+    - tornado: TornadoItem[] with impact percentages
+    - bubble: BubbleItem[] with x/y/size
+    - heatmap: { data: (string|number)[][], months: string[] }
+    """
     agg = _get_balance_aggregates()
     if agg is None:
         return JSONResponse({})
 
-    # Waterfall: balance change flow — start → revenue → expenses → asset changes → end
-    inv_delta = (agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
-    working_cap_delta = (agg["current_assets"] - agg.get("current_assets_prev", 0))
-    waterfall = {
-        "type": "waterfall",
-        "title": "Движение баланса за период",
-        "categories": [
-            "Начало периода", "Выручка", "Расходы",
-            "Инвестиции (ОС)", "Оборотный капитал", "Конец периода",
-        ],
-        "values": [
-            agg["total_assets_prev"],
-            agg["revenue"],
-            -agg["expenses"],
-            inv_delta,
-            working_cap_delta - agg["revenue"] + agg["expenses"] - inv_delta,
-            agg["total_assets"],
-        ],
-    }
+    # --- Waterfall: balance movement (UZS) ---
+    start_balance = agg["total_assets_prev"]
+    revenue = agg["revenue"]
+    costs = -agg["expenses"]
+    inv_delta = -(agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
+    end_balance = agg["total_assets"]
 
-    # Tornado: sensitivity of profit to key factors (±10% each)
-    base_np = agg["net_profit"]
-    factors = [
-        ("Выручка", agg["revenue"] * 0.10, -agg["revenue"] * 0.10),
-        ("Себестоимость", -agg["expenses"] * 0.10, agg["expenses"] * 0.10),
-        ("Процентные расходы", -agg["lt_liabilities"] * 0.01, agg["lt_liabilities"] * 0.01),
-        ("Курсовые разницы", -agg["total_assets"] * 0.005, agg["total_assets"] * 0.005),
+    cum = start_balance
+    waterfall = [
+        {"name": "Начальный баланс", "value": start_balance, "cumulative": cum, "type": "start"},
     ]
-    tornado = {
-        "type": "tornado",
-        "title": "Чувствительность прибыли (±10%)",
-        "baseline": base_np,
-        "factors": [{"name": n, "up": round(u, 0), "down": round(d, 0)} for n, u, d in factors],
-    }
+    cum += revenue
+    waterfall.append({"name": "Выручка", "value": revenue, "cumulative": cum, "type": "positive"})
+    cum += costs
+    waterfall.append({"name": "Себестоимость", "value": costs, "cumulative": cum, "type": "negative"})
+    # Operating expenses = difference not explained by other items
+    op_exp = end_balance - cum - inv_delta
+    if op_exp < 0:
+        cum += op_exp
+        waterfall.append({"name": "Операционные расходы", "value": op_exp, "cumulative": cum, "type": "negative"})
+    if abs(inv_delta) > 0:
+        cum += inv_delta
+        waterfall.append({"name": "Инвестиции", "value": inv_delta, "cumulative": cum, "type": "negative" if inv_delta < 0 else "positive"})
+    waterfall.append({"name": "Итоговый баланс", "value": end_balance, "cumulative": end_balance, "type": "total"})
 
-    # Bubble: asset categories by risk/return/volume
-    bubble = {
-        "type": "bubble",
-        "title": "Активы: риск / доходность / объём",
-        "items": [
-            {"name": "Основные средства", "risk": 0.15, "return_": 0.05, "volume": agg["net_fa"]},
-            {"name": "Запасы", "risk": 0.25, "return_": 0.12, "volume": agg["inventories"]},
-            {"name": "Дебиторка", "risk": 0.30, "return_": 0.08, "volume": agg["receivables"]},
-            {"name": "Денежные средства", "risk": 0.05, "return_": 0.02, "volume": agg["cash"]},
-            {"name": "Кап. вложения", "risk": 0.35, "return_": 0.15, "volume": agg["capex"]},
-        ],
-    }
+    # --- Tornado: sensitivity analysis (impact on net profit ±10%) ---
+    base_np = agg["net_profit"]
+    rev_impact = agg["revenue"] * 0.10
+    cost_impact = agg["expenses"] * 0.10
+    interest_impact = agg["lt_liabilities"] * 0.01
+    fx_impact = agg["total_assets"] * 0.005
+    tornado = []
+    if rev_impact:
+        tornado.append({"factor": "Выручка ±10%", "impact": round(rev_impact / max(abs(base_np), 1) * 100, 1)})
+    if cost_impact:
+        tornado.append({"factor": "Себестоимость ±10%", "impact": round(-cost_impact / max(abs(base_np), 1) * 100, 1)})
+    if interest_impact:
+        tornado.append({"factor": "Процентные расходы ±10%", "impact": round(-interest_impact / max(abs(base_np), 1) * 100, 1)})
+    if fx_impact:
+        tornado.append({"factor": "Курсовые разницы", "impact": round(-fx_impact / max(abs(base_np), 1) * 100, 1)})
+    # Add operating expense sensitivity
+    if agg["expenses"]:
+        overhead = agg["expenses"] * 0.05  # 5% overhead change
+        tornado.append({"factor": "Накладные расходы ±5%", "impact": round(-overhead / max(abs(base_np), 1) * 100, 1)})
 
-    # Heatmap: monthly revenue distribution (estimated — split evenly with seasonal pattern)
-    monthly_rev = agg["revenue"] / 12 if agg["revenue"] else 0
-    seasonal = [0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8]
-    heatmap = {
-        "type": "heatmap",
-        "title": "Оценка помесячной выручки",
-        "months": ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"],
-        "values": [round(monthly_rev * s, 0) for s in seasonal],
+    # --- Bubble: revenue vs profitability vs total assets ---
+    ta = agg["total_assets"]
+    profitability = round(base_np / max(agg["revenue"], 1) * 100, 1) if agg["revenue"] else 0
+    bubble = [
+        {"name": "Основные средства", "x": round(agg["net_fa"]), "y": 5, "size": round(agg["net_fa"])},
+        {"name": "Запасы", "x": round(agg["inventories"]), "y": 12, "size": round(agg["inventories"])},
+        {"name": "Дебиторская задолженность", "x": round(agg["receivables"]), "y": 8, "size": round(agg["receivables"])},
+        {"name": "Денежные средства", "x": round(agg["cash"]), "y": 2, "size": round(agg["cash"])},
+        {"name": "Капитальные вложения", "x": round(agg["capex"]), "y": 15, "size": round(agg["capex"])},
+    ]
+    # Filter out zero-value bubbles
+    bubble = [b for b in bubble if b["size"] > 0]
+
+    # --- Heatmap: correlation matrix of financial metrics ---
+
+    metrics = {
+        "Выручка": agg["revenue"],
+        "Себестоимость": agg["expenses"],
+        "Чист. прибыль": base_np,
+        "Активы": ta,
+        "Капитал": agg["total_equity"],
+        "Обязательства": agg["total_liabilities"],
     }
+    metric_names = list(metrics.keys())
+    metric_vals = list(metrics.values())
+    n = len(metric_names)
+
+    # Build correlation-like heatmap based on normalized ratios
+    heatmap_data = []
+    for i in range(n):
+        row = [metric_names[i]]
+        for j in range(n):
+            if i == j:
+                row.append(100.0)
+            else:
+                vi, vj = metric_vals[i], metric_vals[j]
+                if vi != 0 and vj != 0:
+                    ratio = min(abs(vi), abs(vj)) / max(abs(vi), abs(vj)) * 100
+                    sign = 1 if (vi > 0) == (vj > 0) else -1
+                    row.append(round(ratio * sign, 1))
+                else:
+                    row.append(0.0)
+        heatmap_data.append(row)
 
     return JSONResponse({
         "waterfall": waterfall,
         "tornado": tornado,
         "bubble": bubble,
-        "heatmap": heatmap,
+        "heatmap": heatmap_data,
+        "heatmap_months": metric_names,
     })
 
 
