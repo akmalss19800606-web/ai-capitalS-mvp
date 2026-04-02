@@ -22,17 +22,32 @@ router = APIRouter(tags=["analytics-chapter"])
 # Helpers: extract balance aggregates from cache
 # ---------------------------------------------------------------------------
 
-def _get_balance_aggregates() -> Optional[dict]:
-    """Calculate balance aggregates from cached accounts + pnl data."""
-    accounts = _portfolio_cache.get("accounts")
+def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
+    """Calculate balance aggregates from cached accounts + pnl data.
+
+    When user_id is given, reads from the per-user cache partition.
+    Falls back to scanning all users if user_id is None (backward-compat).
+    """
+    if user_id is not None:
+        cache = _user_cache(user_id)
+        accounts = cache.get("accounts")
+        pnl = cache.get("pnl", {})
+    else:
+        # Backward-compat: scan all user caches for any with accounts
+        accounts = None
+        pnl = {}
+        for uid, ucache in _portfolio_cache.items():
+            if ucache.get("accounts"):
+                accounts = ucache["accounts"]
+                pnl = ucache.get("pnl", {})
+                break
+
     if not accounts:
         return None
 
     def _v(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
         return acc[field] if acc else 0.0
-
-    pnl = _portfolio_cache.get("pnl", {})
 
     net_fa = _v("0100") - _v("0200")
     capex = _v("0800")
@@ -93,6 +108,183 @@ def _get_balance_aggregates() -> Optional[dict]:
         "receivables_prev": receivables_p,
         "cash_prev": cash_p,
     }
+
+
+def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
+    """Build IFRS Comprehensive Income (IAS 1) rows from cache data."""
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    pnl = pnl or {}
+    revenue = pnl.get("total_revenue_end", 0)
+    expenses = pnl.get("total_expenses_end", 0)
+    revenue_prev = pnl.get("total_revenue_start", pnl.get("total_revenue_begin", 0))
+    expenses_prev = pnl.get("total_expenses_start", pnl.get("total_expenses_begin", 0))
+
+    gross_profit = revenue - expenses
+    gross_profit_prev = revenue_prev - expenses_prev
+
+    # IFRS 16 lease adjustments (from account 6970 if exists)
+    lease_payment = _v("6970")
+    if lease_payment > 0:
+        discount_rate = 0.18
+        lease_term = 5
+        pv_factor = (1 - (1 + discount_rate) ** (-lease_term)) / discount_rate
+        rou_asset = lease_payment * pv_factor
+        rou_depreciation = round(rou_asset / lease_term, 2)
+        lease_interest = round(rou_asset * discount_rate, 2)
+    else:
+        rou_depreciation = 0
+        lease_interest = 0
+
+    # IFRS 9 ECL (5% of receivables)
+    receivables = _v("4010") or (_v("2010") + _v("2300"))
+    ecl_impairment = round(receivables * 0.05, 2)
+
+    # IAS 16 revaluation (15% premium on PPE)
+    net_fa = _v("0100") - _v("0200")
+    oci_revaluation = round(net_fa * 0.15, 2)
+
+    profit_before_tax = gross_profit - rou_depreciation - lease_interest - ecl_impairment
+    income_tax = round(profit_before_tax * 0.15, 2) if profit_before_tax > 0 else 0
+    net_profit = profit_before_tax - income_tax
+    total_comprehensive = net_profit + oci_revaluation
+
+    profit_before_tax_prev = gross_profit_prev
+    income_tax_prev = round(profit_before_tax_prev * 0.15, 2) if profit_before_tax_prev > 0 else 0
+    net_profit_prev = profit_before_tax_prev - income_tax_prev
+
+    rows = [
+        {"label": "I. ОТЧЁТ О ПРИБЫЛЯХ И УБЫТКАХ", "current": None, "previous": None, "isHeader": True},
+        {"label": "Выручка", "current": revenue, "previous": revenue_prev, "note": "IAS 18"},
+        {"label": "Себестоимость", "current": -expenses if expenses else None, "previous": -expenses_prev if expenses_prev else None, "note": "IAS 2"},
+        {"label": "Валовая прибыль", "current": gross_profit, "previous": gross_profit_prev, "isTotal": True},
+        {"label": "Амортизация ПП-актива (IFRS 16)", "current": -rou_depreciation if rou_depreciation else None, "previous": None, "note": "IFRS 16"},
+        {"label": "Процентные расходы по аренде (IFRS 16)", "current": -lease_interest if lease_interest else None, "previous": None, "note": "IFRS 16"},
+        {"label": "Обесценение дебиторки (IFRS 9 ECL)", "current": -ecl_impairment if ecl_impairment else None, "previous": None, "note": "IFRS 9"},
+        {"label": "Прибыль до налога", "current": profit_before_tax, "previous": profit_before_tax_prev, "isTotal": True},
+        {"label": "Налог на прибыль", "current": -income_tax if income_tax else None, "previous": -income_tax_prev if income_tax_prev else None, "note": "IAS 12"},
+        {"label": "ЧИСТАЯ ПРИБЫЛЬ", "current": net_profit, "previous": net_profit_prev, "isTotal": True},
+        {"label": "", "current": None, "previous": None},
+        {"label": "II. ПРОЧИЙ СОВОКУПНЫЙ ДОХОД (OCI)", "current": None, "previous": None, "isHeader": True},
+        {"label": "Переоценка ОС (IAS 16)", "current": oci_revaluation if oci_revaluation else None, "previous": None, "note": "IAS 16"},
+        {"label": "ИТОГО СОВОКУПНЫЙ ДОХОД", "current": total_comprehensive, "previous": net_profit_prev, "isTotal": True},
+    ]
+    return rows
+
+
+def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
+    """Build IFRS Cash Flow (IAS 7) rows from cache data."""
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    pnl = pnl or {}
+    revenue = pnl.get("total_revenue_end", 0)
+    expenses = pnl.get("total_expenses_end", 0)
+
+    # Cash positions
+    cash_end = _v("5010") + _v("5110") + _v("5210")
+    cash_begin = _v("5010", "previous") + _v("5110", "previous") + _v("5210", "previous")
+    net_change = cash_end - cash_begin
+
+    # IFRS 16 lease split
+    lease_payment = _v("6970")
+    if lease_payment > 0:
+        discount_rate = 0.18
+        lease_term = 5
+        pv_factor = (1 - (1 + discount_rate) ** (-lease_term)) / discount_rate
+        rou_asset = lease_payment * pv_factor
+        lease_interest = round(rou_asset * discount_rate, 2)
+        lease_principal = round(lease_payment - lease_interest, 2)
+    else:
+        lease_interest = 0
+        lease_principal = 0
+
+    # Estimate operating cash flows from P&L + working capital changes
+    receivables_change = (_v("2010") + _v("2300")) - (_v("2010", "previous") + _v("2300", "previous"))
+    payables_change = _v("6010") - _v("6010", "previous")
+    tax_paid = _v("6310") + _v("6610")
+
+    operating_cash = revenue - expenses - receivables_change + payables_change - tax_paid - lease_interest
+
+    # Investing
+    capex_change = _v("0100") - _v("0100", "previous")
+
+    # Financing
+    lt_loans_change = _v("7010") - _v("7010", "previous")
+    st_loans_change = _v("6820") - _v("6820", "previous")
+
+    operating_total = round(operating_cash, 2) if revenue else None
+    investing_total = round(-capex_change, 2) if capex_change else None
+    financing_total = round(lt_loans_change + st_loans_change - lease_principal, 2) if (lt_loans_change or st_loans_change or lease_principal) else None
+
+    rows = [
+        {"label": "I. ОПЕРАЦИОННАЯ ДЕЯТЕЛЬНОСТЬ", "current": None, "previous": None, "isHeader": True},
+        {"label": "Поступления от покупателей", "current": revenue if revenue else None, "previous": None, "note": "IAS 7"},
+        {"label": "Оплата поставщикам и персоналу", "current": -expenses if expenses else None, "previous": None, "note": "IAS 7"},
+        {"label": "Процентные расходы по аренде (IFRS 16)", "current": -lease_interest if lease_interest else None, "previous": None, "note": "IFRS 16"},
+        {"label": "Налоги уплаченные", "current": -tax_paid if tax_paid else None, "previous": None, "note": "IAS 12"},
+        {"label": "Итого по операционной деятельности", "current": operating_total, "previous": None, "isTotal": True},
+        {"label": "", "current": None, "previous": None},
+        {"label": "II. ИНВЕСТИЦИОННАЯ ДЕЯТЕЛЬНОСТЬ", "current": None, "previous": None, "isHeader": True},
+        {"label": "Приобретение основных средств", "current": -capex_change if capex_change > 0 else None, "previous": None, "note": "IAS 16"},
+        {"label": "Выбытие основных средств", "current": -capex_change if capex_change < 0 else None, "previous": None, "note": "IAS 16"},
+        {"label": "Итого по инвестиционной деятельности", "current": investing_total, "previous": None, "isTotal": True},
+        {"label": "", "current": None, "previous": None},
+        {"label": "III. ФИНАНСОВАЯ ДЕЯТЕЛЬНОСТЬ", "current": None, "previous": None, "isHeader": True},
+        {"label": "Поступление/погашение кредитов", "current": round(lt_loans_change + st_loans_change, 2) if (lt_loans_change or st_loans_change) else None, "previous": None, "note": "IFRS 9"},
+        {"label": "Погашение обязательства по аренде (IFRS 16)", "current": -lease_principal if lease_principal else None, "previous": None, "note": "IFRS 16"},
+        {"label": "Итого по финансовой деятельности", "current": financing_total, "previous": None, "isTotal": True},
+        {"label": "", "current": None, "previous": None},
+        {"label": "Чистое изменение денежных средств", "current": round(net_change, 2), "previous": None, "isTotal": True},
+        {"label": "Денежные средства на начало периода", "current": round(cash_begin, 2), "previous": None},
+        {"label": "Денежные средства на конец периода", "current": round(cash_end, 2), "previous": None, "isTotal": True},
+    ]
+    return rows
+
+
+def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
+    """Build IFRS Changes in Equity (IAS 1) rows from cache data."""
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    pnl = pnl or {}
+    charter = _v("8300")
+    charter_prev = _v("8300", "previous")
+    reserve = _v("8500")
+    reserve_prev = _v("8500", "previous")
+    retained = _v("8700")
+    retained_prev = _v("8700", "previous")
+
+    revenue = pnl.get("total_revenue_end", 0)
+    expenses = pnl.get("total_expenses_end", 0)
+    net_profit = revenue - expenses
+
+    # OCI from IAS 16 revaluation
+    net_fa = _v("0100") - _v("0200")
+    oci_revaluation = round(net_fa * 0.15, 2)
+
+    total_prev = charter_prev + reserve_prev + retained_prev
+    total_cur = charter + reserve + retained + net_profit + oci_revaluation
+
+    rows = [
+        {"label": "Начальное сальдо", "current": round(total_prev, 2), "previous": None, "isTotal": True},
+        {"label": "  Уставный капитал", "current": charter_prev, "previous": None},
+        {"label": "  Резервный капитал", "current": reserve_prev, "previous": None},
+        {"label": "  Нераспределённая прибыль", "current": retained_prev, "previous": None},
+        {"label": "", "current": None, "previous": None},
+        {"label": "Изменения за период", "current": None, "previous": None, "isHeader": True},
+        {"label": "Чистая прибыль за период", "current": round(net_profit, 2) if net_profit else None, "previous": None},
+        {"label": "Переоценка ОС (OCI)", "current": oci_revaluation if oci_revaluation else None, "previous": None, "note": "IAS 16"},
+        {"label": "Изменение уставного капитала", "current": round(charter - charter_prev, 2) if charter != charter_prev else None, "previous": None},
+        {"label": "Изменение резервного капитала", "current": round(reserve - reserve_prev, 2) if reserve != reserve_prev else None, "previous": None},
+        {"label": "", "current": None, "previous": None},
+        {"label": "Конечное сальдо", "current": round(total_cur, 2), "previous": None, "isTotal": True},
+    ]
+    return rows
 
 
 def _safe_div(a: float, b: float) -> float:
@@ -191,9 +383,12 @@ def _calc_kpis(agg: dict) -> list:
 # ---------------------------------------------------------------------------
 
 @router.get("/analytics/kpi")
-async def get_kpi(standard: Optional[str] = "nsbu"):
+async def get_kpi(
+    standard: Optional[str] = "nsbu",
+    current_user: User = Depends(get_current_user),
+):
     """KPI groups by accounting standard."""
-    agg = _get_balance_aggregates()
+    agg = _get_balance_aggregates(user_id=current_user.id)
     if agg is None:
         return JSONResponse({"groups": []})
     return JSONResponse({"groups": _calc_kpis(agg)})
@@ -236,15 +431,71 @@ class DcfInput(BaseModel):
 
 
 @router.post("/analytics/dcf")
-async def calculate_dcf(data: DcfInput):
-    """DCF valuation stub."""
+async def calculate_dcf(
+    data: DcfInput,
+    current_user: User = Depends(get_current_user),
+):
+    """DCF valuation using cached P&L data (revenue, net profit)."""
+    agg = _get_balance_aggregates(user_id=current_user.id)
+
+    # Use cached data if available, otherwise fall back to input
+    revenue = data.revenue if data.revenue else (agg["revenue"] if agg else 0)
+    net_profit = agg["net_profit"] if agg else 0
+    total_assets = agg["total_assets"] if agg else 0
+    total_liabilities = agg["total_liabilities"] if agg else 0
+    total_equity = agg["total_equity"] if agg else 0
+
+    wacc = data.wacc if data.wacc else 0.15
+    growth_rate = data.growth_rate if data.growth_rate else 0.05
+    terminal_growth = data.terminal_growth if data.terminal_growth else 0.03
+    years = data.years if data.years else 5
+
+    if revenue == 0 and net_profit == 0:
+        return JSONResponse({
+            "wacc": wacc,
+            "enterprise_value": 0,
+            "equity_value": 0,
+            "intrinsic_value_per_share": 0,
+            "pv_fcff": 0,
+            "terminal_value": 0,
+            "fcff_year1": 0,
+            "fcff_year2": 0,
+            "fcff_year3": 0,
+        })
+
+    # Estimate FCFF from net profit (simplified: FCFF ≈ Net Profit * 0.8 as proxy)
+    base_fcff = net_profit * 0.8 if net_profit > 0 else revenue * 0.10
+
+    # Project FCFF for each year
+    fcff_projections = []
+    for yr in range(1, years + 1):
+        fcff_projections.append(base_fcff * ((1 + growth_rate) ** yr))
+
+    # PV of projected FCFFs
+    pv_fcff = sum(fcff / ((1 + wacc) ** yr) for yr, fcff in enumerate(fcff_projections, 1))
+
+    # Terminal value (Gordon Growth Model)
+    last_fcff = fcff_projections[-1] if fcff_projections else base_fcff
+    if wacc > terminal_growth:
+        terminal_value = last_fcff * (1 + terminal_growth) / (wacc - terminal_growth)
+    else:
+        terminal_value = last_fcff * 20  # fallback multiplier
+
+    pv_terminal = terminal_value / ((1 + wacc) ** years)
+
+    enterprise_value = pv_fcff + pv_terminal
+    equity_value = enterprise_value - total_liabilities
+
     return JSONResponse({
-        "wacc": 0,
-        "enterprise_value": 0,
-        "equity_value": 0,
-        "intrinsic_value_per_share": 0,
-        "pv_fcff": 0,
-        "terminal_value": 0,
+        "wacc": round(wacc, 4),
+        "enterprise_value": round(enterprise_value, 0),
+        "equity_value": round(equity_value, 0),
+        "intrinsic_value_per_share": round(equity_value, 0),
+        "pv_fcff": round(pv_fcff, 0),
+        "terminal_value": round(pv_terminal, 0),
+        "fcff_year1": round(fcff_projections[0], 0) if len(fcff_projections) > 0 else 0,
+        "fcff_year2": round(fcff_projections[1], 0) if len(fcff_projections) > 1 else 0,
+        "fcff_year3": round(fcff_projections[2], 0) if len(fcff_projections) > 2 else 0,
     })
 
 
@@ -289,13 +540,16 @@ def _stress_status(delta_pct: float) -> str:
 
 
 @router.post("/analytics/stress-test")
-async def run_stress_test(data: StressTestInput = StressTestInput()):
+async def run_stress_test(
+    data: StressTestInput = StressTestInput(),
+    current_user: User = Depends(get_current_user),
+):
     """Stress test: apply single scenario shocks to baseline KPIs.
 
     Accepts: scenario (string id), severity (mild/moderate/severe/extreme), standard (nsbu/ifrs/both).
     Returns: flat results array with baseline/stressed values per standard.
     """
-    agg = _get_balance_aggregates()
+    agg = _get_balance_aggregates(user_id=current_user.id)
     if agg is None:
         return JSONResponse({"results": [], "ai_summary": []})
 
@@ -357,7 +611,9 @@ async def run_stress_test(data: StressTestInput = StressTestInput()):
 # ---------------------------------------------------------------------------
 
 @router.get("/analytics/visualizations")
-async def get_visualizations():
+async def get_visualizations(
+    current_user: User = Depends(get_current_user),
+):
     """Chart/visualization data from real balance data.
 
     Returns arrays ready for Recharts consumption:
@@ -366,7 +622,7 @@ async def get_visualizations():
     - bubble: BubbleItem[] with x/y/size
     - heatmap: { data: (string|number)[][], months: string[] }
     """
-    agg = _get_balance_aggregates()
+    agg = _get_balance_aggregates(user_id=current_user.id)
     if agg is None:
         return JSONResponse({})
 
@@ -763,6 +1019,7 @@ def export_full_report(
         FinancialStatement.standard == "nsbu",
     ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
 
+    cf_nsbu_written = False
     if cf_nsbu_stmts and cf_nsbu_stmts[0].data and isinstance(cf_nsbu_stmts[0].data, list):
         for item in cf_nsbu_stmts[0].data:
             ws_cf_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
@@ -771,7 +1028,21 @@ def export_full_report(
             style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=is_hdr)
             style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
             style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
-    else:
+        cf_nsbu_written = True
+
+    if not cf_nsbu_written:
+        cached_cf = cache.get("cashflow", [])
+        if cached_cf:
+            for item in cached_cf:
+                ws_cf_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+                r = ws_cf_nsbu.max_row
+                is_hdr = item.get("isHeader") or item.get("isTotal")
+                style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=is_hdr)
+                style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+                style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+            cf_nsbu_written = True
+
+    if not cf_nsbu_written:
         write_no_data(ws_cf_nsbu, BLUE_FILL)
     auto_width(ws_cf_nsbu)
 
@@ -790,6 +1061,7 @@ def export_full_report(
         FinancialStatement.standard == "nsbu",
     ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
 
+    eq_nsbu_written = False
     if eq_nsbu_stmts and eq_nsbu_stmts[0].data and isinstance(eq_nsbu_stmts[0].data, list):
         for item in eq_nsbu_stmts[0].data:
             ws_eq_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
@@ -798,7 +1070,21 @@ def export_full_report(
             style_data_cell(ws_eq_nsbu.cell(r, 1), is_bold=is_hdr)
             style_data_cell(ws_eq_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
             style_data_cell(ws_eq_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
-    else:
+        eq_nsbu_written = True
+
+    if not eq_nsbu_written:
+        cached_eq = cache.get("capital_rows", [])
+        if cached_eq:
+            for item in cached_eq:
+                ws_eq_nsbu.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+                r = ws_eq_nsbu.max_row
+                is_hdr = item.get("isHeader") or item.get("isTotal")
+                style_data_cell(ws_eq_nsbu.cell(r, 1), is_bold=is_hdr)
+                style_data_cell(ws_eq_nsbu.cell(r, 2), is_number=True, is_bold=is_hdr)
+                style_data_cell(ws_eq_nsbu.cell(r, 3), is_number=True, is_bold=is_hdr)
+            eq_nsbu_written = True
+
+    if not eq_nsbu_written:
         write_no_data(ws_eq_nsbu, BLUE_FILL)
     auto_width(ws_eq_nsbu)
 
@@ -922,6 +1208,7 @@ def export_full_report(
         FinancialStatement.standard == "ifrs",
     ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
 
+    cf_ifrs_written = False
     if cf_ifrs_stmts and cf_ifrs_stmts[0].data and isinstance(cf_ifrs_stmts[0].data, list):
         for item in cf_ifrs_stmts[0].data:
             ws_cf_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
@@ -930,7 +1217,21 @@ def export_full_report(
             style_data_cell(ws_cf_ifrs.cell(r, 1), is_bold=is_hdr)
             style_data_cell(ws_cf_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
             style_data_cell(ws_cf_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
-    else:
+        cf_ifrs_written = True
+
+    if not cf_ifrs_written and accounts:
+        # Build IFRS CashFlow from cached balance data
+        _ifrs_cf_rows = _build_ifrs_cashflow_rows(accounts, pnl)
+        for item in _ifrs_cf_rows:
+            ws_cf_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_cf_ifrs.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_cf_ifrs.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_cf_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_cf_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
+        cf_ifrs_written = True
+
+    if not cf_ifrs_written:
         write_no_data(ws_cf_ifrs, PURPLE_FILL)
     auto_width(ws_cf_ifrs)
 
@@ -949,6 +1250,7 @@ def export_full_report(
         FinancialStatement.standard == "ifrs",
     ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
 
+    eq_ifrs_written = False
     if eq_ifrs_stmts and eq_ifrs_stmts[0].data and isinstance(eq_ifrs_stmts[0].data, list):
         for item in eq_ifrs_stmts[0].data:
             ws_eq_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
@@ -957,7 +1259,20 @@ def export_full_report(
             style_data_cell(ws_eq_ifrs.cell(r, 1), is_bold=is_hdr)
             style_data_cell(ws_eq_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
             style_data_cell(ws_eq_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
-    else:
+        eq_ifrs_written = True
+
+    if not eq_ifrs_written and accounts:
+        _ifrs_eq_rows = _build_ifrs_equity_rows(accounts, pnl)
+        for item in _ifrs_eq_rows:
+            ws_eq_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_eq_ifrs.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_eq_ifrs.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_eq_ifrs.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_eq_ifrs.cell(r, 3), is_number=True, is_bold=is_hdr)
+        eq_ifrs_written = True
+
+    if not eq_ifrs_written:
         write_no_data(ws_eq_ifrs, PURPLE_FILL)
     auto_width(ws_eq_ifrs)
 
@@ -1015,7 +1330,7 @@ def export_full_report(
     ws_kpi.append(["Показатель", "Группа", "Значение", "Норма", "Статус"])
     style_header_row(ws_kpi, ws_kpi.max_row, GREEN_FILL)
 
-    agg = _get_balance_aggregates()
+    agg = _get_balance_aggregates(user_id=current_user.id)
     if agg:
         for group in _calc_kpis(agg):
             for m in group["metrics"]:

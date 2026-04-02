@@ -573,8 +573,7 @@ function IfrsPositionReport() {
 interface IncomeRow { label: string; amount: number | null; isHeader?: boolean; isTotal?: boolean; note?: string }
 
 function IfrsIncomeReport() {
-  const [rows, setRows] = useState<IfrsRow[]>([]);
-  const [adjustments, setAdjustments] = useState<any[]>([]);
+  const [incomeRows, setIncomeRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
@@ -582,76 +581,34 @@ function IfrsIncomeReport() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      fetch(`${apiBase}/api/v1/portfolios/reports/ifrs/balance`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }).then(r => r.ok ? r.json() : null),
-      fetch(`${apiBase}/api/v1/analytics/ifrs-convert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ portfolio_id: 1, period_from: '2025-01-01', period_to: '2025-12-31' }),
-      }).then(r => r.ok ? r.json() : null),
-    ]).then(([balData, adjData]) => {
-      if (!mounted) return;
-      if (balData?.rows) setRows(balData.rows);
-      if (adjData?.adjustments) setAdjustments(adjData.adjustments);
-      setLoading(false);
-    }).catch(() => { if (mounted) setLoading(false); });
+    fetch(`${apiBase}/api/v1/portfolios/reports/ifrs/income`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!mounted) return;
+        if (data?.rows) setIncomeRows(data.rows);
+        setLoading(false);
+      })
+      .catch(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [token, apiBase]);
 
   if (loading) return <LoadingCard rows={6} />;
-  if (!rows.length) return (
+  if (!incomeRows.length) return (
     <EmptyState
       icon={<span className="text-purple-400"><FileText size={40} /></span>}
       title="Нет данных для отчёта о совокупном доходе"
-      description="Для формирования отчётности МСФО нажмите «Пересчитать МСФО» на вкладке Корректировки"
+      description="Сначала загрузите файл 1С на вкладке «Портфели»"
     />
   );
 
-  // Extract values from balance/adjustments for P&L construction
-  const findAdj = (type: string) => adjustments.find(a => a.adjustment_type === type);
-  const lease = findAdj('ifrs16_lease');
-  const impairment = findAdj('ias36_impairment');
-  const revaluation = findAdj('ias16_revaluation');
-
-  // Build P&L from NSBU structure + IFRS adjustments
-  // Revenue & COGS approximated from balance data, adjustments from IFRSConverter
-  const revenue = 0; // Will be populated when P&L endpoint is available
-  const cogs = 0;
-  const grossProfit = revenue - Math.abs(cogs);
-  const sellingExp = 0;
-  const adminExp = 0;
-  const rouDepreciation = lease ? (lease.ifrs_amount * 0.6) : 0; // ~60% is depreciation portion
-  const leaseInterest = lease ? (lease.ifrs_amount * 0.4) : 0;   // ~40% is interest portion
-  const eclImpairment = impairment ? Math.abs(impairment.difference) : 0;
-
-  const profitBeforeTax = grossProfit - Math.abs(sellingExp) - Math.abs(adminExp)
-    - rouDepreciation - leaseInterest - eclImpairment;
-  const incomeTax = 0;
-  const netProfit = profitBeforeTax - Math.abs(incomeTax);
-
-  // OCI
-  const ociRevaluation = revaluation ? revaluation.difference : 0;
-  const totalComprehensiveIncome = netProfit + ociRevaluation;
-
-  const pnlRows: IncomeRow[] = [
-    { label: 'I. ОТЧЁТ О ПРИБЫЛЯХ И УБЫТКАХ', amount: null, isHeader: true },
-    { label: 'Выручка', amount: revenue || null, note: 'IAS 18' },
-    { label: 'Себестоимость', amount: cogs ? -Math.abs(cogs) : null, note: 'IAS 2' },
-    { label: 'Валовая прибыль', amount: grossProfit || null, isTotal: true },
-    { label: 'Коммерческие расходы', amount: sellingExp ? -Math.abs(sellingExp) : null },
-    { label: 'Административные расходы', amount: adminExp ? -Math.abs(adminExp) : null },
-    { label: 'Амортизация ПП-актива (IFRS 16)', amount: rouDepreciation ? -rouDepreciation : null, note: 'IFRS 16' },
-    { label: 'Процентные расходы по аренде (IFRS 16)', amount: leaseInterest ? -leaseInterest : null, note: 'IFRS 16' },
-    { label: 'Обесценение дебиторки (IFRS 9 ECL)', amount: eclImpairment ? -eclImpairment : null, note: 'IFRS 9' },
-    { label: 'Прибыль до налога', amount: profitBeforeTax || null, isTotal: true },
-    { label: 'Налог на прибыль', amount: incomeTax ? -Math.abs(incomeTax) : null, note: 'IAS 12' },
-    { label: 'ЧИСТАЯ ПРИБЫЛЬ', amount: netProfit || null, isTotal: true },
-    { label: '', amount: null },
-    { label: 'II. ПРОЧИЙ СОВОКУПНЫЙ ДОХОД (OCI)', amount: null, isHeader: true },
-    { label: 'Переоценка ОС (IAS 16)', amount: ociRevaluation || null, note: 'IAS 16' },
-    { label: 'ИТОГО СОВОКУПНЫЙ ДОХОД', amount: totalComprehensiveIncome || null, isTotal: true },
-  ];
+  const pnlRows: IncomeRow[] = incomeRows.map(row => ({
+    label: row.label || '',
+    amount: row.current ?? row.amount ?? null,
+    isHeader: row.isHeader,
+    isTotal: row.isTotal,
+    note: row.note,
+  }));
 
   return (
     <div className="overflow-x-auto">
@@ -692,8 +649,7 @@ function IfrsIncomeReport() {
 interface CashFlowRow { label: string; amount: number | null; isHeader?: boolean; isTotal?: boolean; note?: string }
 
 function IfrsCashFlowReport() {
-  const [adjustments, setAdjustments] = useState<any[]>([]);
-  const [rows, setRows] = useState<IfrsRow[]>([]);
+  const [cfApiRows, setCfApiRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
@@ -701,61 +657,34 @@ function IfrsCashFlowReport() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      fetch(`${apiBase}/api/v1/portfolios/reports/ifrs/balance`,
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }).then(r => r.ok ? r.json() : null),
-      fetch(`${apiBase}/api/v1/analytics/ifrs-convert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ portfolio_id: 1, period_from: '2025-01-01', period_to: '2025-12-31' }),
-      }).then(r => r.ok ? r.json() : null),
-    ]).then(([balData, adjData]) => {
-      if (!mounted) return;
-      if (balData?.rows) setRows(balData.rows);
-      if (adjData?.adjustments) setAdjustments(adjData.adjustments);
-      setLoading(false);
-    }).catch(() => { if (mounted) setLoading(false); });
+    fetch(`${apiBase}/api/v1/portfolios/reports/ifrs/cashflow`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!mounted) return;
+        if (data?.rows) setCfApiRows(data.rows);
+        setLoading(false);
+      })
+      .catch(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, [token, apiBase]);
 
   if (loading) return <LoadingCard rows={6} />;
-  if (!rows.length) return (
+  if (!cfApiRows.length) return (
     <EmptyState
       icon={<span className="text-purple-400"><FileText size={40} /></span>}
       title="Нет данных для отчёта о движении денежных средств"
-      description="Для формирования отчётности МСФО нажмите «Пересчитать МСФО» на вкладке Корректировки"
+      description="Сначала загрузите файл 1С на вкладке «Портфели»"
     />
   );
 
-  const lease = adjustments.find(a => a.adjustment_type === 'ifrs16_lease');
-  const leasePayment = lease ? Math.abs(lease.nsbu_amount || 0) : 0;
-  const leaseInterest = lease ? Math.abs(lease.ifrs_amount || 0) * 0.4 : 0;
-  const leasePrincipal = leasePayment - leaseInterest;
-
-  const cfRows: CashFlowRow[] = [
-    { label: 'I. ОПЕРАЦИОННАЯ ДЕЯТЕЛЬНОСТЬ', amount: null, isHeader: true },
-    { label: 'Поступления от покупателей', amount: null, note: 'IAS 7' },
-    { label: 'Оплата поставщикам и персоналу', amount: null, note: 'IAS 7' },
-    { label: 'Процентные расходы по аренде (IFRS 16)', amount: leaseInterest ? -leaseInterest : null, note: 'IFRS 16' },
-    { label: 'Налоги уплаченные', amount: null, note: 'IAS 12' },
-    { label: 'Итого по операционной деятельности', amount: null, isTotal: true },
-    { label: '', amount: null },
-    { label: 'II. ИНВЕСТИЦИОННАЯ ДЕЯТЕЛЬНОСТЬ', amount: null, isHeader: true },
-    { label: 'Приобретение основных средств', amount: null, note: 'IAS 16' },
-    { label: 'Выбытие основных средств', amount: null, note: 'IAS 16' },
-    { label: 'Итого по инвестиционной деятельности', amount: null, isTotal: true },
-    { label: '', amount: null },
-    { label: 'III. ФИНАНСОВАЯ ДЕЯТЕЛЬНОСТЬ', amount: null, isHeader: true },
-    { label: 'Поступление кредитов и займов', amount: null, note: 'IFRS 9' },
-    { label: 'Погашение кредитов и займов', amount: null, note: 'IFRS 9' },
-    { label: 'Погашение обязательства по аренде (IFRS 16)', amount: leasePrincipal ? -leasePrincipal : null, note: 'IFRS 16' },
-    { label: 'Дивиденды выплаченные', amount: null, note: 'IAS 7' },
-    { label: 'Итого по финансовой деятельности', amount: null, isTotal: true },
-    { label: '', amount: null },
-    { label: 'Чистое изменение денежных средств', amount: null, isTotal: true },
-    { label: 'Денежные средства на начало периода', amount: null },
-    { label: 'Денежные средства на конец периода', amount: null, isTotal: true },
-  ];
+  const cfRows: CashFlowRow[] = cfApiRows.map(row => ({
+    label: row.label || '',
+    amount: row.current ?? row.amount ?? null,
+    isHeader: row.isHeader,
+    isTotal: row.isTotal,
+    note: row.note,
+  }));
 
   return (
     <div className="overflow-x-auto">

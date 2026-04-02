@@ -814,6 +814,72 @@ async def get_nsbu_fixed_assets(
 
 
 # ---------------------------------------------------------------------------
+# GET /reports/ifrs/income — IFRS Comprehensive Income (IAS 1)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/ifrs/income")
+async def get_ifrs_income(
+    current_user: User = Depends(get_current_user),
+):
+    """Get IFRS Comprehensive Income report computed from cached 1C data."""
+    from app.api.v1.routers.analytics_chapter import _build_ifrs_income_rows
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
+    if not accounts:
+        return JSONResponse({"rows": []})
+    pnl = cache.get("pnl")
+    company_info = cache.get("company_info")
+    result = {"rows": _build_ifrs_income_rows(accounts, pnl)}
+    if company_info:
+        result["company_info"] = company_info
+    return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# GET /reports/ifrs/cashflow — IFRS Cash Flow (IAS 7)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/ifrs/cashflow")
+async def get_ifrs_cashflow(
+    current_user: User = Depends(get_current_user),
+):
+    """Get IFRS Cash Flow report computed from cached 1C data."""
+    from app.api.v1.routers.analytics_chapter import _build_ifrs_cashflow_rows
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
+    if not accounts:
+        return JSONResponse({"rows": []})
+    pnl = cache.get("pnl")
+    company_info = cache.get("company_info")
+    result = {"rows": _build_ifrs_cashflow_rows(accounts, pnl)}
+    if company_info:
+        result["company_info"] = company_info
+    return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------------
+# GET /reports/ifrs/equity — IFRS Changes in Equity (IAS 1)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/ifrs/equity")
+async def get_ifrs_equity(
+    current_user: User = Depends(get_current_user),
+):
+    """Get IFRS Changes in Equity report computed from cached 1C data."""
+    from app.api.v1.routers.analytics_chapter import _build_ifrs_equity_rows
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
+    if not accounts:
+        return JSONResponse({"rows": []})
+    pnl = cache.get("pnl")
+    company_info = cache.get("company_info")
+    result = {"rows": _build_ifrs_equity_rows(accounts, pnl)}
+    if company_info:
+        result["company_info"] = company_info
+    return JSONResponse(result)
+
+
+# ---------------------------------------------------------------------------
 # GET /template/excel — download template (kept as-is)
 # ---------------------------------------------------------------------------
 
