@@ -10,13 +10,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# ─── Константы калибровки (Узбекистан, 2025) ────────────────────────────────
-
-UZ_INFLATION_RATE = 0.10        # ~10% инфляция
-UZ_REFINANCING_RATE = 0.14      # Ставка рефинансирования ЦБ
-UZ_GDP_GROWTH = 0.06            # Рост ВВП ~6%
-UZ_RISK_PREMIUM = 0.05          # Премия за страновой риск
-UZ_DEFAULT_DISCOUNT = 0.18      # Типичная ставка дисконтирования
+# CALC-28: Import centralized UZ constants instead of duplicating
+from .constants import UZ_INFLATION_RATE, UZ_REFINANCING_RATE, UZ_GDP_GROWTH, UZ_RISK_PREMIUM, UZ_DEFAULT_DISCOUNT
 
 from .dcf_service import _npv, _irr_bisection
 
@@ -192,7 +187,8 @@ async def what_if_analysis(
 
     # Сортировка торнадо по абсолютной дельте (наибольшее влияние первым)
     tornado_data = []
-    var_names = list({item["variable"] for item in tornado_items})
+    # CALC-26: Sort variable names to ensure deterministic order
+    var_names = sorted({item["variable"] for item in tornado_items})
     for var_name in var_names:
         items = [i for i in tornado_items if i["variable"] == var_name]
         low = min(items, key=lambda x: x["npv"])

@@ -186,6 +186,10 @@ app.add_middleware(
 from app.middleware.rate_limiter import RateLimitMiddleware
 app.add_middleware(RateLimitMiddleware, rate_limit=120, window_seconds=60)
 
+# AUTH-09: Register SecurityHeadersMiddleware
+from app.middleware.security_headers import SecurityHeadersMiddleware
+app.add_middleware(SecurityHeadersMiddleware)
+
 # ── Core routers ──
 app.include_router(health_router)
 app.include_router(auth_router, prefix='/api/v1')

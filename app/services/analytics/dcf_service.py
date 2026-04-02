@@ -10,13 +10,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# ─── Константы калибровки (Узбекистан, 2025) ────────────────────────────────
-
-UZ_INFLATION_RATE = 0.10        # ~10% инфляция
-UZ_REFINANCING_RATE = 0.14      # Ставка рефинансирования ЦБ
-UZ_GDP_GROWTH = 0.06            # Рост ВВП ~6%
-UZ_RISK_PREMIUM = 0.05          # Премия за страновой риск
-UZ_DEFAULT_DISCOUNT = 0.18      # Типичная ставка дисконтирования
+# CALC-28: Import centralized UZ constants instead of duplicating
+from .constants import UZ_INFLATION_RATE, UZ_REFINANCING_RATE, UZ_GDP_GROWTH, UZ_RISK_PREMIUM, UZ_DEFAULT_DISCOUNT
 
 
 def _npv(rate: float, cash_flows: List[float]) -> float:
@@ -106,6 +101,7 @@ def _payback_period(cash_flows: List[float]) -> Dict[str, Optional[float]]:
                 else:
                     simple_payback = float(t)
 
+    # CALC-24: Returns simple payback only; discounted payback is calculated separately in _discounted_payback()
     return {"simple": simple_payback}
 
 
@@ -151,7 +147,10 @@ async def calculate_dcf(
         len(cash_flows), discount_rate * 100, terminal_growth * 100,
     )
 
+    # CALC-25: Track warning when terminal value will be 0 due to invalid params
+    tv_warning = None
     if discount_rate <= terminal_growth:
+        tv_warning = "discount_rate <= terminal_growth: terminal value set to 0"
         logger.warning("Ставка дисконтирования ≤ терминального роста, терминальная стоимость не рассчитывается")
 
     # Полный массив потоков: [-инвестиция, CF1, CF2, ...]
@@ -232,6 +231,7 @@ async def calculate_dcf(
         "initial_investment": initial_investment,
         "currency": currency,
         "total_cash_flows": len(cash_flows),
+        "warning": tv_warning,  # CALC-25: Warning field when terminal_value=0
     }
 
     logger.info("DCF результат: NPV=%.2f, IRR=%s", npv, result["irr_pct"])

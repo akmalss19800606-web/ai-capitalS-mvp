@@ -90,7 +90,8 @@ async def analyze_market(
 
     except Exception as e:
         logger.error(f"Market analysis error: {e}")
-        raise HTTPException(500, f"Ошибка анализа рынка: {str(e)}")
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 @router.post(
@@ -115,7 +116,8 @@ async def quick_market_analysis(
         return result
     except Exception as e:
         logger.error(f"Quick market analysis error: {e}")
-        raise HTTPException(500, str(e))
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------

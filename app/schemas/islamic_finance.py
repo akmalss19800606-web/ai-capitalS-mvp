@@ -138,6 +138,7 @@ class SSBFatwaResponse(BaseModel):
     subject: str
     product_type: Optional[str]
     decision: str
+    reasoning: Optional[str] = None  # ISL-20: Add reasoning field to response schema
     aaoifi_refs: Optional[list]
     status: str
     issued_at: Optional[datetime]

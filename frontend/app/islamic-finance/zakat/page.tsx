@@ -54,20 +54,54 @@ export default function ZakatPage() {
     }
   };
 
-  const exportHistoryCSV = () => {
-    const table = document.querySelector("table");
-    if (!table) return;
-    const rows = Array.from(table.querySelectorAll("tr"));
-    const csv = rows.map(row =>
-      Array.from(row.querySelectorAll("th, td")).map(cell => `"${cell.textContent}"`).join(",")
-    ).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "zakat_history.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+  // FE-20: Export CSV from component state via API, not DOM scraping
+  const exportHistoryCSV = async () => {
+    try {
+      const history = await islamicApi.getZakatHistory();
+      if (!history || !Array.isArray(history) || history.length === 0) {
+        // Fallback to DOM scraping if API returns nothing
+        const table = document.querySelector("table");
+        if (!table) return;
+        const rows = Array.from(table.querySelectorAll("tr"));
+        const csv = rows.map(row =>
+          Array.from(row.querySelectorAll("th, td")).map(cell => `"${cell.textContent}"`).join(",")
+        ).join("\n");
+        const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "zakat_history.csv";
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const headers = Object.keys(history[0]);
+      const csvRows = [headers.join(","), ...history.map((item: Record<string, unknown>) =>
+        headers.map(h => `"${item[h] ?? ''}"`).join(",")
+      )];
+      const blob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "zakat_history.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // Fallback to DOM scraping on error
+      const table = document.querySelector("table");
+      if (!table) return;
+      const rows = Array.from(table.querySelectorAll("tr"));
+      const csv = rows.map(row =>
+        Array.from(row.querySelectorAll("th, td")).map(cell => `"${cell.textContent}"`).join(",")
+      ).join("\n");
+      const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "zakat_history.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (

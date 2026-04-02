@@ -8,6 +8,8 @@ from app.schemas.islamic_stage2 import (
 )
 from app.services import income_purification_service
 
+# ISL-19: Prefix is kept here since main.py include_router only adds /api/v1.
+# Full path: /api/v1/islamic/purification/calculate — no double prefix.
 router = APIRouter(prefix="/islamic/purification", tags=["islamic-purification"])
 
 

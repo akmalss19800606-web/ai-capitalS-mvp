@@ -256,6 +256,8 @@ def create_sso_provider(
     """Создать SSO-провайдер (только Admin)."""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Только Admin")
+    # AUTH-10: TODO — client_secret should be encrypted at rest in production.
+    # For MVP, plaintext storage is acceptable but must be addressed before GA.
     provider = SsoProvider(
         name=body.name,
         protocol=body.protocol,

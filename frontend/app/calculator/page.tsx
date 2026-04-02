@@ -1,6 +1,11 @@
-﻿'use client'
+﻿// CALCF-08: TODO — This calculator and calculator-pro/page.tsx are divergent implementations.
+// Plan: merge into a single calculator component with shared logic. Until then, keep both in sync.
+// CALCF-07: NOTE — Client-side NPV calculation does not account for tax regime.
+// The authoritative NPV with tax adjustments comes from the backend /calculator/dcf endpoint.
+'use client'
 
 import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Calculator, BarChart2, GitCompare, Activity, Dice6,
   TrendingUp, Loader2, Download, RefreshCw, Plus, Trash2,
@@ -181,7 +186,10 @@ function npvColor(npv: number): string {
 // ─────────────────────────────────────────────────────────
 
 function CalculatorProPageInner() {
-  const sp = useSearchParams(); const [activeTab, setActiveTab] = useState(sp.get('tab') || 'dcf')
+  const sp = useSearchParams(); const router = useRouter()
+  const [activeTab, setActiveTabState] = useState(sp.get('tab') || 'dcf')
+  // CALCF-13: Sync tab selection to URL search params
+  const setActiveTab = (tab: string) => { setActiveTabState(tab); router.replace(`?tab=${tab}`, { scroll: false }) }
   const [dcfParams, setDcfParams] = useState<DCFParams>(DEFAULT_DCF)
   const [waccParams, setWaccParams] = useState<WACCParams>(DEFAULT_WACC)
   const [showWacc, setShowWacc] = useState(false)

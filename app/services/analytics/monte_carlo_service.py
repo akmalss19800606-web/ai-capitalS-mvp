@@ -10,13 +10,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# ─── Константы калибровки (Узбекистан, 2025) ────────────────────────────────
-
-UZ_INFLATION_RATE = 0.10        # ~10% инфляция
-UZ_REFINANCING_RATE = 0.14      # Ставка рефинансирования ЦБ
-UZ_GDP_GROWTH = 0.06            # Рост ВВП ~6%
-UZ_RISK_PREMIUM = 0.05          # Премия за страновой риск
-UZ_DEFAULT_DISCOUNT = 0.18      # Типичная ставка дисконтирования
+# CALC-28: Import centralized UZ constants instead of duplicating
+from .constants import UZ_INFLATION_RATE, UZ_REFINANCING_RATE, UZ_GDP_GROWTH, UZ_RISK_PREMIUM, UZ_DEFAULT_DISCOUNT
 
 from .dcf_service import _npv, _irr_bisection
 
@@ -100,8 +95,8 @@ async def monte_carlo_simulation(
         sim_discount = base_discount_rate + rng.gauss(0, disc_volatility)
         sim_discount = max(sim_discount, 0.01)
 
-        # Расчёт NPV для данной симуляции
-        full = [-abs(initial_investment)] + sim_flows if initial_investment else sim_flows
+        # CALC-16: Use explicit check for initial_investment to avoid skipping when value is 0
+        full = [-abs(initial_investment)] + sim_flows if initial_investment is not None and initial_investment != 0 else sim_flows
         sim_npv = _npv(sim_discount, full)
 
         # Терминальная стоимость

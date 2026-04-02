@@ -124,6 +124,7 @@ async def monte_carlo(body: MonteCarloRequest, _u=Depends(get_current_user)):
         if body.annual_cash_flow and body.years and not cfs:
             cfs = [body.annual_cash_flow] * body.years
         n = body.iterations or body.n_simulations
+        # CALC-18: removed dead code fallback path — always use monte_carlo_npv
         return calc.monte_carlo_npv(
             initial_investment=inv, base_cash_flows=cfs,
             discount_rate=body.discount_rate, n_simulations=min(n, 50000),
@@ -150,7 +151,7 @@ async def sensitivity(body: SensitivityRequest, _u=Depends(get_current_user)):
 @router.post("/benchmarks", summary="UZ Market Benchmarks 2026")
 async def benchmarks(body: BenchmarkRequest, _u=Depends(get_current_user)):
     try:
-        irr = body.irr or body.irr_pct
+        irr = body.irr if body.irr is not None else body.irr_pct
         return calc.get_benchmarks(npv=body.npv, irr_pct=irr, investment_usd=body.investment_usd, horizon_years=body.horizon_years)
     except Exception as e:
         logger.error("Benchmarks error: %s", e)

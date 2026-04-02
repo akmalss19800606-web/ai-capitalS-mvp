@@ -184,7 +184,8 @@ export default function MarketAnalysisPage(){
       {step===6&&<button onClick={submit} disabled={loading} style={{padding:"12px 32px",borderRadius:8,border:"none",background:loading?C.muted:"#10b981",color:"#fff",cursor:loading?"not-allowed":"pointer",fontSize:14,fontWeight:700}}>{loading?"Генерация AI-отчёта...":"🚀 Создать AI-отчёт"}</button>}
       <div style={{flex:1}}/><Sel value={provider} onChange={(e:any)=>setProvider(e.target.value)} style={{width:180}}><option value="groq">Groq (быстро)</option><option value="perplexity">Perplexity (глубже)</option></Sel>
     </div>
-    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>AI анализирует данные... {progress.toFixed(0)}%</p></div>}
+    {/* FE-19: Progress bar is an approximation — not tied to real backend progress */}
+    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>AI анализирует данные... ~{progress.toFixed(0)}%</p></div>}
     {error&&<div style={{marginTop:16,padding:12,background:C.errorBg,borderRadius:8,border:`1px solid ${C.error}`,color:C.error}}>{error}</div>}
     {result&&renderReport()}
   </div></div>;

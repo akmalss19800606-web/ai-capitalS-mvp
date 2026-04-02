@@ -2,7 +2,7 @@
 MarketAnalysisReport + CalculatorHistory DB Models — MARKET-002
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, String, Float, Integer, DateTime, Text, Numeric, JSON
 from sqlalchemy.dialects.postgresql import UUID
@@ -72,8 +72,8 @@ class MarketAnalysisReportDB(Base):
     generation_time_sec = Column(Float, nullable=True)
     ai_model_used = Column(String(50), nullable=True)
     tokens_used = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=datetime.utcnow)
 
 
 class CalculatorHistoryDB(Base):
@@ -87,4 +87,4 @@ class CalculatorHistoryDB(Base):
     currency = Column(String(3), default="USD")
     npv = Column(Float, nullable=True)
     irr = Column(Float, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

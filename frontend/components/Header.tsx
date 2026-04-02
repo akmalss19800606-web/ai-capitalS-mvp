@@ -85,12 +85,13 @@ export default function Header({ onHamburgerClick }: HeaderProps) {
   const langRef = useRef<HTMLDivElement>(null);
   const activeItem = getActiveNavItem(pathname, t);
 
+  // FE-21: Removed pathname from deps — fetch user only once, not on every navigation
   useEffect(() => {
     fetchUserSafe().then(u => {
       if (u) setUser(u);
       else setUser({ full_name: t.header.defaultUser, email: '' });
     });
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

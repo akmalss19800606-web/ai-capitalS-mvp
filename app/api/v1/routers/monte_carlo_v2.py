@@ -72,11 +72,11 @@ SECTOR_PARAMS = {
     },
 }
 
-# Макроэкономические параметры Узбекистана
-UZ_INFLATION = 0.10
-UZ_GDP_GROWTH = 0.06
-UZ_EXCHANGE_VOLATILITY = 0.12
-UZ_RISK_FREE_RATE = 0.14
+# CALC-28: Import centralized UZ constants; keep local aliases for backward compat
+from app.services.analytics.constants import UZ_INFLATION_RATE, UZ_GDP_GROWTH, UZ_REFINANCING_RATE
+UZ_INFLATION = UZ_INFLATION_RATE
+UZ_EXCHANGE_VOLATILITY = 0.12  # Not in shared constants — specific to MC v2
+UZ_RISK_FREE_RATE = UZ_REFINANCING_RATE
 
 
 class MonteCarloV2Request(BaseModel):

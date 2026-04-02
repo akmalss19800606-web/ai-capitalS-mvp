@@ -1,3 +1,5 @@
+// CALCF-08: TODO — This calculator and app/calculator/page.tsx are divergent implementations.
+// Plan: merge into a single calculator component with shared logic. Until then, keep both in sync.
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -52,13 +54,25 @@ const TABS = [
 // Вспомогательные компоненты
 // ─────────────────────────────────────────────────────────
 
-const MetricCard = ({ label, value, sub, trend, color = 'blue' }: any) => (
-  <div className={`bg-slate-800/60 border border-slate-700/50 rounded-xl p-4`}>
-    <div className="text-slate-400 text-xs mb-1">{label}</div>
-    <div className={`text-xl font-bold text-white`}>{value}</div>
-    {sub && <div className={`text-xs mt-1 text-slate-400`}>{sub}</div>}
-  </div>
-)
+// CALCF-09: Wire up color and trend props in MetricCard rendering
+const MetricCard = ({ label, value, sub, trend, color = 'blue' }: any) => {
+  const colorMap: Record<string, string> = {
+    blue: 'text-blue-400', emerald: 'text-emerald-400', red: 'text-red-400',
+    amber: 'text-amber-400', gray: 'text-slate-400',
+  }
+  const textColor = colorMap[color] || colorMap.blue
+  return (
+    <div className={`bg-slate-800/60 border border-slate-700/50 rounded-xl p-4`}>
+      <div className="text-slate-400 text-xs mb-1">{label}</div>
+      <div className={`text-xl font-bold ${textColor} flex items-center gap-1`}>
+        {value}
+        {trend === 'up' && <span className="text-emerald-400 text-sm">▲</span>}
+        {trend === 'down' && <span className="text-red-400 text-sm">▼</span>}
+      </div>
+      {sub && <div className={`text-xs mt-1 text-slate-400`}>{sub}</div>}
+    </div>
+  )
+}
 
 const InputField = ({ label, value, onChange, type = 'number', min, max, step, suffix, hint, required }: any) => (
   <div>
@@ -161,7 +175,7 @@ export default function CalculatorProPage() {
       })
       if (data?.detail) throw new Error(data.detail)
       setDcfResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setDcfLoading(false) }
   }
 
@@ -173,7 +187,7 @@ export default function CalculatorProPage() {
       })
       if (data?.detail) throw new Error(data.detail)
       setCompareResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setCompareLoading(false) }
   }
 
@@ -184,7 +198,7 @@ export default function CalculatorProPage() {
         method: 'POST', body: JSON.stringify({ base_params: dcfParams, mode: sensitMode, variation_pct: 20 })
       })
       setSensitResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setSensitLoading(false) }
   }
 
@@ -196,7 +210,7 @@ export default function CalculatorProPage() {
       })
       if (data?.detail) throw new Error(data.detail)
       setMcResult(data)
-    } catch (e: any) { alert('Ошибка: ' + e.message) }
+    } catch (e: any) { setError('Ошибка: ' + e.message) }
     finally { setMcLoading(false) }
   }
 
@@ -227,6 +241,13 @@ export default function CalculatorProPage() {
           </div>
           <p className="text-slate-400 ml-14">NPV • IRR • MIRR • WACC • Monte Carlo • Анализ чувствительности</p>
         </div>
+        {/* CALCF-10: State-based error display instead of alert() */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-300 text-sm flex justify-between items-center">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200 ml-4 font-bold">&times;</button>
+          </div>
+        )}
 
         {/* Вкладки */}
         <div className="flex gap-1 bg-slate-800/40 border border-slate-700/50 rounded-2xl p-1.5 mb-6 overflow-x-auto">
@@ -710,9 +731,10 @@ export default function CalculatorProPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
+                      {/* CALCF-12: Align spider headers with actual backend response pct_change values */}
                       <tr className="text-slate-400 text-xs border-b border-slate-700/50">
                         <th className="text-left pb-2 pr-4">Переменная</th>
-                        {[-30,-20,-10,0,10,20,30].map(p => <th key={p} className="pb-2 pr-3">{p}%</th>)}
+                        {[-20,-16,-12,-8,-4,0,4,8,12,16,20].map(p => <th key={p} className="pb-2 pr-3">{p}%</th>)}
                       </tr>
                     </thead>
                     <tbody>

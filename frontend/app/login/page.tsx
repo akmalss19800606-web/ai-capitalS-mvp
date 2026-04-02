@@ -137,7 +137,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-      localStorage.setItem('token', data.access_token);
+      // FE-22: Removed duplicate localStorage.setItem — auth.login() already sets the token
       if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
       router.push('/');
     } catch {

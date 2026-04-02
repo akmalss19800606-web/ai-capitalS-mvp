@@ -12,6 +12,13 @@ from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
+
+# CALC-27: Validate that numeric inputs are finite (not NaN or Inf)
+def validate_finite(*values):
+    for v in values:
+        if v is not None and isinstance(v, (int, float)) and (math.isnan(v) or math.isinf(v)):
+            raise ValueError(f"Input must be finite, got {v}")
+
 try:
     import numpy_financial as npf
     NPF_AVAILABLE = True
@@ -113,6 +120,7 @@ class InvestmentCalculatorService:
         """Enhanced DCF with NPV, IRR, XIRR, MIRR, PI, ROI, Payback."""
         if not cash_flows:
             return {"error": "Cash flows required"}
+        validate_finite(discount_rate, terminal_growth, initial_investment, custom_tax_rate, *cash_flows)
         tax_r = custom_tax_rate if custom_tax_rate is not None else TAX_REGIMES.get(tax_regime, TAX_REGIMES["general"])["cit"]
         inv = initial_investment if initial_investment > 0 else abs(cash_flows[0]) if cash_flows[0] < 0 else 0
         # Periods
@@ -293,6 +301,7 @@ class InvestmentCalculatorService:
                 nl = cn([cf * (2 - lo) for cf in cash_flows], discount_rate)
                 nh = cn([cf * (2 - hi) for cf in cash_flows], discount_rate)
             else:
+                # CALC-29: Linear approximation for unknown variables — scales base NPV proportionally
                 nl = base * (1 - variation_pct / 100)
                 nh = base * (1 + variation_pct / 100)
             tornado.append({"variable": vn, "base_value": round(bv, 4), "npv_low": round(nl, 2), "npv_high": round(nh, 2), "npv_range": round(abs(nh - nl), 2)})
@@ -351,6 +360,8 @@ class InvestmentCalculatorService:
         if pb and pb <= 5: signals.append(f"Payback {pb}y")
         pi = dcf.get("profitability_index")
         if pi and pi > 1: signals.append(f"PI={pi}")
+        # CALC-20: Scoring uses signal string matching — counts positive signals
+        # (any signal not containing "<" or "NPV < 0" is treated as positive)
         score = sum(1 for s in signals if "<" not in s and "NPV < 0" not in s) / max(len(signals), 1) * 100
         rec = "INVEST" if score >= 60 else "ADDITIONAL ANALYSIS NEEDED"
         return {

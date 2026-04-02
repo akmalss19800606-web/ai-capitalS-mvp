@@ -142,12 +142,53 @@ async def export_calc_pdf(
                 story.append(Paragraph(f"{k}: {v:,.2f}", body_s))
             elif isinstance(v, str):
                 story.append(Paragraph(f"{k}: {v}", body_s))
+            elif isinstance(v, list):
+                # CALC-21: Handle list values in PDF export
+                story.append(Paragraph(f"{k}: {', '.join(str(x) for x in v[:20])}", body_s))
+            elif isinstance(v, dict):
+                # CALC-21: Handle dict values in PDF export
+                summary = '; '.join(f'{dk}: {dv}' for dk, dv in list(v.items())[:10])
+                story.append(Paragraph(f"{k}: {summary}", body_s))
         doc.build(story)
         buf.seek(0)
         return StreamingResponse(buf, media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="calc-{calc_id}.pdf"'})
     except ImportError:
         raise HTTPException(status_code=501, detail="reportlab not installed")
+
+
+class CalcHistorySaveRequest(BaseModel):
+    calc_type: str
+    inputs: dict
+    results: dict
+    currency: str = "USD"
+
+
+# CALC-22: POST endpoint to save calculation results
+@router.post("/history", summary="Save calculation result to history")
+async def save_history(
+    body: CalcHistorySaveRequest,
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user),
+):
+    Model = _get_calc_model(db)
+    if Model is None:
+        raise HTTPException(status_code=501, detail="History table not available")
+    item = Model(
+        user_id=user.id,
+        calc_type=body.calc_type,
+        inputs=body.inputs,
+        results=body.results,
+        currency=body.currency,
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return CalcHistoryItem(
+        id=item.id, calc_type=item.calc_type, inputs=item.inputs,
+        results=item.results, currency=getattr(item, "currency", "USD"),
+        created_at=str(item.created_at) if item.created_at else None,
+    )
 
 
 @router.get("/history/{calc_id}/xlsx", summary="Export calculator result as XLSX")

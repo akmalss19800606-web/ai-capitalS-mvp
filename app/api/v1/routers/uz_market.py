@@ -150,7 +150,8 @@ async def quick_ask(body: QuickAskRequest, _u=Depends(get_optional_user)):
         return await svc.quick_ask(body.question, body.sector, body.provider)
     except Exception as e:
         logger.error(f"Quick ask error: {e}")
-        raise HTTPException(500, str(e))
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +169,8 @@ async def deep_analysis(body: DeepAnalysisRequest, _u=Depends(get_optional_user)
         raise
     except Exception as e:
         logger.error(f"Deep analysis error: {e}")
-        raise HTTPException(500, str(e))
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -186,7 +188,8 @@ async def compare_sectors(body: SectorCompareRequest, _u=Depends(get_optional_us
         raise
     except Exception as e:
         logger.error(f"Compare error: {e}")
-        raise HTTPException(500, str(e))
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +219,8 @@ async def generate_full_report(body: FullReportRequest, _u=Depends(get_optional_
         return result
     except Exception as e:
         logger.error(f"Generate report error: {e}")
-        raise HTTPException(500, f"Ошибка генерации отчёта: {str(e)}")
+        # MKT-05: Don't expose internal error details to client
+        raise HTTPException(500, "Internal server error")
 
 
 # ---------------------------------------------------------------------------

@@ -120,12 +120,8 @@ export const organizations = {
   addMember: (id: number, data: unknown) => apiRequest(`/organizations/${id}/members`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
-export const market = {
-  stocks: () => apiRequest('/market-uz/stocks'),
-  bonds: () => apiRequest('/market-uz/bonds'),
-  indices: () => apiRequest('/market-uz/indices'),
-  overview: () => apiRequest('/market-uz/overview'),
-};
+// FE-17: Removed duplicate `market` object — use `marketUz` instead
+export const market = marketUz;
 
 export const ai = {
   recommendation: (id: number) => apiRequest(`/analytics/ai-recommendation/${id}`),
@@ -189,10 +185,10 @@ export const accessControl = {
   assignRole: (data: unknown) => apiRequest('/access-control/assign', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// FE-18: Removed duplicate `get` — `getByInn` serves the same purpose
 export const companyLookup = {
   search: (query: string) => apiRequest(`/companies/search?q=${encodeURIComponent(query)}`),
   getByInn: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
-    get: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
 };
 
 export const ddScoring = {

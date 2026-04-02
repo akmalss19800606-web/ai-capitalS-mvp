@@ -30,7 +30,7 @@ def _compute_score(
     haram_revenue_pct: Optional[Decimal],
     debt_ratio: Optional[Decimal],
     interest_income_pct: Optional[Decimal],
-) -> tuple[Decimal, dict, str]:
+) -> tuple[Decimal, dict, str, str]:  # ISL-17: Return type is 4 values (score, violations, status, recommendation)
     # ISL-05: If all key fields are None, return insufficient_data
     if all(v is None for v in [haram_revenue_pct, debt_ratio, interest_income_pct]):
         return Decimal("0"), {}, "insufficient_data", "Insufficient financial data for screening"
@@ -161,22 +161,19 @@ def get_screening_results(
     limit: int = 20,
 ) -> List[ShariahScreenResponse]:
     from app.db.models.islamic_stage1 import ShariahScreeningResult, ShariahScreeningCompany
+    # ISL-18: Use JOIN instead of N+1 separate queries per result
+    from sqlalchemy import outerjoin
     rows = (
-        db.query(ShariahScreeningResult)
+        db.query(ShariahScreeningResult, ShariahScreeningCompany.name_ru)
+        .outerjoin(ShariahScreeningCompany, ShariahScreeningResult.company_id == ShariahScreeningCompany.id)
         .filter(ShariahScreeningResult.requested_by == user_id)
         .order_by(ShariahScreeningResult.created_at.desc())
         .limit(limit)
         .all()
     )
     results = []
-    for r in rows:
-        company_name = "Неизвестная компания"
-        if r.company_id:
-            company = db.query(ShariahScreeningCompany).filter(
-                ShariahScreeningCompany.id == r.company_id
-            ).first()
-            if company:
-                company_name = company.name_ru
+    for r, company_name_ru in rows:
+        company_name = company_name_ru or "Неизвестная компания"
 
         _, _, _, recommendation = _compute_score(
             r.haram_revenue_pct, r.debt_ratio, r.interest_income_pct
