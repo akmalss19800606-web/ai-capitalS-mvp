@@ -1215,7 +1215,7 @@ export default function PortfoliosPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
 
-  // Load company info on mount
+  // Load company info on mount and auto-fill registration form
   useEffect(() => {
     fetch(`${apiBase}/api/v1/portfolios/company-info`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
@@ -1224,6 +1224,16 @@ export default function PortfoliosPage() {
         if (d?.company_info) {
           setCompanyInfo(d.company_info);
           setActiveOrg(d.company_info.inn || 'org', d.company_info.name || '');
+          // Auto-fill registration form from cached 1C data
+          setRegForm(prev => ({
+            ...prev,
+            name: d.company_info.name || prev.name,
+            inn: d.company_info.inn || prev.inn,
+            oked: d.company_info.activity || prev.oked,
+            address: d.company_info.address || prev.address,
+            director: d.company_info.director || prev.director,
+            accountant: d.company_info.accountant || prev.accountant,
+          }));
         }
       })
       .catch(() => {});

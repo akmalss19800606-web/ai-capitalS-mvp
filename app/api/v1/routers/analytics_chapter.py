@@ -4,11 +4,15 @@ Uses real data from _portfolio_cache when available.
 E2-08: Full NSBU+IFRS Excel export endpoint.
 """
 import io
+import logging
 import math
+import traceback
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from app.api.v1.routers.portfolios import _portfolio_cache, _user_cache, _build_nsbu_rows, _build_ifrs_rows, _build_diff_rows
 from app.api.v1.deps import get_db, get_current_user
@@ -70,6 +74,24 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
 
     revenue = pnl.get("total_revenue_end", 0.0)
     expenses = pnl.get("total_expenses_end", 0.0)
+
+    # Fallback: if pnl totals are zero, try to extract from balance accounts
+    # (some ОСВ files don't have clear section VI/VII headers)
+    if revenue == 0 and expenses == 0:
+        for code, acc in accounts.items():
+            code_str = str(code)
+            cur = acc.get("credit_end", 0) or acc.get("current", 0)
+            cur_d = acc.get("debit_end", 0) or acc.get("current", 0)
+            # Revenue accounts: 90xx (sales revenue)
+            if code_str.startswith("90"):
+                revenue += abs(cur) if cur else abs(cur_d)
+            # Cost of goods / expenses: 20xx-29xx, 44xx, 91xx-99xx
+            elif code_str.startswith(("20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "44")):
+                expenses += abs(cur_d) if cur_d else abs(cur)
+            # Other operating expenses: 91xx-99xx
+            elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
+                expenses += abs(cur_d) if cur_d else abs(cur)
+
     net_profit = revenue - expenses
 
     # Previous period
@@ -758,6 +780,14 @@ def export_full_report(
     balance, P&L, cash flow, equity, fixed assets, adjustments, KPIs,
     stress tests, and investment decisions.
     """
+    try:
+        return _do_export_full_report(req, db, current_user)
+    except Exception as e:
+        logger.error("Export full report failed: %s\n%s", e, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации отчёта: {str(e)}")
+
+
+def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     from datetime import date as _date
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -830,7 +860,10 @@ def export_full_report(
         from app.db.models.ifrs import FinancialStatement as FS
         ws.append(headers)
         style_header_row(ws, ws.max_row, fill)
-        stmts = db.query(FS).filter(FS.statement_type == stmt_type, FS.standard == standard).order_by(FS.created_at.desc()).limit(2).all()
+        try:
+            stmts = db.query(FS).filter(FS.statement_type == stmt_type, FS.standard == standard).order_by(FS.created_at.desc()).limit(2).all()
+        except Exception:
+            stmts = []
         if stmts and stmts[0].data:
             data = stmts[0].data
             rows_list = data if isinstance(data, list) else [{k: v} for k, v in data.items()] if isinstance(data, dict) else []
@@ -948,10 +981,23 @@ def export_full_report(
     style_header_row(ws_pnl_nsbu, ws_pnl_nsbu.max_row, BLUE_FILL)
 
     from app.db.models.ifrs import FinancialStatement
-    pnl_nsbu_stmts = db.query(FinancialStatement).filter(
+
+    def _safe_query(query_fn):
+        """Safely execute a DB query, return empty list on failure."""
+        try:
+            return query_fn()
+        except Exception as exc:
+            logger.warning("DB query failed in export: %s", exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            return []
+
+    pnl_nsbu_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "P&L",
         FinancialStatement.standard == "nsbu",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     pnl_nsbu_written = False
     if pnl_nsbu_stmts and pnl_nsbu_stmts[0].data:
@@ -968,9 +1014,9 @@ def export_full_report(
 
     if not pnl_nsbu_written:
         # Also try generic P&L statements or cache
-        pnl_generic = db.query(FinancialStatement).filter(
+        pnl_generic = _safe_query(lambda: db.query(FinancialStatement).filter(
             FinancialStatement.statement_type == "P&L"
-        ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+        ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
         if pnl_generic and pnl_generic[0].data:
             stmt_data = pnl_generic[0].data
             if isinstance(stmt_data, list):
@@ -1014,10 +1060,10 @@ def export_full_report(
     ws_cf_nsbu.append(["Показатель", "Текущий период", "Предыдущий период"])
     style_header_row(ws_cf_nsbu, ws_cf_nsbu.max_row, BLUE_FILL)
 
-    cf_nsbu_stmts = db.query(FinancialStatement).filter(
+    cf_nsbu_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "CF",
         FinancialStatement.standard == "nsbu",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     cf_nsbu_written = False
     if cf_nsbu_stmts and cf_nsbu_stmts[0].data and isinstance(cf_nsbu_stmts[0].data, list):
@@ -1056,10 +1102,10 @@ def export_full_report(
     ws_eq_nsbu.append(["Показатель", "Текущий период", "Предыдущий период"])
     style_header_row(ws_eq_nsbu, ws_eq_nsbu.max_row, BLUE_FILL)
 
-    eq_nsbu_stmts = db.query(FinancialStatement).filter(
+    eq_nsbu_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "Equity",
         FinancialStatement.standard == "nsbu",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     eq_nsbu_written = False
     if eq_nsbu_stmts and eq_nsbu_stmts[0].data and isinstance(eq_nsbu_stmts[0].data, list):
@@ -1156,10 +1202,10 @@ def export_full_report(
     ws_oci.append(["Показатель", "Текущий период", "Предыдущий период"])
     style_header_row(ws_oci, ws_oci.max_row, PURPLE_FILL)
 
-    oci_stmts = db.query(FinancialStatement).filter(
+    oci_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "P&L",
         FinancialStatement.standard == "ifrs",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     if oci_stmts and oci_stmts[0].data and isinstance(oci_stmts[0].data, list):
         for item in oci_stmts[0].data:
@@ -1203,10 +1249,10 @@ def export_full_report(
     ws_cf_ifrs.append(["Показатель", "Текущий период", "Предыдущий период"])
     style_header_row(ws_cf_ifrs, ws_cf_ifrs.max_row, PURPLE_FILL)
 
-    cf_ifrs_stmts = db.query(FinancialStatement).filter(
+    cf_ifrs_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "CF",
         FinancialStatement.standard == "ifrs",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     cf_ifrs_written = False
     if cf_ifrs_stmts and cf_ifrs_stmts[0].data and isinstance(cf_ifrs_stmts[0].data, list):
@@ -1245,10 +1291,10 @@ def export_full_report(
     ws_eq_ifrs.append(["Показатель", "Текущий период", "Предыдущий период"])
     style_header_row(ws_eq_ifrs, ws_eq_ifrs.max_row, PURPLE_FILL)
 
-    eq_ifrs_stmts = db.query(FinancialStatement).filter(
+    eq_ifrs_stmts = _safe_query(lambda: db.query(FinancialStatement).filter(
         FinancialStatement.statement_type == "Equity",
         FinancialStatement.standard == "ifrs",
-    ).order_by(FinancialStatement.created_at.desc()).limit(2).all()
+    ).order_by(FinancialStatement.created_at.desc()).limit(2).all())
 
     eq_ifrs_written = False
     if eq_ifrs_stmts and eq_ifrs_stmts[0].data and isinstance(eq_ifrs_stmts[0].data, list):
@@ -1286,8 +1332,11 @@ def export_full_report(
     ws_adj.append(["Тип", "Счёт", "Сумма НСБУ", "Сумма МСФО", "Разница", "Описание"])
     style_header_row(ws_adj, ws_adj.max_row, AMBER_FILL)
 
-    from app.db.models.ifrs import IFRSAdjustment
-    adjustments = db.query(IFRSAdjustment).order_by(IFRSAdjustment.created_at.desc()).limit(200).all()
+    try:
+        from app.db.models.ifrs import IFRSAdjustment
+        adjustments = db.query(IFRSAdjustment).order_by(IFRSAdjustment.created_at.desc()).limit(200).all()
+    except Exception:
+        adjustments = []
 
     adj_type_labels = {
         "ifrs16_lease": "МСФО 16 Аренда",
@@ -1403,8 +1452,11 @@ def export_full_report(
                     st_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
     else:
         # Fallback: DB stress tests
-        from app.db.models.stress_retrospective import StressTest as StressTestModel
-        stress_tests = db.query(StressTestModel).order_by(StressTestModel.created_at.desc()).limit(20).all()
+        try:
+            from app.db.models.stress_retrospective import StressTest as StressTestModel
+            stress_tests = db.query(StressTestModel).order_by(StressTestModel.created_at.desc()).limit(20).all()
+        except Exception:
+            stress_tests = []
         if stress_tests:
             # Rewrite headers for DB data
             ws_stress_nsbu.delete_rows(ws_stress_nsbu.max_row)
@@ -1487,10 +1539,13 @@ def export_full_report(
     ws_dec.append(["Актив", "Тип", "Статус", "Приоритет", "Категория", "Сумма", "Цена", "Итого", "Дата"])
     style_header_row(ws_dec, ws_dec.max_row, GRAY_FILL)
 
-    from app.db.models.investment_decision import InvestmentDecision
-    decisions = db.query(InvestmentDecision).filter(
-        InvestmentDecision.created_by == current_user.id,
-    ).order_by(InvestmentDecision.created_at.desc()).limit(100).all()
+    try:
+        from app.db.models.investment_decision import InvestmentDecision
+        decisions = db.query(InvestmentDecision).filter(
+            InvestmentDecision.created_by == current_user.id,
+        ).order_by(InvestmentDecision.created_at.desc()).limit(100).all()
+    except Exception:
+        decisions = []
 
     if decisions:
         for d in decisions:

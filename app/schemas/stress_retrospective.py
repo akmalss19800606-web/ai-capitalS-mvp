@@ -2,8 +2,8 @@
 Pydantic-схемы: Стресс-тестирование и Ретроспективный анализ.
 Фаза 2, Сессия 2.
 """
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, Field, validator
+from typing import Any, List, Optional, Union
 from datetime import datetime
 
 
@@ -17,6 +17,9 @@ class ShockParameter(BaseModel):
     description: str = ""
 
 
+_SEVERITY_MAP = {"mild": 0.5, "moderate": 1.0, "severe": 1.5, "extreme": 2.0}
+
+
 class StressTestRequest(BaseModel):
     portfolio_id: Optional[int] = None
     scenario: str = Field(
@@ -24,7 +27,17 @@ class StressTestRequest(BaseModel):
         description="Один из: financial_crisis, pandemic, rate_hike, currency_shock, stagflation, custom"
     )
     custom_shocks: Optional[List[ShockParameter]] = None
-    severity: float = Field(default=1.0, ge=0.1, le=3.0, description="Множитель тяжести шока")
+    severity: Union[float, str] = Field(default=1.0, description="Множитель тяжести шока (число или строка: mild/moderate/severe/extreme)")
+    standard: Optional[str] = None  # nsbu/ifrs/both — used by analytics_chapter
+
+    @validator("severity", pre=True, always=True)
+    def coerce_severity(cls, v):
+        if isinstance(v, str):
+            return _SEVERITY_MAP.get(v.lower(), 1.0)
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 1.0
 
 
 class AssetImpact(BaseModel):
