@@ -398,6 +398,46 @@ export default function PortfoliosPage() {
     finally { setLoading(false); }
   }
 
+  async function handle1CExcelUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+    setImportStatus('Загружаем выгрузку 1С...');
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const res = await fetch(
+        `${apiBase}/api/v1/analytics/import/1c-excel`,
+        { method: 'POST', headers: token ? { Authorization: `Bearer ${token}` } : {}, body: form }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const parsed = data.sheets_parsed?.length || 0;
+        const found = data.sheets_found?.length || 0;
+        setImportStatus(`1С импорт завершён: ${parsed}/${found} листов обработано, ${data.accounts_count || 0} счетов ОСВ`);
+        if (data?.company_info) {
+          setCompanyInfo(data.company_info);
+          setRegForm(prev => ({
+            ...prev,
+            name: data.company_info.name || prev.name,
+            inn: data.company_info.inn || prev.inn,
+            oked: data.company_info.activity || prev.oked,
+            address: data.company_info.address || prev.address,
+            director: data.company_info.director || prev.director,
+            accountant: data.company_info.accountant || prev.accountant,
+          }));
+        }
+        if (data.warnings?.length) {
+          setImportStatus(prev => prev + ` | Предупреждения: ${data.warnings.join(', ')}`);
+        }
+      } else {
+        const err = await res.json().catch(() => null);
+        setImportStatus(`Ошибка импорта 1С: ${err?.detail || res.status}`);
+      }
+    } catch { setImportStatus('Ошибка сети при импорте 1С'); }
+    finally { setLoading(false); }
+  }
+
   const orgTypes: { key: OrgType; icon: string; label: string }[] = [
     { key: 'solo', icon: '🏢', label: 'Solo (одно юрлицо)' },
     { key: 'branch', icon: '🏗', label: 'Филиал (подразделение)' },
@@ -509,9 +549,9 @@ export default function PortfoliosPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-all">
             <div className="text-3xl mb-2">🗂</div>
-            <p className="font-medium text-gray-700 text-sm">Загрузить из 1С</p>
-            <p className="text-xs text-gray-400 mt-1">XML / CSV выгрузка</p>
-            <input type="file" accept=".xml,.csv" className="hidden" onChange={handleExcelUpload} id="upload-1c" />
+            <p className="font-medium text-gray-700 text-sm">Импорт из 1С</p>
+            <p className="text-xs text-gray-400 mt-1">Excel выгрузка (10 листов)</p>
+            <input type="file" accept=".xlsx,.xls" className="hidden" onChange={handle1CExcelUpload} id="upload-1c" />
             <label htmlFor="upload-1c" className="mt-2 inline-block text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-full cursor-pointer hover:bg-blue-100">
               Выбрать файл
             </label>

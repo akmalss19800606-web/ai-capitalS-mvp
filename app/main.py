@@ -318,3 +318,6 @@ app.include_router(news_router, prefix="/api/v1")
 # E2-04: IFRS Converter (NSBU → IFRS)
 from app.api.v1.routers.ifrs_converter_router import router as ifrs_converter_router
 app.include_router(ifrs_converter_router, prefix="/api/v1")
+# E2-03: 1C Excel parser import
+from app.api.v1.routers.import_1c_excel import router as import_1c_excel_router
+app.include_router(import_1c_excel_router, prefix="/api/v1")
