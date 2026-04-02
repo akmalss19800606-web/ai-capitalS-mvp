@@ -7,6 +7,7 @@ import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { NextStepBanner } from '@/components/analytics/NextStepBanner';
 import { IfrsAdjustmentsPanel } from '@/components/analytics/IfrsAdjustmentsPanel';
+import { ExportFullReportButton } from '@/components/analytics/ExportFullReportButton';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -581,7 +582,7 @@ export default function PortfoliosPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-2">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {(['nsbu', 'ifrs', 'diff', 'adjustments'] as ActiveTab[]).map(tab => {
             const labels: Record<ActiveTab, string> = { nsbu: '🇺🇿 НСБУ', ifrs: '🌍 МСФО (IAS 1)', diff: 'Δ Разница', adjustments: '🔄 Корректировки МСФО' };
             return (
@@ -598,6 +599,9 @@ export default function PortfoliosPage() {
               </button>
             );
           })}
+          <div className="ml-auto">
+            <ExportFullReportButton portfolioId={0} />
+          </div>
         </div>
       </div>
 
