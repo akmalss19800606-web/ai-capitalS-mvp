@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
 from app.services.excel_1c_parser import Excel1CParser
+from app.api.v1.routers.portfolios import _user_cache
 
 router = APIRouter(tags=["analytics"])
 
@@ -102,5 +103,14 @@ def import_1c_excel(
         "capital": parsed.capital_rows,
         "tax": parsed.tax_rows,
     }
+
+    # Cache parsed 1C data for report endpoints (P&L, CashFlow, Capital, FixedAssets)
+    cache = _user_cache(current_user.id)
+    cache["company_info"] = summary["company_info"]
+    cache["income_expenses"] = parsed.income_expenses
+    cache["cashflow"] = parsed.cashflow
+    cache["capital_rows"] = parsed.capital_rows
+    cache["fixed_assets"] = parsed.fixed_assets
+    cache["tax_rows"] = parsed.tax_rows
 
     return summary

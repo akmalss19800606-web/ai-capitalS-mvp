@@ -66,7 +66,373 @@ interface DiffRow {
   reason?: string;
 }
 
+interface PnlRow {
+  section: string;
+  name: string;
+  current_year: number;
+  previous_year: number;
+  source?: string;
+}
+
+interface CashFlowRow {
+  section: string;
+  group: string;
+  name: string;
+  inflow: number;
+  outflow: number;
+  net: number;
+  source?: string;
+}
+
+interface CapitalRow {
+  name: string;
+  balance_start: number;
+  movement: number;
+  balance_end: number;
+}
+
+interface FixedAssetRow {
+  section: string;
+  category: string;
+  balance_start?: number;
+  inflow?: number;
+  disposal?: number;
+  revaluation?: number;
+  balance_end?: number;
+  useful_life?: number;
+  accum_start?: number;
+  charged?: number;
+  disposal_accum?: number;
+  accum_end?: number;
+  rate?: number;
+}
+
+type NsbuSubTab = 'balance' | 'pnl' | 'cashflow' | 'capital' | 'fixed_assets';
+
+function NsbuBalanceTable({ rows, companyInfo, balanceOk }: {
+  rows: NsbuRow[];
+  companyInfo: any;
+  balanceOk: boolean | null;
+}) {
+  return (
+    <div className="bg-white rounded-xl border border-[#e2e8f0]">
+      {companyInfo && (
+        <div className="mb-0 mx-6 mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <h4 className="font-bold text-blue-900">{companyInfo.name}</h4>
+          <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-blue-800">
+            <p>ИНН: {companyInfo.inn}</p>
+            <p>Деятельность: {companyInfo.activity}</p>
+            <p>Директор: {companyInfo.director}</p>
+            <p>Период: {companyInfo.period}</p>
+            {companyInfo.unit && <p>Единица: {companyInfo.unit}</p>}
+            {companyInfo.accountant && <p>Гл. бухгалтер: {companyInfo.accountant}</p>}
+          </div>
+        </div>
+      )}
+      {balanceOk !== null && (
+        <div className={`mb-0 mx-6 mt-4 p-3 rounded-lg text-sm font-medium ${
+          balanceOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+        }`}>
+          {balanceOk ? 'Баланс сходится (Активы = Обязательства + Капитал)' : 'Баланс не сходится — проверьте данные'}
+        </div>
+      )}
+      <div className="overflow-x-auto p-6">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-800 text-white">
+              <th className="text-left py-3 px-4 rounded-tl-lg">Показатель</th>
+              <th className="text-center py-3 px-4 w-20">Код</th>
+              <th className="text-right py-3 px-4">Текущий период</th>
+              <th className="text-right py-3 px-4 rounded-tr-lg">Предыдущий период</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className={`border-b border-gray-100 ${
+                row.isHeader ? 'bg-blue-50 font-semibold text-blue-800' :
+                row.isTotalAsset || row.isTotalLiability ? 'bg-slate-800 text-white font-bold' :
+                'hover:bg-gray-50'
+              }`}>
+                <td className={`py-2 px-4 ${row.isHeader ? 'pl-4' : 'pl-8'}`}>{row.label}</td>
+                <td className="py-2 px-4 text-center text-gray-400">{row.code}</td>
+                <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.current)}</td>
+                <td className="py-2 px-4 text-right text-gray-500">{formatCurrencyUZS(row.previous)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NsbuPnlTable() {
+  const [rows, setRows] = useState<PnlRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/pnl`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <LoadingCard rows={5} />;
+  if (!rows.length) return (
+    <EmptyState icon={<span>---</span>} title="Нет данных ОПиУ" description="Загрузите выгрузку 1С с листом Доходы и Расходы" />
+  );
+
+  let currentSection = '';
+  return (
+    <div className="bg-white rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-x-auto p-6">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-800 text-white">
+              <th className="text-left py-3 px-4 rounded-tl-lg">Наименование</th>
+              <th className="text-right py-3 px-4">За отчётный период</th>
+              <th className="text-right py-3 px-4 rounded-tr-lg">За предыдущий период</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              const showSection = row.section && row.section !== currentSection;
+              if (showSection) currentSection = row.section;
+              return (
+                <React.Fragment key={i}>
+                  {showSection && (
+                    <tr className="bg-blue-50">
+                      <td colSpan={3} className="py-2 px-4 font-semibold text-blue-800 uppercase text-xs">
+                        {row.section}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8">{row.name}</td>
+                    <td className={`py-2 px-4 text-right ${row.current_year < 0 ? 'text-red-600' : ''}`}>
+                      {formatCurrencyUZS(row.current_year)}
+                    </td>
+                    <td className={`py-2 px-4 text-right text-gray-500 ${row.previous_year < 0 ? 'text-red-600' : ''}`}>
+                      {formatCurrencyUZS(row.previous_year)}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NsbuCashFlowTable() {
+  const [rows, setRows] = useState<CashFlowRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/cashflow`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <LoadingCard rows={5} />;
+  if (!rows.length) return (
+    <EmptyState icon={<span>---</span>} title="Нет данных ДДС" description="Загрузите выгрузку 1С с листом Денежные Средства" />
+  );
+
+  let currentGroup = '';
+  return (
+    <div className="bg-white rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-x-auto p-6">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-800 text-white">
+              <th className="text-left py-3 px-4 rounded-tl-lg">Наименование</th>
+              <th className="text-right py-3 px-4">Поступления</th>
+              <th className="text-right py-3 px-4">Выбытие</th>
+              <th className="text-right py-3 px-4 rounded-tr-lg">Нетто</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => {
+              const showGroup = row.group && row.group !== currentGroup;
+              if (showGroup) currentGroup = row.group;
+              return (
+                <React.Fragment key={i}>
+                  {showGroup && (
+                    <tr className="bg-blue-50">
+                      <td colSpan={4} className="py-2 px-4 font-semibold text-blue-800 uppercase text-xs">
+                        {row.group}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 pl-8">{row.name}</td>
+                    <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.inflow)}</td>
+                    <td className={`py-2 px-4 text-right ${row.outflow > 0 ? 'text-red-600' : ''}`}>
+                      {formatCurrencyUZS(row.outflow)}
+                    </td>
+                    <td className={`py-2 px-4 text-right font-medium ${row.net < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {formatCurrencyUZS(row.net)}
+                    </td>
+                  </tr>
+                </React.Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NsbuCapitalTable() {
+  const [rows, setRows] = useState<CapitalRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/capital`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <LoadingCard rows={4} />;
+  if (!rows.length) return (
+    <EmptyState icon={<span>---</span>} title="Нет данных по капиталу" description="Загрузите выгрузку 1С с листом Капитал" />
+  );
+
+  return (
+    <div className="bg-white rounded-xl border border-[#e2e8f0]">
+      <div className="overflow-x-auto p-6">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-slate-800 text-white">
+              <th className="text-left py-3 px-4 rounded-tl-lg">Наименование</th>
+              <th className="text-right py-3 px-4">Остаток на начало</th>
+              <th className="text-right py-3 px-4">Движение</th>
+              <th className="text-right py-3 px-4 rounded-tr-lg">Остаток на конец</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                <td className="py-2 px-4">{row.name}</td>
+                <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.balance_start)}</td>
+                <td className={`py-2 px-4 text-right ${row.movement < 0 ? 'text-red-600' : ''}`}>
+                  {formatCurrencyUZS(row.movement)}
+                </td>
+                <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(row.balance_end)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function NsbuFixedAssetsTable() {
+  const [rows, setRows] = useState<FixedAssetRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/fixed-assets`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  if (loading) return <LoadingCard rows={5} />;
+  if (!rows.length) return (
+    <EmptyState icon={<span>---</span>} title="Нет данных по основным средствам" description="Загрузите выгрузку 1С с листом Основные Средства" />
+  );
+
+  const costRows = rows.filter(r => r.section === 'cost');
+  const deprRows = rows.filter(r => r.section === 'depreciation');
+
+  return (
+    <div className="bg-white rounded-xl border border-[#e2e8f0] space-y-6">
+      {costRows.length > 0 && (
+        <div className="overflow-x-auto p-6 pb-0">
+          <h4 className="font-semibold text-blue-800 mb-3 uppercase text-xs">Первоначальная стоимость</h4>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-800 text-white">
+                <th className="text-left py-3 px-4 rounded-tl-lg">Категория ОС</th>
+                <th className="text-right py-3 px-4">На начало</th>
+                <th className="text-right py-3 px-4">Поступление</th>
+                <th className="text-right py-3 px-4">Выбытие</th>
+                <th className="text-right py-3 px-4">Переоценка</th>
+                <th className="text-right py-3 px-4 rounded-tr-lg">На конец</th>
+              </tr>
+            </thead>
+            <tbody>
+              {costRows.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-2 px-4">{row.category}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.balance_start ?? 0)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.inflow ?? 0)}</td>
+                  <td className={`py-2 px-4 text-right ${(row.disposal ?? 0) > 0 ? 'text-red-600' : ''}`}>
+                    {formatCurrencyUZS(row.disposal ?? 0)}
+                  </td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.revaluation ?? 0)}</td>
+                  <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(row.balance_end ?? 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {deprRows.length > 0 && (
+        <div className="overflow-x-auto p-6 pt-0">
+          <h4 className="font-semibold text-blue-800 mb-3 uppercase text-xs">Накопленная амортизация</h4>
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="bg-slate-800 text-white">
+                <th className="text-left py-3 px-4 rounded-tl-lg">Категория ОС</th>
+                <th className="text-right py-3 px-4">На начало</th>
+                <th className="text-right py-3 px-4">Начислено</th>
+                <th className="text-right py-3 px-4">Выбытие</th>
+                <th className="text-right py-3 px-4 rounded-tr-lg">На конец</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deprRows.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-2 px-4">{row.category}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.accum_start ?? 0)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.charged ?? 0)}</td>
+                  <td className={`py-2 px-4 text-right ${(row.disposal_accum ?? 0) > 0 ? 'text-red-600' : ''}`}>
+                    {formatCurrencyUZS(row.disposal_accum ?? 0)}
+                  </td>
+                  <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(row.accum_end ?? 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NsbuReport() {
+  const [subTab, setSubTab] = useState<NsbuSubTab>('balance');
   const [rows, setRows] = useState<NsbuRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [balanceOk, setBalanceOk] = useState<boolean | null>(null);
@@ -96,60 +462,40 @@ function NsbuReport() {
   if (loading) return <LoadingCard rows={5} />;
   if (!rows.length) return (
     <EmptyState
-      icon={<span>📄</span>}
+      icon={<span>---</span>}
       title="Нет данных НСБУ"
       description="Сначала загрузите данные из 1С или Excel"
     />
   );
 
+  const subTabs: { key: NsbuSubTab; label: string }[] = [
+    { key: 'balance', label: 'Баланс' },
+    { key: 'pnl', label: 'ОПиУ' },
+    { key: 'cashflow', label: 'ДДС' },
+    { key: 'capital', label: 'Капитал' },
+    { key: 'fixed_assets', label: 'Движение ОС' },
+  ];
+
   return (
-    <div className="bg-white rounded-xl border border-[#e2e8f0]">
-      {companyInfo && (
-        <div className="mb-0 mx-6 mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <h4 className="font-bold text-blue-900">{companyInfo.name}</h4>
-          <div className="grid grid-cols-2 gap-2 mt-2 text-sm text-blue-800">
-            <p>ИНН: {companyInfo.inn}</p>
-            <p>Деятельность: {companyInfo.activity}</p>
-            <p>Директор: {companyInfo.director}</p>
-            <p>Период: {companyInfo.period}</p>
-            {companyInfo.unit && <p>Единица: {companyInfo.unit}</p>}
-            {companyInfo.accountant && <p>Гл. бухгалтер: {companyInfo.accountant}</p>}
-          </div>
-        </div>
-      )}
-      {balanceOk !== null && (
-        <div className={`mb-0 mx-6 mt-4 p-3 rounded-lg text-sm font-medium ${
-          balanceOk ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-        }`}>
-          {balanceOk ? '✅ Баланс сходится (Активы = Обязательства + Капитал)' : '⚠️ Баланс не сходится — проверьте данные'}
-        </div>
-      )}
-      <div className="overflow-x-auto p-6">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-slate-800 text-white">
-              <th className="text-left py-3 px-4 rounded-tl-lg">Показатель</th>
-              <th className="text-center py-3 px-4 w-20">Код</th>
-              <th className="text-right py-3 px-4">Текущий период</th>
-              <th className="text-right py-3 px-4 rounded-tr-lg">Предыдущий период</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i} className={`border-b border-gray-100 ${
-                row.isHeader ? 'bg-blue-50 font-semibold text-blue-800' :
-                row.isTotalAsset || row.isTotalLiability ? 'bg-slate-800 text-white font-bold' :
-                'hover:bg-gray-50'
-              }`}>
-                <td className={`py-2 px-4 ${row.isHeader ? 'pl-4' : 'pl-8'}`}>{row.label}</td>
-                <td className="py-2 px-4 text-center text-gray-400">{row.code}</td>
-                <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.current)}</td>
-                <td className="py-2 px-4 text-right text-gray-500">{formatCurrencyUZS(row.previous)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        {subTabs.map(t => (
+          <button key={t.key} onClick={() => setSubTab(t.key)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition ${
+              subTab === t.key
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {subTab === 'balance' && <NsbuBalanceTable rows={rows} companyInfo={companyInfo} balanceOk={balanceOk} />}
+      {subTab === 'pnl' && <NsbuPnlTable />}
+      {subTab === 'cashflow' && <NsbuCashFlowTable />}
+      {subTab === 'capital' && <NsbuCapitalTable />}
+      {subTab === 'fixed_assets' && <NsbuFixedAssetsTable />}
     </div>
   );
 }

@@ -750,6 +750,70 @@ async def get_diff_report(
 
 
 # ---------------------------------------------------------------------------
+# GET /reports/nsbu/pnl — ОПиУ (Форма 2)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/nsbu/pnl")
+async def get_nsbu_pnl(
+    current_user: User = Depends(get_current_user),
+):
+    """Get P&L report from parsed 1C data (income_expenses)."""
+    cache = _user_cache(current_user.id)
+    rows = cache.get("income_expenses", [])
+    if not rows:
+        return JSONResponse({"rows": []})
+    return JSONResponse({"rows": rows})
+
+
+# ---------------------------------------------------------------------------
+# GET /reports/nsbu/cashflow — ДДС (Форма 4)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/nsbu/cashflow")
+async def get_nsbu_cashflow(
+    current_user: User = Depends(get_current_user),
+):
+    """Get Cash Flow report from parsed 1C data (cashflow)."""
+    cache = _user_cache(current_user.id)
+    rows = cache.get("cashflow", [])
+    if not rows:
+        return JSONResponse({"rows": []})
+    return JSONResponse({"rows": rows})
+
+
+# ---------------------------------------------------------------------------
+# GET /reports/nsbu/capital — Капитал (Форма 5)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/nsbu/capital")
+async def get_nsbu_capital(
+    current_user: User = Depends(get_current_user),
+):
+    """Get Equity report from parsed 1C data (capital_rows)."""
+    cache = _user_cache(current_user.id)
+    rows = cache.get("capital_rows", [])
+    if not rows:
+        return JSONResponse({"rows": []})
+    return JSONResponse({"rows": rows})
+
+
+# ---------------------------------------------------------------------------
+# GET /reports/nsbu/fixed-assets — Движение ОС (Форма 3)
+# ---------------------------------------------------------------------------
+
+@router.get("/reports/nsbu/fixed-assets")
+async def get_nsbu_fixed_assets(
+    current_user: User = Depends(get_current_user),
+):
+    """Get Fixed Assets movement report from parsed 1C data."""
+    cache = _user_cache(current_user.id)
+    rows = cache.get("fixed_assets", [])
+    if not rows:
+        return JSONResponse({"rows": []})
+    return JSONResponse({"rows": rows})
+
+
+# ---------------------------------------------------------------------------
 # GET /template/excel — download template (kept as-is)
 # ---------------------------------------------------------------------------
 
