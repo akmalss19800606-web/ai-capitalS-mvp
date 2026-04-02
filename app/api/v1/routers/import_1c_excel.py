@@ -1,13 +1,16 @@
 """
 E2-03: API endpoint for 1C Excel import (10-sheet format).
 """
+import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
 from app.services.excel_1c_parser import Excel1CParser
-from app.api.v1.routers.portfolios import _user_cache
+from app.api.v1.routers.portfolios import _user_cache, _is_credit_account, _classify_account
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["analytics"])
 
@@ -112,5 +115,95 @@ def import_1c_excel(
     cache["capital_rows"] = parsed.capital_rows
     cache["fixed_assets"] = parsed.fixed_assets
     cache["tax_rows"] = parsed.tax_rows
+
+    # ── Build accounts dict + pnl dict from OSV entries ──────────────
+    # This enables KPI calculations (profitability, DCF, stress-test, etc.)
+    accounts = {}
+    revenue_accounts = {}
+    expense_accounts = {}
+
+    for e in parsed.osv_entries:
+        code = e.account_code.strip()
+        if not code or "." in code:
+            continue
+        base = code[:4] if len(code) >= 4 else code
+
+        ds = float(e.debit_start)
+        cs = float(e.credit_start)
+        de = float(e.debit_end)
+        ce = float(e.credit_end)
+
+        prefix = int(base[:2]) if base[:2].isdigit() else 0
+
+        # Revenue accounts (90xx-99xx)
+        if 90 <= prefix <= 99:
+            revenue_accounts[base] = {
+                "code": base, "name": e.account_name,
+                "credit_start": cs, "credit_end": ce,
+            }
+            continue
+        elif 20 <= prefix <= 29 and de > 0:
+            # Cost/expense accounts
+            expense_accounts[base] = {
+                "code": base, "name": e.account_name,
+                "debit_start": ds, "debit_end": de,
+            }
+
+        is_credit = _is_credit_account(base)
+        accounts[base] = {
+            "code": base,
+            "name": e.account_name,
+            "debit_start": ds,
+            "credit_start": cs,
+            "debit_end": de,
+            "credit_end": ce,
+            "current": ce if is_credit else de,
+            "previous": cs if is_credit else ds,
+            "section": _classify_account(base),
+        }
+
+    # Fallback: extract revenue/expense from income_expenses list (1C format)
+    if parsed.income_expenses and not revenue_accounts:
+        total_revenue_cur = 0.0
+        total_revenue_prev = 0.0
+        total_expenses_cur = 0.0
+        total_expenses_prev = 0.0
+        for ie in parsed.income_expenses:
+            name_lower = ie.get("name", "").lower()
+            cur_val = float(ie.get("current_year") or 0)
+            prev_val = float(ie.get("previous_year") or 0)
+            section_lower = ie.get("section", "").lower()
+            if "доход" in section_lower or "выручк" in name_lower or "реализац" in name_lower:
+                total_revenue_cur += cur_val
+                total_revenue_prev += prev_val
+            else:
+                total_expenses_cur += cur_val
+                total_expenses_prev += prev_val
+        if total_revenue_cur or total_expenses_cur:
+            revenue_accounts["9010"] = {"code": "9010", "name": "Выручка", "credit_start": total_revenue_prev, "credit_end": total_revenue_cur}
+            expense_accounts["2010"] = {"code": "2010", "name": "Себестоимость", "debit_start": total_expenses_prev, "debit_end": total_expenses_cur}
+
+    total_revenue_start = sum(a["credit_start"] for a in revenue_accounts.values())
+    total_revenue_end = sum(a["credit_end"] for a in revenue_accounts.values())
+    total_expenses_start = sum(a["debit_start"] for a in expense_accounts.values())
+    total_expenses_end = sum(a["debit_end"] for a in expense_accounts.values())
+
+    pnl_data = {
+        "total_revenue_start": total_revenue_start,
+        "total_revenue_end": total_revenue_end,
+        "total_expenses_start": total_expenses_start,
+        "total_expenses_end": total_expenses_end,
+        "net_profit_start": total_revenue_start - total_expenses_start,
+        "net_profit_end": total_revenue_end - total_expenses_end,
+        "revenue_accounts": revenue_accounts,
+        "expense_accounts": expense_accounts,
+    }
+
+    cache["accounts"] = accounts
+    cache["pnl"] = pnl_data
+    logger.info(
+        "1C import: %d accounts cached, revenue=%.0f, expenses=%.0f",
+        len(accounts), total_revenue_end, total_expenses_end,
+    )
 
     return summary
