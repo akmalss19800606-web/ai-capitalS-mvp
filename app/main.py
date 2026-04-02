@@ -315,3 +315,6 @@ from app.api.v1.routers.islamic_products_ref_router import router as islamic_ref
 app.include_router(islamic_ref_router,         prefix="/api/v1/islamic",          tags=["Islamic: Reference Data"])
 # E1-02/E1-03: News
 app.include_router(news_router, prefix="/api/v1")
+# E2-04: IFRS Converter (NSBU → IFRS)
+from app.api.v1.routers.ifrs_converter_router import router as ifrs_converter_router
+app.include_router(ifrs_converter_router, prefix="/api/v1")
