@@ -1,6 +1,7 @@
 /* eslint-disable */
 "use client";
 import React, { useState, useEffect } from "react";
+import { riskAnalysis } from "@/lib/api";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
@@ -59,14 +60,21 @@ export default function StressTestPage(){
     }
   },[selectedOrg]);
 
-  const runStress=()=>{
-    if(!balance)return;
+  const runStress=async()=>{
+    if(!balance||!selectedOrg)return;
     setRunning(true);
-    const sev=SEVERITY.find(s=>s.value===severity);
-    const pct=sev?.pct||0.2;
-    const sc=SCENARIOS.find(s=>s.id===scenario);
-
-    setTimeout(()=>{
+    try{
+      const res=await riskAnalysis.stressTest({
+        portfolio_id: selectedOrg,
+        scenario_key: scenario,
+        severity: severity,
+      });
+      setResult(res);
+    }catch(e:any){
+      // Fallback: compute locally if backend not available
+      const sev=SEVERITY.find(s=>s.value===severity);
+      const pct=sev?.pct||0.2;
+      const sc=SCENARIOS.find(s=>s.id===scenario);
       const stressed={
         scenario: sc?.name,
         severity: sev?.label,
@@ -89,8 +97,9 @@ export default function StressTestPage(){
         factors: sc?.factors||[],
       };
       setResult(stressed);
+    }finally{
       setRunning(false);
-    },1500);
+    }
   };
 
   const fmtNum=(n:number)=>new Intl.NumberFormat("ru-RU",{maximumFractionDigits:0}).format(n);

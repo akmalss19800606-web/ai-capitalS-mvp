@@ -69,6 +69,7 @@ def calculate_zakat(
         record_id = record.id
     except Exception as e:
         db.rollback()
+        raise
 
     return ZakatCalculateResponse(
         calculation_date=calc_date,

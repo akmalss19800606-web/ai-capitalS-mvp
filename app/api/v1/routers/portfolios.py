@@ -17,7 +17,14 @@ router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 # ---------------------------------------------------------------------------
 # In-memory cache for parsed ОСВ data (until we have a proper DB table)
 # ---------------------------------------------------------------------------
-_portfolio_cache: dict = {}
+_portfolio_cache: dict = {}  # key = user_id, value = user's cache data
+
+
+def _user_cache(user_id: int) -> dict:
+    """Get or create per-user cache partition."""
+    if user_id not in _portfolio_cache:
+        _portfolio_cache[user_id] = {}
+    return _portfolio_cache[user_id]
 
 
 # ---------------------------------------------------------------------------
@@ -108,9 +115,13 @@ class CompanyRegistration(BaseModel):
 
 
 @router.post("/register")
-async def register_company(data: CompanyRegistration):
+async def register_company(
+    data: CompanyRegistration,
+    current_user: User = Depends(get_current_user),
+):
     """Register company manually (without file upload)."""
-    _portfolio_cache["company_info"] = {
+    cache = _user_cache(current_user.id)
+    cache["company_info"] = {
         "name": data.name,
         "inn": data.inn,
         "activity": data.oked,
@@ -124,9 +135,12 @@ async def register_company(data: CompanyRegistration):
 
 
 @router.get("/company-info")
-async def get_company_info():
+async def get_company_info(
+    current_user: User = Depends(get_current_user),
+):
     """Return cached company info."""
-    info = _portfolio_cache.get("company_info")
+    cache = _user_cache(current_user.id)
+    info = cache.get("company_info")
     if not info:
         return JSONResponse({"status": "empty", "company_info": None})
     return JSONResponse({"status": "ok", "company_info": info})
@@ -264,6 +278,7 @@ def _parse_company_info(wb) -> dict:
 async def import_portfolio_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Import financial data from 1C Excel (ОСВ) file."""
     content = await file.read()
@@ -276,7 +291,8 @@ async def import_portfolio_excel(
 
             # --- Parse company info from Реквизиты sheet ---
             company_info = _parse_company_info(wb)
-            _portfolio_cache["company_info"] = company_info
+            cache = _user_cache(current_user.id)
+            cache["company_info"] = company_info
 
             # --- Find ОСВ sheet ---
             osv_sheet = None
@@ -378,9 +394,9 @@ async def import_portfolio_excel(
 
             wb.close()
 
-            _portfolio_cache["accounts"] = accounts
-            _portfolio_cache["pnl"] = pnl_data
-            _portfolio_cache["filename"] = filename
+            cache["accounts"] = accounts
+            cache["pnl"] = pnl_data
+            cache["filename"] = filename
 
             return JSONResponse({
                 "status": "success",
@@ -542,13 +558,16 @@ def _build_nsbu_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
 
 @router.get("/reports/nsbu/balance")
-async def get_nsbu_balance():
+async def get_nsbu_balance(
+    current_user: User = Depends(get_current_user),
+):
     """Get NSBU balance report from parsed ОСВ data."""
-    accounts = _portfolio_cache.get("accounts")
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
-    pnl = _portfolio_cache.get("pnl")
-    company_info = _portfolio_cache.get("company_info")
+    pnl = cache.get("pnl")
+    company_info = cache.get("company_info")
     result = {"rows": _build_nsbu_rows(accounts, pnl)}
     if company_info:
         result["company_info"] = company_info
@@ -665,13 +684,16 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
 
 @router.get("/reports/ifrs/balance")
-async def get_ifrs_balance():
+async def get_ifrs_balance(
+    current_user: User = Depends(get_current_user),
+):
     """Get IFRS balance report (IAS 1) from parsed ОСВ data."""
-    accounts = _portfolio_cache.get("accounts")
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
-    pnl = _portfolio_cache.get("pnl")
-    company_info = _portfolio_cache.get("company_info")
+    pnl = cache.get("pnl")
+    company_info = cache.get("company_info")
     result = {"rows": _build_ifrs_rows(accounts, pnl)}
     if company_info:
         result["company_info"] = company_info
@@ -716,9 +738,12 @@ def _build_diff_rows(accounts: dict) -> list:
 
 
 @router.get("/reports/diff")
-async def get_diff_report():
+async def get_diff_report(
+    current_user: User = Depends(get_current_user),
+):
     """Get NSBU vs IFRS diff report from parsed ОСВ data."""
-    accounts = _portfolio_cache.get("accounts")
+    cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
     return JSONResponse({"rows": _build_diff_rows(accounts)})
@@ -729,7 +754,9 @@ async def get_diff_report():
 # ---------------------------------------------------------------------------
 
 @router.get("/template/excel")
-async def download_portfolio_template():
+async def download_portfolio_template(
+    current_user: User = Depends(get_current_user),
+):
     """Download empty NSBU + IFRS template."""
     try:
         from openpyxl import Workbook
@@ -759,13 +786,16 @@ async def download_portfolio_template():
 # ---------------------------------------------------------------------------
 
 @router.get("/export/excel")
-async def export_portfolio_excel():
+async def export_portfolio_excel(
+    current_user: User = Depends(get_current_user),
+):
     """Export full NSBU + IFRS report as Excel with real data from cache."""
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
 
-        accounts = _portfolio_cache.get("accounts")
+        cache = _user_cache(current_user.id)
+        accounts = cache.get("accounts")
         if not accounts:
             # No data — return stub
             wb = Workbook()
@@ -782,8 +812,8 @@ async def export_portfolio_excel():
                 headers={"Content-Disposition": "attachment; filename=report_nsbu_ifrs.xlsx"},
             )
 
-        pnl = _portfolio_cache.get("pnl")
-        company_info = _portfolio_cache.get("company_info", {})
+        pnl = cache.get("pnl")
+        company_info = cache.get("company_info", {})
 
         bold = Font(bold=True)
         header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")

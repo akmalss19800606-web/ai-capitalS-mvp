@@ -21,7 +21,7 @@ from app.schemas.islamic_stage1 import (
 BASE_SCORE = Decimal("5.0")
 THRESHOLDS = {
     "haram_revenue_pct": {"limit": Decimal("5.0"), "penalty": Decimal("2.0"), "label": "Выручка от харам-деятельности"},
-    "debt_ratio": {"limit": Decimal("33.0"), "penalty": Decimal("1.0"), "label": "Долговая нагрузка"},
+    "debt_ratio": {"limit": Decimal("30.0"), "penalty": Decimal("1.0"), "label": "Долговая нагрузка"},
     "interest_income_pct": {"limit": Decimal("5.0"), "penalty": Decimal("1.5"), "label": "Процентный доход"},
 }
 

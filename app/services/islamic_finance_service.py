@@ -219,7 +219,8 @@ class ProductService:
             periods = int(params.get("periods", 12))
             amount = float(params.get("amount", 0))
             rate = float(params.get("rate", 0.05))
-            total = amount * (1 + rate)
+            years = periods / 12 if periods > 12 else 1
+            total = amount * (1 + rate * years)
             pmt = round(total / max(periods, 1), 2)
             schedule = [{"period": i + 1, "payment": pmt} for i in range(periods)]
             result["total"] = round(total, 2)

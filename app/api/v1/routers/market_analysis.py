@@ -105,11 +105,10 @@ async def quick_market_analysis(
     _u=Depends(get_current_user),
 ):
     try:
-        result = await svc.quick_market_analysis(
-            oked_section=oked_section,
-            oked_division=oked_division,
-            region=region,
-            investment_amount=investment_amount,
+        question = f"Анализ рынка: секция ОКЭД {oked_section}, раздел {oked_division}, регион {region}, инвестиции ${investment_amount}"
+        result = await svc.quick_ask(
+            question=question,
+            sector=oked_section,
             provider=provider,
         )
         return result

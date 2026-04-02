@@ -1,38 +1,38 @@
 from typing import Optional
 from uuid import UUID
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from app.db.models.islamic_stage3 import SukukIssuance, TakafulPlan, WaqfProject
 
 
-async def get_all_sukuks(db: AsyncSession, status: Optional[str] = None):
+def get_all_sukuks(db: Session, status: Optional[str] = None):
     query = select(SukukIssuance).order_by(SukukIssuance.issue_date.desc())
     if status:
         query = query.where(SukukIssuance.status == status)
-    result = await db.execute(query)
+    result = db.execute(query)
     return result.scalars().all()
 
 
-async def get_sukuk_by_id(db: AsyncSession, sukuk_id: UUID):
-    result = await db.execute(select(SukukIssuance).where(SukukIssuance.id == sukuk_id))
+def get_sukuk_by_id(db: Session, sukuk_id: UUID):
+    result = db.execute(select(SukukIssuance).where(SukukIssuance.id == sukuk_id))
     return result.scalar_one_or_none()
 
 
-async def get_all_takaful_plans(db: AsyncSession, takaful_type: Optional[str] = None):
+def get_all_takaful_plans(db: Session, takaful_type: Optional[str] = None):
     query = select(TakafulPlan).where(TakafulPlan.is_active == True).order_by(TakafulPlan.name_ru)
     if takaful_type:
         query = query.where(TakafulPlan.takaful_type == takaful_type)
-    result = await db.execute(query)
+    result = db.execute(query)
     return result.scalars().all()
 
 
-async def get_takaful_by_id(db: AsyncSession, plan_id: UUID):
-    result = await db.execute(select(TakafulPlan).where(TakafulPlan.id == plan_id))
+def get_takaful_by_id(db: Session, plan_id: UUID):
+    result = db.execute(select(TakafulPlan).where(TakafulPlan.id == plan_id))
     return result.scalar_one_or_none()
 
 
-async def calculate_takaful_contribution(
+def calculate_takaful_contribution(
     coverage_amount: float,
     takaful_type: str,
     term_months: int = 12,
@@ -56,21 +56,21 @@ async def calculate_takaful_contribution(
     }
 
 
-async def get_all_waqf_projects(db: AsyncSession, status: Optional[str] = None):
+def get_all_waqf_projects(db: Session, status: Optional[str] = None):
     query = select(WaqfProject).order_by(WaqfProject.created_at.desc())
     if status:
         query = query.where(WaqfProject.status == status)
-    result = await db.execute(query)
+    result = db.execute(query)
     return result.scalars().all()
 
 
-async def get_waqf_by_id(db: AsyncSession, waqf_id: UUID):
-    result = await db.execute(select(WaqfProject).where(WaqfProject.id == waqf_id))
+def get_waqf_by_id(db: Session, waqf_id: UUID):
+    result = db.execute(select(WaqfProject).where(WaqfProject.id == waqf_id))
     return result.scalar_one_or_none()
 
 
-async def get_waqf_stats(db: AsyncSession) -> dict:
-    projects = await get_all_waqf_projects(db)
+def get_waqf_stats(db: Session) -> dict:
+    projects = get_all_waqf_projects(db)
     total_target = sum(float(p.target_amount_uzs or 0) for p in projects)
     total_collected = sum(float(p.collected_amount_uzs or 0) for p in projects)
     active = sum(1 for p in projects if p.status == "active")

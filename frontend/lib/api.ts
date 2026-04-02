@@ -231,6 +231,19 @@ export const riskAnalysis = {
   portfolio: (id: number) => apiRequest(`/risk/portfolio/${id}`),
   var: (id: number) => apiRequest(`/risk/var/${id}`),
   stress: (id: number) => apiRequest(`/risk/stress/${id}`),
+  concentration: (portfolioId?: number) =>
+    apiRequest(`/risk/concentration${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  performance: (portfolioId?: number) =>
+    apiRequest(`/risk/performance${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  composite: (portfolioId?: number) =>
+    apiRequest(`/risk/composite${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  recommendations: (portfolioId?: number) =>
+    apiRequest(`/risk/recommendations${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  scoreInvestment: (data: unknown) =>
+    apiRequest('/risk/score-investment', { method: 'POST', body: JSON.stringify(data) }),
+  stressTest: (data: unknown) =>
+    apiRequest('/analytics/stress-test', { method: 'POST', body: JSON.stringify(data) }),
+  stressScenarios: () => apiRequest('/analytics/stress-scenarios'),
 };
 
 export const reports = {
