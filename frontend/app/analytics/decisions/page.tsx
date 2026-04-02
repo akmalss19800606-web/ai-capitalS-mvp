@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { formatCurrencyUZS, formatNumber, formatDateRu } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -166,6 +167,8 @@ export default function DecisionsPage() {
   const [saveError, setSaveError] = useState('');
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [histLoading, setHistLoading] = useState(true);
+
+  const { activeOrgName, activeStandard } = useAnalytics();
 
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';

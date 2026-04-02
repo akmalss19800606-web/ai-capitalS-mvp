@@ -5,6 +5,7 @@ import {
   ScatterChart, Scatter, ZAxis, Cell,
 } from 'recharts';
 import { formatCurrencyUZS } from '@/lib/formatters';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -255,6 +256,7 @@ export default function VisualizationsPage() {
   const [tornadoData, setTornadoData] = useState<TornadoItem[]>(DEMO_TORNADO);
   const [bubbleData, setBubbleData] = useState<BubbleItem[]>(DEMO_BUBBLE);
   const [heatmapData, setHeatmapData] = useState<(string | number)[][]>(DEMO_HEATMAP);
+  const { activeStandard } = useAnalytics();
 
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';

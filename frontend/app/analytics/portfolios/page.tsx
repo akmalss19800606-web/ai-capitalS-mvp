@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { formatCurrencyUZS } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -66,6 +67,7 @@ function NsbuReport() {
   const [loading, setLoading] = useState(true);
   const [balanceOk, setBalanceOk] = useState<boolean | null>(null);
   const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const { setNsbuReady } = useAnalytics();
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
 
@@ -76,6 +78,7 @@ function NsbuReport() {
       .then(data => {
         if (data?.rows) {
           setRows(data.rows);
+          setNsbuReady(true);
           const totalAsset = data.rows.filter((r: NsbuRow) => r.isTotalAsset)?.[0]?.current ?? 0;
           const totalLiab = data.rows.filter((r: NsbuRow) => r.isTotalLiability)?.[0]?.current ?? 0;
           setBalanceOk(Math.abs(totalAsset - totalLiab) < 1);
@@ -84,7 +87,7 @@ function NsbuReport() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, [token, setNsbuReady]);
 
   if (loading) return <LoadingCard rows={5} />;
   if (!rows.length) return (
@@ -150,6 +153,7 @@ function NsbuReport() {
 function IfrsReport() {
   const [rows, setRows] = useState<IfrsRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const { setIfrsReady } = useAnalytics();
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
 
@@ -157,9 +161,9 @@ function IfrsReport() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/ifrs/balance`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .then(d => { if (d?.rows) { setRows(d.rows); setIfrsReady(true); } setLoading(false); })
       .catch(() => setLoading(false));
-  }, [token]);
+  }, [token, setIfrsReady]);
 
   if (loading) return <LoadingCard rows={5} />;
   if (!rows.length) return (
@@ -319,6 +323,8 @@ export default function PortfoliosPage() {
   const [regForm, setRegForm] = useState<RegForm>(emptyForm);
   const [regSaving, setRegSaving] = useState(false);
 
+  const { setActiveOrg, setNsbuReady, setIfrsReady } = useAnalytics();
+
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') || '' : '';
 
@@ -329,9 +335,14 @@ export default function PortfoliosPage() {
     fetch(`${apiBase}/api/v1/portfolios/company-info`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.company_info) setCompanyInfo(d.company_info); })
+      .then(d => {
+        if (d?.company_info) {
+          setCompanyInfo(d.company_info);
+          setActiveOrg(d.company_info.inn || 'org', d.company_info.name || '');
+        }
+      })
       .catch(() => {});
-  }, [token, apiBase]);
+  }, [token, apiBase, setActiveOrg]);
 
   async function handleRegister() {
     if (!regForm.name.trim()) return;
@@ -344,6 +355,7 @@ export default function PortfoliosPage() {
       });
       if (res.ok) {
         setCompanyInfo({ ...regForm, activity: regForm.oked });
+        setActiveOrg(regForm.inn || 'org', regForm.name);
       }
     } catch {}
     finally { setRegSaving(false); }

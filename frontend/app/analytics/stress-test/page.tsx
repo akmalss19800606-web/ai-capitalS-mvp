@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -127,7 +128,7 @@ function StressResultsTable({
 export default function StressTestPage() {
   const [scenario, setScenario] = useState('crisis_2008');
   const [severity, setSeverity] = useState('moderate');
-  const [stdMode, setStdMode] = useState<'nsbu' | 'ifrs' | 'both'>('both');
+  const { activeStandard: stdMode, setActiveStandard: setStdMode } = useAnalytics();
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<StressResult[]>([]);
   const [aiSummary, setAiSummary] = useState<string[]>([]);

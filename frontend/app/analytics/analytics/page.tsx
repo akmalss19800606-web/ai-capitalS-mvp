@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { formatCurrencyUZS } from '@/lib/formatters';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
+import { useAnalytics } from '@/contexts/AnalyticsContext';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -221,39 +222,42 @@ function MultipliersBlock() {
 
 export default function AnalyticsAnalyticsPage() {
   const [kpiGroups, setKpiGroups] = useState<KpiGroup[]>([]);
-  const [activeStandard, setActiveStandard] = useState<'nsbu' | 'ifrs'>('nsbu');
+  const { activeStandard, setActiveStandard } = useAnalytics();
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
 
+  // KPI API accepts 'nsbu' or 'ifrs'; if 'both' is selected, default to 'nsbu'
+  const kpiStandard = activeStandard === 'both' ? 'nsbu' : activeStandard;
+
   useEffect(() => {
     setLoading(true);
     fetch(
-      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/analytics/kpi?standard=${activeStandard}`,
+      `${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/analytics/kpi?standard=${kpiStandard}`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} }
     )
       .then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.groups) setKpiGroups(d.groups); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [activeStandard, token]);
+  }, [kpiStandard, token]);
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">📈 Финансовые коэффициенты (32 KPI)</h2>
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
-          <button onClick={() => setActiveStandard('nsbu')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              activeStandard === 'nsbu' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
-            }`}>
-            🇺🇿 НСБУ
-          </button>
-          <button onClick={() => setActiveStandard('ifrs')}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-              activeStandard === 'ifrs' ? 'bg-white shadow text-gray-900' : 'text-gray-500'
-            }`}>
-            🌍 МСФО
-          </button>
+          {([
+            { key: 'nsbu' as const, label: 'НСБУ' },
+            { key: 'ifrs' as const, label: 'МСФО' },
+            { key: 'both' as const, label: 'Оба' },
+          ]).map(s => (
+            <button key={s.key} onClick={() => setActiveStandard(s.key)}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeStandard === s.key ? 'bg-white shadow text-gray-900' : 'text-gray-500'
+              }`}>
+              {s.label}
+            </button>
+          ))}
         </div>
       </div>
 
