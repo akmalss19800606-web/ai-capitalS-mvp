@@ -30,8 +30,10 @@ def calculate_purification(db: Session, user_id: int, request: PurificationCalcu
             ).first()
             if result and result.haram_revenue_pct is not None:
                 non_compliant_pct = Decimal(str(result.haram_revenue_pct))
-        except Exception:
-            pass
+        except Exception as e:
+            # ISL-09: Log screening lookup failure instead of silent swallow
+            import logging
+            logging.getLogger(__name__).warning(f"Screening lookup failed: {e}")
 
     exchange_rate = _get_exchange_rate(db)
     purification_uzs = (request.gross_income_uzs * non_compliant_pct / Decimal("100")).quantize(Decimal("0.01"))

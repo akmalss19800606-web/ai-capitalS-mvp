@@ -30,7 +30,12 @@ def calculate_zakat(
 
     is_due = net_assets >= nisab_data["nisab_uzs"]
     zakat_uzs = (net_assets * ZAKAT_RATE).quantize(Decimal("0.01")) if is_due else Decimal("0")
-    zakat_usd = (zakat_uzs / nisab_data["exchange_rate_uzs"]).quantize(Decimal("0.01"))
+    # ISL-12: Guard against ZeroDivisionError in USD conversion
+    exchange_rate = nisab_data.get("exchange_rate_uzs", 0)
+    if exchange_rate and exchange_rate > 0:
+        zakat_usd = (zakat_uzs / Decimal(str(exchange_rate))).quantize(Decimal("0.01"))
+    else:
+        zakat_usd = Decimal("0")
 
     if is_due:
         explanation = (
@@ -114,5 +119,8 @@ def get_zakat_history(
             )
             for r in rows
         ]
-    except Exception:
-        return []
+    except Exception as e:
+        # ISL-08: Log and re-raise instead of swallowing
+        import logging
+        logging.getLogger(__name__).error(f"Failed to fetch zakat history: {e}")
+        raise

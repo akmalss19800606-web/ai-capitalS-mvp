@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/market-analysis", tags=["Market Analysis UZ"])
 svc = UZMarketAnalysisService()
 
-# In-memory store for MVP (replace with DB in production)
+# MKT-03: In-memory store for MVP — user-scoped (key: "user_id:report_id")
 _reports_store: dict = {}
 
 
@@ -83,8 +83,9 @@ async def analyze_market(
         result["generation_time_sec"] = elapsed
         result["id"] = report_id
 
-        # Store in memory for GET /reports/{id}
-        _reports_store[report_id] = result
+        # MKT-03: Store with user-scoped key
+        uid = str(getattr(_u, 'id', 'anon'))
+        _reports_store[f"{uid}:{report_id}"] = result
         return result
 
     except Exception as e:
@@ -130,7 +131,10 @@ async def list_reports(
     offset: int = Query(0, ge=0),
     _u=Depends(get_current_user),
 ):
-    all_reports = list(_reports_store.values())
+    # MKT-03: Filter reports by user
+    uid = str(getattr(_u, 'id', 'anon'))
+    prefix = f"{uid}:"
+    all_reports = [v for k, v in _reports_store.items() if k.startswith(prefix)]
     total = len(all_reports)
     items = all_reports[offset: offset + limit]
     summaries = []
@@ -159,7 +163,9 @@ async def list_reports(
     summary="Получить отчёт по ID",
 )
 async def get_report(report_id: str, _u=Depends(get_current_user)):
-    report = _reports_store.get(report_id)
+    # MKT-03: User-scoped lookup
+    uid = str(getattr(_u, 'id', 'anon'))
+    report = _reports_store.get(f"{uid}:{report_id}")
     if not report:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
     return report
@@ -170,7 +176,10 @@ async def get_report(report_id: str, _u=Depends(get_current_user)):
     summary="Удалить отчёт",
 )
 async def delete_report(report_id: str, _u=Depends(get_current_user)):
-    if report_id not in _reports_store:
+    # MKT-03: User-scoped delete
+    uid = str(getattr(_u, 'id', 'anon'))
+    key = f"{uid}:{report_id}"
+    if key not in _reports_store:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
-    del _reports_store[report_id]
+    del _reports_store[key]
     return {"deleted": report_id}

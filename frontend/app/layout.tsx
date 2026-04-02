@@ -1,3 +1,6 @@
+// TODO: FE-07 — 'use client' in root layout disables SSR for all pages.
+// This is here for sidebar/theme state. Moving to a server component with
+// client-only wrappers is a larger refactor — tracked separately.
 'use client';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -19,11 +22,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [htmlLang, setHtmlLang] = useState('ru');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  // FE-15: Track mobile state for responsive marginLeft
+  const [isMobile, setIsMobile] = useState(false);
 
   /* Close mobile sidebar on route change */
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  /* FE-15: Detect mobile viewport */
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   /* Persist collapsed state + locale + onboarding check */
   useEffect(() => {
@@ -110,7 +123,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               id="main-content"
               role="main"
               className="main-area flex-1 min-h-screen flex flex-col"
-              style={{ marginLeft: `${sidebarWidth}px` }}
+              style={{ marginLeft: isMobile ? 0 : `${sidebarWidth}px` }}
             >
               {/* Header */}
               <Header onHamburgerClick={() => setMobileOpen(true)} />

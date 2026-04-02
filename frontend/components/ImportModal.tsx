@@ -57,9 +57,11 @@ function ExcelImportPanel({ orgId, onSuccess }: { orgId: number; onSuccess: () =
       params.set("header_row", String(headerRow));
       if (sheetName) params.set("sheet_name", sheetName);
 
+      // FE-10: Add auth headers to fetch calls
+      const token = localStorage.getItem('token');
       const res = await fetch(
         `${API}/organizations/${orgId}/import/excel?${params}`,
-        { method: "POST", body: formData }
+        { method: "POST", body: formData, headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Ошибка импорта");
@@ -203,9 +205,11 @@ function OneCPanel({ orgId, onSuccess }: { orgId: number; onSuccess: () => void 
     setTesting(true);
     setTestResult(null);
     try {
+      // FE-10: Add auth headers
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API}/import/1c/test`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(config),
       });
       const data = await res.json();
@@ -223,9 +227,11 @@ function OneCPanel({ orgId, onSuccess }: { orgId: number; onSuccess: () => void 
     setImportResult(null);
     try {
       const params = period ? `?period=${period}` : "";
+      // FE-10: Add auth headers
+      const token1c = localStorage.getItem('token');
       const res = await fetch(`${API}/organizations/${orgId}/import/1c${params}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(token1c ? { Authorization: `Bearer ${token1c}` } : {}) },
         body: JSON.stringify(config),
       });
       const data = await res.json();

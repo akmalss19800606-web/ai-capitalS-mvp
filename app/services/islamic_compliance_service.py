@@ -27,7 +27,10 @@ class ComplianceService:
     ) -> dict[str, Any]:
         """Check compliance against a specific standard."""
         thresholds = STANDARDS.get(standard, STANDARDS["AAOIFI"])
-        mc = market_cap if market_cap > 0 else 1
+        # ISL-15: Return error for invalid market_cap instead of using mc=1
+        if market_cap <= 0:
+            return {"error": "Market cap must be positive", "compliant": False, "score": 0, "checks": []}
+        mc = market_cap
         checks = [
             {
                 "name": "debt_ratio",

@@ -1,4 +1,4 @@
-﻿from pydantic import BaseModel, UUID4
+﻿from pydantic import BaseModel, UUID4, Field
 from typing import Optional, List
 from decimal import Decimal
 from datetime import date, datetime
@@ -57,7 +57,8 @@ class PurificationCalculateRequest(BaseModel):
     source_type: str
     source_description: Optional[str] = None
     gross_income_uzs: Decimal
-    non_compliant_pct: Decimal
+    # ISL-07: Add range validation for purification percentage
+    non_compliant_pct: Decimal = Field(..., ge=0, le=100)
     screening_result_id: Optional[UUID4] = None
     notes: Optional[str] = None
 

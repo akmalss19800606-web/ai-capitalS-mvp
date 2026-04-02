@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/uz-market", tags=["UZ Market Analysis"])
 svc = UZMarketAnalysisService()
 
-# In-memory store for MVP
+# MKT-02: In-memory store for MVP — user-scoped (key: "user_id:report_id")
 _reports_store: dict = {}
 
 
@@ -43,6 +43,9 @@ async def get_optional_user(authorization: Optional[str] = Header(None)):
         db = SessionLocal()
         try:
             user = db.query(User).filter(User.id == int(user_id)).first()
+            # MKT-04: Detach user from session before closing to prevent leak
+            if user:
+                db.expunge(user)
             return user
         finally:
             db.close()
@@ -207,8 +210,9 @@ async def generate_full_report(body: FullReportRequest, _u=Depends(get_optional_
         elapsed = round(time.time() - start_time, 2)
         result["generation_time_sec"] = elapsed
         result["id"] = report_id
-        # Store for history
-        _reports_store[report_id] = result
+        # MKT-02: Store with user-scoped key
+        uid = str(getattr(_u, 'id', 'anon')) if _u else 'anon'
+        _reports_store[f"{uid}:{report_id}"] = result
         return result
     except Exception as e:
         logger.error(f"Generate report error: {e}")
@@ -225,7 +229,10 @@ async def list_reports(
     offset: int = Query(0, ge=0),
     _u=Depends(get_optional_user),
 ):
-    all_reports = list(_reports_store.values())
+    # MKT-02: Filter reports by user
+    uid = str(getattr(_u, 'id', 'anon')) if _u else 'anon'
+    prefix = f"{uid}:"
+    all_reports = [v for k, v in _reports_store.items() if k.startswith(prefix)]
     total = len(all_reports)
     items = all_reports[offset: offset + limit]
     summaries = []
@@ -250,14 +257,19 @@ async def list_reports(
 
 @router.get("/reports/{report_id}", summary="Получить отчёт по ID")
 async def get_report(report_id: str, _u=Depends(get_optional_user)):
-    report = _reports_store.get(report_id)
+    # MKT-02: User-scoped lookup
+    uid = str(getattr(_u, 'id', 'anon')) if _u else 'anon'
+    report = _reports_store.get(f"{uid}:{report_id}")
     if not report:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
     return report
 
 @router.delete("/reports/{report_id}", summary="Удалить отчёт")
 async def delete_report(report_id: str, _u=Depends(get_optional_user)):
-    if report_id not in _reports_store:
+    # MKT-02: User-scoped delete
+    uid = str(getattr(_u, 'id', 'anon')) if _u else 'anon'
+    key = f"{uid}:{report_id}"
+    if key not in _reports_store:
         raise HTTPException(404, f"Отчёт '{report_id}' не найден")
-    del _reports_store[report_id]
+    del _reports_store[key]
     return {"deleted": report_id}

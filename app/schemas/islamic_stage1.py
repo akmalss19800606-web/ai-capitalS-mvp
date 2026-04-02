@@ -100,9 +100,10 @@ class ShariahScreenRequest(BaseModel):
     company_id: Optional[UUID4] = None
     company_name: Optional[str] = None
     ticker: Optional[str] = None
-    haram_revenue_pct: Optional[Decimal] = None
-    debt_ratio: Optional[Decimal] = None
-    interest_income_pct: Optional[Decimal] = None
+    # ISL-06: Add range validation for screening percentages
+    haram_revenue_pct: Optional[Decimal] = Field(None, ge=0, le=100)
+    debt_ratio: Optional[Decimal] = Field(None, ge=0, le=100)
+    interest_income_pct: Optional[Decimal] = Field(None, ge=0, le=100)
     mode: IslamicMode = IslamicMode.individual
 
     class Config:

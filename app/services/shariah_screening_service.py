@@ -31,6 +31,10 @@ def _compute_score(
     debt_ratio: Optional[Decimal],
     interest_income_pct: Optional[Decimal],
 ) -> tuple[Decimal, dict, str]:
+    # ISL-05: If all key fields are None, return insufficient_data
+    if all(v is None for v in [haram_revenue_pct, debt_ratio, interest_income_pct]):
+        return Decimal("0"), {}, "insufficient_data", "Insufficient financial data for screening"
+
     score = BASE_SCORE
     violations = {}
 
@@ -104,7 +108,14 @@ def screen_company(
         mode=request.mode,
     )
     db.add(result)
-    db.commit()
+    # ISL-11: Wrap db.commit in try/except with rollback
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        import logging
+        logging.getLogger(__name__).error(f"Failed to save screening: {e}")
+        raise
     db.refresh(result)
 
     return ShariahScreenResponse(

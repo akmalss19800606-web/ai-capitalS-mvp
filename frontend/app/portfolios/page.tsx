@@ -89,10 +89,17 @@ export default function PortfoliosPage() {
   const [importTab, setImportTab] = useState<'excel' | 'nsbu' | '1c' | 'manual'>('nsbu');
 
   useEffect(() => {
+    // FE-12+13: Add .ok check and proper error logging
     fetch(`${API}/chart-of-accounts`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(setAccounts).catch(() => {});
+      .then(r => {
+        if (!r.ok) throw new Error(`API error: ${r.status}`);
+        return r.json();
+      }).then(setAccounts).catch(err => { console.error('Chart of accounts fetch failed:', err); });
     fetch(`${API}/organizations`, { headers: getAuthHeaders() })
-      .then(r => r.json()).then(d => { if (Array.isArray(d)) setExistingOrgs(d); }).catch(() => {});
+      .then(r => {
+        if (!r.ok) throw new Error(`API error: ${r.status}`);
+        return r.json();
+      }).then(d => { if (Array.isArray(d)) setExistingOrgs(d); }).catch(err => { console.error('Organizations fetch failed:', err); });
   }, []);
 
   const accountsByCategory = (cat: string) =>
@@ -476,8 +483,28 @@ export default function PortfoliosPage() {
               </div>
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setStep(3)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Редактировать</button>
-                <button onClick={() => { window.open(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`, "_blank"); }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт PDF</button>
-                <button onClick={() => { window.open(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`, "_blank"); }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт Excel</button>
+                <button onClick={async () => {
+                  // FE-11: Use fetch with auth header instead of window.open
+                  const token = localStorage.getItem('token');
+                  const res = await fetch(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  const blob = await res.blob();
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'report.pdf';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт PDF</button>
+                <button onClick={async () => {
+                  // FE-11: Use fetch with auth header instead of window.open
+                  const token = localStorage.getItem('token');
+                  const res = await fetch(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  const blob = await res.blob();
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = 'report.xlsx';
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт Excel</button>
                 <button onClick={() => { window.location.href = "/analytics"; }} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Аналитика →</button>
               </div>
             </>

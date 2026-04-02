@@ -31,7 +31,8 @@ export async function apiRequest(endpoint: string, options: RequestInit = {}) {
           localStorage.removeItem('token');
           removeCookie('access_token');
           window.location.href = '/login';
-          return;
+          // FE-08: Throw instead of returning undefined
+          throw new Error('Authentication failed. Please log in again.');
         }
     } catch {
       localStorage.removeItem('token');

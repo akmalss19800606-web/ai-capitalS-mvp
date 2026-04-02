@@ -42,7 +42,10 @@ class ScreeningService:
         total_revenue: float,
         standard: str,
     ) -> dict:
-        mc = float(market_cap or total_assets) or 1
+        # ISL-16: Return error instead of using mc=1 for zero/negative values
+        mc = float(market_cap or total_assets)
+        if mc <= 0:
+            return {"error": "Market cap or total assets required", "is_compliant": False, "score": 0}
         tr = float(total_revenue) or 1
         t = THRESHOLDS.get(standard, THRESHOLDS["AAOIFI"])
         ratios = [
@@ -128,8 +131,8 @@ class ZakatService:
     NISAB_SILVER_GRAMS = 595
     ZAKAT_RATE = 0.025
 
-    # Default prices (USD per gram) — will be replaced by live feed later
-    DEFAULT_GOLD_PRICE = 65.0
+    # ISL-13: Default prices (USD per gram, approximate — should be updated or fetched dynamically)
+    DEFAULT_GOLD_PRICE = 85.0
     DEFAULT_SILVER_PRICE = 0.8
 
     CURRENCY_RATES = {"UZS": 12876.54, "USD": 1, "EUR": 0.92, "RUB": 92.5}

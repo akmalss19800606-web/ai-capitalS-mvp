@@ -25,7 +25,10 @@ def get_nisab_today(db: Session) -> dict:
             .order_by(desc(CurrencyRate.rate_date))
             .first()
         )
-    except Exception:
+    except Exception as e:
+        # ISL-14: Log when falling back to hardcoded values
+        import logging
+        logging.getLogger(__name__).warning(f"DB lookup failed, will use fallback nisab values: {e}")
         rate_row = None
 
     if rate_row and hasattr(rate_row, "gold_price_uzs") and rate_row.gold_price_uzs:
@@ -34,6 +37,9 @@ def get_nisab_today(db: Session) -> dict:
         rate_date = rate_row.rate_date
         source = "db"
     else:
+        # ISL-14: Log fallback usage
+        import logging
+        logging.getLogger(__name__).warning("Using fallback nisab values: no DB rate found")
         # Fallback для dev-среды: ~$85/г × 12700 UZS/USD
         gold_price_uzs = Decimal("1079500")   # ~$85 × 12700
         exchange_rate_uzs = Decimal("12700")
