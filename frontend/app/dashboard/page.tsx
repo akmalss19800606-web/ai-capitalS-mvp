@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import EconomicNewsBlock from "@/components/dashboard/EconomicNewsBlock";
 
 // === Types ===
 interface TickerItem {
@@ -284,6 +285,11 @@ export default function DashboardPage() {
         <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2">
           <QuickTools />
         </WidgetCard>
+      </div>
+
+      {/* Row 4: Economic News — full width */}
+      <div className="mt-6">
+        <EconomicNewsBlock />
       </div>
     </div>
   );
