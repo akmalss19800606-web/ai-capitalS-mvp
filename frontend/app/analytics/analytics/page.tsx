@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { NextStepBanner } from '@/components/analytics/NextStepBanner';
+import { AlertSignalList } from '@/components/analytics/AlertSignalList';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -242,8 +243,21 @@ export default function AnalyticsAnalyticsPage() {
       .catch(() => setLoading(false));
   }, [kpiStandard, token]);
 
+  // Extract KPI values for alert generation
+  const kpiFlat = kpiGroups.flatMap(g => g.metrics);
+  const findKpi = (key: string) => kpiFlat.find(m => m.key === key)?.value ?? null;
+  const kpiData = {
+    current_ratio: findKpi('current_ratio'),
+    debt_to_equity: findKpi('debt_to_equity'),
+    profit_margin: findKpi('profit_margin'),
+    asset_turnover: findKpi('asset_turnover'),
+    roe: findKpi('roe'),
+  };
+
   return (
     <div className="space-y-8">
+      {!loading && kpiGroups.length > 0 && <AlertSignalList kpiData={kpiData} />}
+
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">📈 Финансовые коэффициенты (32 KPI)</h2>
         <div className="flex bg-gray-100 rounded-lg p-1 gap-1">

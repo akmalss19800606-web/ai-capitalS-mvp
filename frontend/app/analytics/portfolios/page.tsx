@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import { useAnalytics } from '@/contexts/AnalyticsContext';
 import { NextStepBanner } from '@/components/analytics/NextStepBanner';
+import { IfrsAdjustmentsPanel } from '@/components/analytics/IfrsAdjustmentsPanel';
 
 // === ДИЗАЙН-ТОКЕНЫ АНАЛИТИКИ (копировать в каждый файл) ===
 const C = {
@@ -32,7 +33,7 @@ const C = {
   neutral: 'text-slate-400',
 };
 
-type ActiveTab = 'nsbu' | 'ifrs' | 'diff';
+type ActiveTab = 'nsbu' | 'ifrs' | 'diff' | 'adjustments';
 
 interface NsbuRow {
   code?: string;
@@ -581,14 +582,15 @@ export default function PortfoliosPage() {
 
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-2">
         <div className="flex flex-wrap gap-2">
-          {(['nsbu', 'ifrs', 'diff'] as ActiveTab[]).map(tab => {
-            const labels: Record<ActiveTab, string> = { nsbu: '🇺🇿 НСБУ', ifrs: '🌍 МСФО (IAS 1)', diff: 'Δ Разница' };
+          {(['nsbu', 'ifrs', 'diff', 'adjustments'] as ActiveTab[]).map(tab => {
+            const labels: Record<ActiveTab, string> = { nsbu: '🇺🇿 НСБУ', ifrs: '🌍 МСФО (IAS 1)', diff: 'Δ Разница', adjustments: '🔄 Корректировки МСФО' };
             return (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
                   activeTab === tab
                     ? tab === 'nsbu' ? 'bg-blue-600 text-white'
                       : tab === 'ifrs' ? 'bg-green-600 text-white'
+                      : tab === 'adjustments' ? 'bg-indigo-600 text-white'
                       : 'bg-violet-600 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}>
@@ -602,6 +604,9 @@ export default function PortfoliosPage() {
       {activeTab === 'nsbu' && <NsbuReport />}
       {activeTab === 'ifrs' && <IfrsReport />}
       {activeTab === 'diff' && <DiffReport />}
+      {activeTab === 'adjustments' && (
+        <IfrsAdjustmentsPanel portfolioId={1} periodFrom="2025-01-01" periodTo="2025-12-31" />
+      )}
 
       <NextStepBanner
         label="Перейти к Аналитике KPI →"
