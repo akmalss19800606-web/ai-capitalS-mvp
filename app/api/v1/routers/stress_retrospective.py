@@ -4,6 +4,7 @@
 
 Эндпоинты:
   POST /analytics/stress-test          — запуск стресс-теста
+  POST /analytics/stress-test/run/dual — двойной НСБУ+МСФО стресс-тест
   GET  /analytics/stress-test/{id}     — получить результат
   GET  /analytics/stress-test          — история
   GET  /analytics/stress-scenarios     — список сценариев
@@ -24,6 +25,7 @@ from app.db.models.user import User
 from app.db.models.investment_decision import InvestmentDecision
 from app.db.models.portfolio import Portfolio
 from app.db.models.stress_retrospective import StressTest, Retrospective
+from app.db.models.ifrs import FinancialStatement
 from app.schemas.stress_retrospective import (
     StressTestRequest, StressTestResponse,
     RetrospectiveRequest, RetrospectiveResponse,
@@ -160,6 +162,154 @@ def list_stress_tests(
         q = q.filter(StressTest.portfolio_id == portfolio_id)
     q = q.order_by(StressTest.created_at.desc())
     return q.offset((page - 1) * per_page).limit(per_page).all()
+
+
+# ═══════════════════════════════════════════════════════════════
+# ДВОЙНОЙ СТРЕСС-ТЕСТ: НСБУ + МСФО
+# ═══════════════════════════════════════════════════════════════
+
+@router.post("/stress-test/run/dual")
+def run_dual_stress_test(
+    req: StressTestRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Запустить стресс-тест параллельно по НСБУ и МСФО.
+    1. Запустить обычный стресс-тест (НСБУ данные)
+    2. Если есть МСФО данные (financial_statements с standard='ifrs') — запустить по ним тоже
+    3. Вернуть оба результата + сравнение
+    """
+    try:
+        portfolio = db.query(Portfolio).filter(
+            Portfolio.id == req.portfolio_id
+        ).first()
+        if not portfolio:
+            raise HTTPException(status_code=404, detail="Портфель не найден")
+
+        # ── НСБУ: собираем активы из решений портфеля ──
+        decisions = db.query(InvestmentDecision).filter(
+            InvestmentDecision.portfolio_id == req.portfolio_id,
+        ).all()
+
+        nsbu_assets = []
+        for d in decisions:
+            nsbu_assets.append({
+                "name": d.title or f"Решение #{d.id}",
+                "value": float(d.amount or 0),
+                "sector": d.sector if hasattr(d, "sector") and d.sector else "Прочее",
+                "geography": d.geography if hasattr(d, "geography") and d.geography else "Узбекистан",
+            })
+
+        custom_shocks = None
+        if req.custom_shocks:
+            custom_shocks = [s.model_dump() for s in req.custom_shocks]
+
+        logger.info(f"DualStressTest: portfolio_id={req.portfolio_id}, nsbu_assets={len(nsbu_assets)}, scenario={req.scenario}")
+
+        # Запуск НСБУ стресс-теста
+        nsbu_result = run_stress_test(
+            assets=nsbu_assets,
+            scenario=req.scenario,
+            severity=req.severity,
+            custom_shocks=custom_shocks,
+        )
+
+        # ── МСФО: ищем данные в financial_statements ──
+        ifrs_stmt = db.query(FinancialStatement).filter(
+            FinancialStatement.portfolio_id == req.portfolio_id,
+            FinancialStatement.standard == "ifrs",
+        ).order_by(FinancialStatement.created_at.desc()).first()
+
+        ifrs_available = ifrs_stmt is not None and ifrs_stmt.data is not None
+        ifrs_result = None
+        comparison = None
+
+        if ifrs_available:
+            # Построить активы из МСФО данных
+            ifrs_data = ifrs_stmt.data or {}
+            ifrs_assets = _build_ifrs_assets(ifrs_data, nsbu_assets)
+
+            ifrs_result = run_stress_test(
+                assets=ifrs_assets,
+                scenario=req.scenario,
+                severity=req.severity,
+                custom_shocks=custom_shocks,
+            )
+
+            # Рассчитать сравнение
+            comparison = {
+                "loss_difference": round(
+                    (ifrs_result["total_loss_pct"] or 0) - (nsbu_result["total_loss_pct"] or 0), 2
+                ),
+                "asset_impact_diff": round(
+                    (ifrs_result["portfolio_value_after"] - ifrs_result["portfolio_value_before"])
+                    - (nsbu_result["portfolio_value_after"] - nsbu_result["portfolio_value_before"]),
+                    2,
+                ),
+                "equity_impact_diff": round(
+                    (ifrs_result["total_loss_pct"] or 0) - (nsbu_result["total_loss_pct"] or 0), 2
+                ),
+                "recovery_diff": round(
+                    (ifrs_result["recovery_time_months"] or 0) - (nsbu_result["recovery_time_months"] or 0), 1
+                ),
+                "ifrs_available": True,
+            }
+
+            logger.info(
+                f"DualStressTest: NSBU loss={nsbu_result['total_loss_pct']}%, "
+                f"IFRS loss={ifrs_result['total_loss_pct']}%"
+            )
+        else:
+            comparison = {
+                "loss_difference": 0,
+                "asset_impact_diff": 0,
+                "equity_impact_diff": 0,
+                "recovery_diff": 0,
+                "ifrs_available": False,
+            }
+
+        return {
+            "nsbu": nsbu_result,
+            "ifrs": ifrs_result,
+            "comparison": comparison,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"DualStressTest error: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Ошибка двойного стресс-теста: {str(e)}")
+
+
+def _build_ifrs_assets(
+    ifrs_data: dict,
+    nsbu_assets: list,
+) -> list:
+    """
+    Построить список активов для МСФО стресс-теста.
+    Берём НСБУ активы и корректируем их на основе МСФО данных
+    (total_ifrs_assets / total_nsbu_assets ratio).
+    """
+    total_nsbu = float(ifrs_data.get("total_nsbu_assets", 0) or 0)
+    total_ifrs = float(ifrs_data.get("total_ifrs_assets", 0) or 0)
+
+    # Если есть корректировки — рассчитываем коэффициент МСФО/НСБУ
+    if total_nsbu > 0 and total_ifrs > 0:
+        ratio = total_ifrs / total_nsbu
+    else:
+        ratio = 1.0
+
+    ifrs_assets = []
+    for a in nsbu_assets:
+        ifrs_assets.append({
+            "name": f"{a['name']} (МСФО)",
+            "value": round(float(a.get("value", 0)) * ratio, 2),
+            "sector": a.get("sector", "Прочее"),
+            "geography": a.get("geography", "Узбекистан"),
+        })
+
+    return ifrs_assets
 
 
 # ═══════════════════════════════════════════════════════════════
