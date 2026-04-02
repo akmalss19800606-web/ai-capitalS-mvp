@@ -63,6 +63,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     def _cleanup(self, client_id: str, now: float) -> None:
         """Удалить устаревшие записи."""
+        if client_id not in self._requests:
+            return
         cutoff = now - self.window_seconds
         self._requests[client_id] = [
             t for t in self._requests[client_id] if t > cutoff
@@ -80,15 +82,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # AUTH-06: all state access under async lock
         async with self._lock:
+            # Ensure client bucket exists before cleanup
+            self._requests.setdefault(client_id, [])
+
             # Очистка устаревших
             self._cleanup(client_id, now)
 
             # AUTH-05: periodic cleanup of stale clients
             if now - self._last_cleanup > 300:
-                self._requests = {k: v for k, v in self._requests.items() if v and v[-1] > now - self._window}
+                stale = {k: v for k, v in self._requests.items() if v and v[-1] > now - self._window}
+                self._requests.clear()
+                self._requests.update(stale)
                 self._last_cleanup = now
 
-            current_count = len(self._requests[client_id])
+            current_count = len(self._requests.get(client_id, []))
 
             if current_count >= limit:
                 retry_after = int(self.window_seconds - (now - self._requests[client_id][0])) + 1
@@ -108,7 +115,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
 
             # Регистрируем запрос
-            self._requests[client_id].append(now)
+            self._requests.setdefault(client_id, []).append(now)
 
         # Выполняем запрос и добавляем заголовки
         response = await call_next(request)
