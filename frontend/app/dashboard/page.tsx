@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 
 // === Types ===
 interface TickerItem {
@@ -182,22 +183,23 @@ function MacroWidget({ data }: { data: MacroData | null }) {
 }
 
 // === Quick Tools ===
+const QUICK_TOOLS = [
+  { name: "Портфели", icon: "📊", href: "/analytics/portfolios" },
+  { name: "Калькулятор", icon: "🧮", href: "/calculator" },
+  { name: "Due Diligence", icon: "🔍", href: "/due-diligence" },
+  { name: "Рынок УЗ", icon: "🌍", href: "/uz-market" },
+  { name: "Исламские финансы", icon: "☪️", href: "/islamic-finance" },
+  { name: "Отчёты", icon: "📋", href: "/report" },
+];
+
 function QuickTools() {
-  const tools = [
-    { name: "Калькулятор", href: "/calculator", icon: "🧮" },
-    { name: "Портфели", href: "/portfolios", icon: "💼" },
-    { name: "Решения", href: "/decisions", icon: "⚖️" },
-    { name: "Ислам. финансы", href: "/islamic-finance", icon: "🅌" },
-    { name: "Организации", href: "/organizations", icon: "🏢" },
-    { name: "AI Ассистент", href: "/ai-assistant", icon: "🤖" },
-  ];
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {tools.map(t => (
-        <a key={t.name} href={t.href} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {QUICK_TOOLS.map(t => (
+        <Link key={t.name} href={t.href} prefetch className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm">
           <span>{t.icon}</span>
           <span>{t.name}</span>
-        </a>
+        </Link>
       ))}
     </div>
   );
