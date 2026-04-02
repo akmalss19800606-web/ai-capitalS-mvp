@@ -216,9 +216,9 @@ class InvestmentCalculatorService:
             rs = random.gauss(1.0, revenue_std)
             cs = random.gauss(1.0, cost_std)
             rts = random.gauss(0, rate_std)
-            adj_cfs = [cf * rs * cs for cf in base_cash_flows]
+            adj_cfs = [cf * rs / cs if cs != 0 else cf * rs for cf in base_cash_flows]
             adj_r = max(discount_rate + rts, 0.01)
-            npv = -initial_investment + sum(cf / ((1 + adj_r) ** t) for t, cf in enumerate(adj_cfs, 1))
+            npv = sum(cf / ((1 + adj_r) ** t) for t, cf in enumerate(adj_cfs))
             results.append(round(npv, 2))
         results.sort()
         n = len(results)
@@ -258,7 +258,7 @@ class InvestmentCalculatorService:
         if variables is None:
             variables = {"revenue": 1.0, "costs": 1.0, "discount_rate": discount_rate, "growth": 0.05}
         def cn(cfs, r):
-            return -initial_investment + sum(cf / ((1 + r) ** t) for t, cf in enumerate(cfs, 1))
+            return sum(cf / ((1 + r) ** t) for t, cf in enumerate(cfs))
         base = cn(cash_flows, discount_rate)
         tornado = []
         spider = []
@@ -314,7 +314,7 @@ class InvestmentCalculatorService:
         calc = InvestmentCalculatorService
         dcf = calc.calculate_dcf(cash_flows, discount_rate, terminal_growth, initial_investment, tax_regime, currency=currency)
         inv = dcf.get("initial_investment", 0)
-        base_cfs = [cf for cf in cash_flows if cf > 0] if cash_flows else []
+        base_cfs = list(cash_flows) if cash_flows else []
         mc = calc.monte_carlo_npv(inv, base_cfs, discount_rate, n_simulations=5000) if inv > 0 and base_cfs else None
         sens = calc.sensitivity_analysis(base_cfs, discount_rate, inv) if inv > 0 and base_cfs else None
         irr_pct = dcf.get("irr", 0) or 0

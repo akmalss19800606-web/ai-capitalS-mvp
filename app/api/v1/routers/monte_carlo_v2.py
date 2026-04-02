@@ -148,12 +148,14 @@ def _simulate(
     """Монте-Карло (GBM) с учётом инфляции и курсовых рисков."""
     results = []
 
-    # Реальная доходность = номинальная - инфляция
-    real_return = mean_return - UZ_INFLATION
-    # Увеличиваем vol за счёт курсовых рисков
+    # Реальная доходность = номинальная - инфляция (log-return for GBM)
+    net_discrete = mean_return - UZ_INFLATION
+    real_return = math.log(1 + max(net_discrete, -0.99))
+    # Комбинированная волатильность с полной ковариационной формулой
     total_vol = math.sqrt(
         volatility ** 2
-        + (UZ_EXCHANGE_VOLATILITY * correlation_usd) ** 2
+        + UZ_EXCHANGE_VOLATILITY ** 2
+        + 2 * correlation_usd * volatility * UZ_EXCHANGE_VOLATILITY
     )
 
     dt = 1.0  # годовой шаг

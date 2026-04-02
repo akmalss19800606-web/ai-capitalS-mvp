@@ -89,7 +89,8 @@ async def monte_carlo_simulation(
         for t in range(n_years):
             # Случайный шок с опциональной автокорреляцией
             independent_shock = random.gauss(0, cf_volatility)
-            shock = autocorrelation * prev_shock + (1 - abs(autocorrelation)) * independent_shock
+            rho = max(-0.99, min(0.99, autocorrelation))
+            shock = rho * prev_shock + math.sqrt(1 - rho**2) * independent_shock
             prev_shock = shock
 
             sim_cf = base_cash_flows[t] * (1.0 + shock)
