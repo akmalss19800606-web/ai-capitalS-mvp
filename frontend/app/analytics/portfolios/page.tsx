@@ -326,7 +326,7 @@ export default function PortfoliosPage() {
   const [regForm, setRegForm] = useState<RegForm>(emptyForm);
   const [regSaving, setRegSaving] = useState(false);
 
-  const { setActiveOrg, setNsbuReady, setIfrsReady } = useAnalytics();
+  const { setActiveOrg, setPeriod, setActiveStandard, setNsbuReady, setIfrsReady } = useAnalytics();
 
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') || '' : '';
@@ -391,6 +391,12 @@ export default function PortfoliosPage() {
             director: data.company_info.director || prev.director,
             accountant: data.company_info.accountant || prev.accountant,
           }));
+          // Auto-fill AnalyticsContext so ContextBar updates immediately
+          const orgName = data.company_info.name || '';
+          const orgInn = data.company_info.inn || '';
+          if (orgName) {
+            setActiveOrg(orgInn || 'org', orgName);
+          }
         }
         setActiveTab(t => { const old = t; setTimeout(() => setActiveTab(old), 50); return 'nsbu'; });
       } else {
@@ -428,7 +434,20 @@ export default function PortfoliosPage() {
             director: data.company_info.director || prev.director,
             accountant: data.company_info.accountant || prev.accountant,
           }));
+          // Auto-fill AnalyticsContext so ContextBar updates immediately
+          const orgName = data.company_info.name || data.organization || '';
+          const orgInn = data.company_info.inn || data.inn || '';
+          if (orgName) {
+            setActiveOrg(orgInn || 'org', orgName);
+          }
         }
+        // Auto-set period from 1C data
+        if (data.period_from && data.period_to) {
+          setPeriod(data.period_from, data.period_to);
+        }
+        // Mark NSBU as ready and set standard
+        setActiveStandard('nsbu');
+        setNsbuReady(true);
         if (data.warnings?.length) {
           setImportStatus(prev => prev + ` | Предупреждения: ${data.warnings.join(', ')}`);
         }

@@ -36,10 +36,22 @@ def import_1c_excel(
         raise HTTPException(status_code=422, detail=f"Ошибка парсинга: {exc}")
 
     # Build summary
+    period_str = ""
+    period_from_iso = ""
+    period_to_iso = ""
+    if parsed.period_from and parsed.period_to:
+        period_str = f"{parsed.period_from.strftime('%d.%m.%Y')} — {parsed.period_to.strftime('%d.%m.%Y')}"
+        period_from_iso = parsed.period_from.isoformat()
+        period_to_iso = parsed.period_to.isoformat()
+
     summary = {
         "organization": parsed.organization_name,
         "inn": parsed.inn,
-        "period": "",
+        "period": period_str,
+        "period_from": period_from_iso,
+        "period_to": period_to_iso,
+        "director": parsed.director,
+        "accountant": parsed.accountant,
         "sheets_found": parsed.sheets_found,
         "sheets_parsed": parsed.sheets_parsed,
         "accounts_count": len(parsed.osv_entries),
@@ -62,14 +74,9 @@ def import_1c_excel(
             "director": parsed.director,
             "accountant": parsed.accountant,
             "unit": parsed.unit,
-            "period": "",
+            "period": period_str,
         },
     }
-
-    if parsed.period_from and parsed.period_to:
-        period_str = f"{parsed.period_from.strftime('%d.%m.%Y')} — {parsed.period_to.strftime('%d.%m.%Y')}"
-        summary["period"] = period_str
-        summary["company_info"]["period"] = period_str
 
     # Detailed parsed data for downstream use
     summary["data"] = {
