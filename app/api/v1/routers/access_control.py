@@ -29,6 +29,7 @@ from typing import List, Optional, Dict, Any
 
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
+from app.db.models.investment_decision import InvestmentDecision
 from app.services import abac_service
 
 router = APIRouter(prefix="/access", tags=["access-control"])
@@ -251,12 +252,23 @@ def seed_roles(
 
 # ── Decision-level Access ──
 
+def _verify_decision_owner(db: Session, decision_id: int, current_user: User):
+    """AUTH-07/08: Verify the current user owns the decision or is superuser."""
+    decision = db.query(InvestmentDecision).filter(InvestmentDecision.id == decision_id).first()
+    if not decision:
+        raise HTTPException(status_code=404, detail="Решение не найдено")
+    if decision.created_by != current_user.id and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return decision
+
+
 @router.get("/decisions/{decision_id}/access", response_model=List[DecisionAccessRead])
 def list_decision_access(
     decision_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _verify_decision_owner(db, decision_id, current_user)
     return abac_service.get_decision_access(db, decision_id)
 
 
@@ -267,6 +279,7 @@ def grant_access(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _verify_decision_owner(db, decision_id, current_user)
     return abac_service.grant_decision_access(
         db, decision_id, body.user_id, body.access_level,
         body.can_view_financials, current_user.id,
@@ -280,6 +293,7 @@ def revoke_access(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    _verify_decision_owner(db, decision_id, current_user)
     ok = abac_service.revoke_decision_access(db, decision_id, user_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Запись доступа не найдена")

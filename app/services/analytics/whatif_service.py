@@ -233,10 +233,14 @@ async def what_if_analysis(
             "npv": round(s_npv, 2),
         })
 
-    # Spider: терминальный рост
+    # Spider: терминальный рост (CALC-17: handle zero base value)
     spider_data["terminal_growth"] = []
     for step in spider_steps:
-        adj_tg = terminal_growth * (1 + step)
+        if terminal_growth == 0:
+            # Additive steps when base is 0: use 0.01 as delta unit
+            adj_tg = step * 0.01
+        else:
+            adj_tg = terminal_growth * (1 + step)
         s_npv = _full_npv(base_cash_flows, base_discount_rate, initial_investment, adj_tg)
         spider_data["terminal_growth"].append({
             "variation_pct": round(step * 100, 0),

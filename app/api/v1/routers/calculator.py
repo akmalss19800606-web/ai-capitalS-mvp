@@ -5,7 +5,7 @@ Endpoints: dcf, wacc, monte-carlo, sensitivity, benchmarks, compare, full, tax-r
 import logging
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from app.api.v1.deps import get_current_user
 from app.services.calculator_service import InvestmentCalculatorService
 
@@ -36,6 +36,13 @@ class WACCRequest(BaseModel):
     size_premium: float = Field(0.025, ge=0, le=1)
     cost_of_debt: float = Field(0.228, ge=0, le=1)
     tax_rate: float = Field(0.15, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def weights_sum_to_one(self):
+        total = self.equity_weight + self.debt_weight
+        if abs(total - 1.0) > 0.01:
+            raise ValueError(f"equity_weight + debt_weight must equal 1.0, got {total}")
+        return self
 
 
 class MonteCarloRequest(BaseModel):

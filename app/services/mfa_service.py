@@ -59,7 +59,8 @@ def verify_totp(secret_b32: str, code: str) -> bool:
     """Проверить TOTP-код с учётом допустимого окна."""
     counter = _current_counter()
     for drift in range(-TOTP_VALID_WINDOW, TOTP_VALID_WINDOW + 1):
-        if _hotp(secret_b32, counter + drift) == code.strip():
+        # Use constant-time comparison to prevent timing attacks (AUTH-03)
+        if hmac.compare_digest(_hotp(secret_b32, counter + drift), code.strip()):
             return True
     return False
 

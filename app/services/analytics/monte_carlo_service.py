@@ -62,8 +62,8 @@ async def monte_carlo_simulation(
         num_simulations, volatility, uz_calibration,
     )
 
-    if seed is not None:
-        random.seed(seed)
+    # Use isolated RNG to avoid affecting other requests (CALC-14)
+    rng = random.Random(seed) if seed is not None else random.Random()
 
     # ── Калибровка под Узбекистан ──
     cf_volatility = volatility
@@ -88,7 +88,7 @@ async def monte_carlo_simulation(
         prev_shock = 0.0
         for t in range(n_years):
             # Случайный шок с опциональной автокорреляцией
-            independent_shock = random.gauss(0, cf_volatility)
+            independent_shock = rng.gauss(0, cf_volatility)
             rho = max(-0.99, min(0.99, autocorrelation))
             shock = rho * prev_shock + math.sqrt(1 - rho**2) * independent_shock
             prev_shock = shock
@@ -97,7 +97,7 @@ async def monte_carlo_simulation(
             sim_flows.append(sim_cf)
 
         # Случайная ставка дисконтирования (не может быть ≤ 0)
-        sim_discount = base_discount_rate + random.gauss(0, disc_volatility)
+        sim_discount = base_discount_rate + rng.gauss(0, disc_volatility)
         sim_discount = max(sim_discount, 0.01)
 
         # Расчёт NPV для данной симуляции
@@ -119,7 +119,8 @@ async def monte_carlo_simulation(
     mean_npv = sum(npv_results) / n
     median_npv = npv_results[n // 2] if n % 2 == 1 else (npv_results[n // 2 - 1] + npv_results[n // 2]) / 2
 
-    variance = sum((x - mean_npv) ** 2 for x in npv_results) / n
+    # Sample variance (n-1) for consistency with sample skewness (CALC-15)
+    variance = sum((x - mean_npv) ** 2 for x in npv_results) / (n - 1) if n > 1 else 0
     std_npv = math.sqrt(variance)
 
     min_npv = npv_results[0]

@@ -73,9 +73,17 @@ class InvestmentCalculatorService:
         size_premium: float = 0.025,
         cost_of_debt: float = 0.228,
         tax_rate: float = 0.15,
+        cost_equity: float = None,
     ) -> dict:
         """WACC via CAPM: Re = Rf + Beta*(ERP+CRP) + SCP."""
-        ke = risk_free_rate + beta * (equity_risk_premium + country_risk_premium) + size_premium
+        # Validate weights sum to 1.0
+        total_weight = equity_weight + debt_weight
+        if abs(total_weight - 1.0) > 0.01:
+            raise ValueError(f"equity_weight + debt_weight must equal 1.0, got {total_weight}")
+        if cost_equity is not None and cost_equity > 0:
+            ke = cost_equity
+        else:
+            ke = risk_free_rate + beta * (equity_risk_premium + country_risk_premium) + size_premium
         wacc = equity_weight * ke + debt_weight * cost_of_debt * (1 - tax_rate)
         return {
             "wacc": round(wacc, 6),
@@ -122,7 +130,10 @@ class InvestmentCalculatorService:
             cumulative_pv += pv
             if simple_payback is None and cumulative_cf >= 0 and t > 0:
                 prev = cumulative_cf - cf
-                simple_payback = round(t - 1 + (-prev / cf) if cf != 0 else t, 2)
+                if cf > 0 and prev < 0:
+                    simple_payback = round(t - 1 + (-prev / cf), 2)
+                elif cf != 0:
+                    simple_payback = float(t)
             if disc_payback is None and cumulative_pv >= 0 and t > 0:
                 prev_pv = cumulative_pv - pv
                 disc_payback = round(t - 1 + (-prev_pv / pv) if pv != 0 else t, 2)
@@ -142,15 +153,21 @@ class InvestmentCalculatorService:
         # MIRR
         mirr_val = InvestmentCalculatorService._calc_mirr(cash_flows, discount_rate, discount_rate)
         mirr_pct = round(mirr_val * 100, 2) if mirr_val is not None else None
-        # PI & ROI
+        # PI: PV of future CFs / initial investment
+        # npv already includes CF[0] at t=0 (the investment), so:
+        # npv = -inv + PV_of_future → (npv + inv) / inv = PV_of_future / inv. Correct.
         pi = round((npv + inv) / inv, 4) if inv > 0 else None
+        # NPV-based ROI (NPVI)
         roi_pct = round((npv / inv) * 100, 2) if inv > 0 else None
-        # Tax savings
-        tax_savings = round(inv * tax_r * 0.1, 2) if tax_regime == "sez" else 0
+        # Simple ROI: (total undiscounted future CFs - investment) / investment
+        simple_roi_pct = round((sum(cash_flows[1:]) - inv) / inv * 100, 2) if inv > 0 and len(cash_flows) > 1 else None
+        # Tax savings: SEZ saves vs general regime CIT
+        tax_savings = round(inv * TAX_REGIMES["general"]["cit"] * 0.1, 2) if tax_regime == "sez" else 0
         return {
             "npv": round(npv, 2), "irr": irr_pct, "mirr": mirr_pct,
             "payback_years": simple_payback, "discounted_payback": disc_payback,
-            "profitability_index": pi, "roi_pct": roi_pct,
+            "profitability_index": pi, "roi_pct": roi_pct, "npv_roi_pct": roi_pct,
+            "simple_roi_pct": simple_roi_pct,
             "dcf_value": round(total_pv, 2),
             "terminal_value": round(tv, 2), "tv_present_value": round(tv_pv, 2),
             "discount_rate": discount_rate, "discount_rate_pct": round(discount_rate * 100, 2),
@@ -272,8 +289,9 @@ class InvestmentCalculatorService:
                 nl = cn([cf * lo for cf in cash_flows], discount_rate)
                 nh = cn([cf * hi for cf in cash_flows], discount_rate)
             elif vn == "costs":
-                nl = cn([cf / lo if lo else cf for cf in cash_flows], discount_rate)
-                nh = cn([cf / hi if hi else cf for cf in cash_flows], discount_rate)
+                # Higher costs = lower CF: CF_adjusted = CF * (2 - factor)
+                nl = cn([cf * (2 - lo) for cf in cash_flows], discount_rate)
+                nh = cn([cf * (2 - hi) for cf in cash_flows], discount_rate)
             else:
                 nl = base * (1 - variation_pct / 100)
                 nh = base * (1 + variation_pct / 100)
@@ -322,7 +340,7 @@ class InvestmentCalculatorService:
         wacc_data = None
         if equity > 0 or debt > 0:
             total = equity + debt
-            wacc_data = calc.calculate_wacc_capm(equity_weight=equity / total, debt_weight=debt / total, cost_of_debt=cost_debt, tax_rate=tax_rate)
+            wacc_data = calc.calculate_wacc_capm(equity_weight=equity / total, debt_weight=debt / total, cost_of_debt=cost_debt, tax_rate=tax_rate, cost_equity=cost_equity)
         # Scoring
         npv_val = dcf.get("npv", 0)
         signals = []
