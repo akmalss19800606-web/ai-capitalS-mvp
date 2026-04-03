@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
+import { formatCurrencyUZS } from '@/lib/formatters';
 
-// Color Palette (shared with DD page) - Task 1.1
+// ─── Color Palette ──────────────────────────────────────────────────────────
 const C = {
   bg: '#f8f8fc',
   card: '#ffffff',
@@ -18,112 +19,95 @@ const C = {
   badgeBg: '#f1f5f9',
 } as const;
 
-// Task 1.2 - Interface
+// ─── E3-01: CompanyProfile interface ────────────────────────────────────────
+export interface CompanyProfile {
+  inn: string;
+  name: string;
+  shortName?: string;
+  director?: string;
+  legalForm?: string;
+  authorizedCapital?: number;
+  foundedYear?: number;
+  okedCode?: string;
+  okedName?: string;
+  region?: string;
+  address?: string;
+  licenses?: string[];
+  isActive: boolean;
+}
+
+// Adapter: maps raw lookup result to CompanyProfile
+function toCompanyProfile(data: Record<string, any>): CompanyProfile {
+  const yearRaw = data.founded_year ?? data.foundedyear ?? data.foundedYear;
+  const capitalRaw = data.authorized_capital ?? data.authorizedcapital ?? data.authorizedCapital;
+  const statusRaw = (data.status || '').toLowerCase();
+  const isActive = !statusRaw || statusRaw.includes('действ') || statusRaw.includes('active');
+
+  return {
+    inn: data.inn || '',
+    name: data.name || data.shortName || '',
+    shortName: data.shortName ?? data.short_name,
+    director: data.director,
+    legalForm: data.legal_form ?? data.legalform ?? data.legalForm,
+    authorizedCapital: capitalRaw ? Number(capitalRaw) : undefined,
+    foundedYear: yearRaw ? Number(yearRaw) : undefined,
+    okedCode: data.oked ?? data.okedCode,
+    okedName: data.industry ?? data.okedName,
+    region: data.region,
+    address: data.address,
+    licenses: data.licenses,
+    isActive,
+  };
+}
+
+// ─── Props ──────────────────────────────────────────────────────────────────
 export interface CompanyProfileCardProps {
-  data: {
-    name?: string;
-    inn?: string;
-    oked?: string;
-    industry?: string;
-    founded_year?: string | number;
-    address?: string;
-    region?: string;
-    director?: string;
-    authorized_capital?: string | number;
-    status?: string;
-    employee_count?: string | number;
-    legal_form?: string;
-    phone?: string;
-    email?: string | null;
-  } | null;
+  data: Record<string, any> | null;
   onClose?: () => void;
 }
 
-// Task 1.4 - renderStatus
-function renderStatus(status?: string) {
-  if (!status) return null;
-  const s = status.toLowerCase();
-  if (s.includes('действ') || s.includes('active')) {
-    return (
-      <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.successBg, color: C.success, fontSize: 12, fontWeight: 600 }}>
-        {status}
-      </span>
-    );
-  }
-  if (s.includes('ликвид') || s.includes('liquidat')) {
-    return (
-      <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.errorBg, color: C.error, fontSize: 12, fontWeight: 600 }}>
-        {status}
-      </span>
-    );
-  }
-  return (
-    <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.badgeBg, color: C.muted, fontSize: 12, fontWeight: 600 }}>
-      {status}
-    </span>
-  );
-}
-
-// Task 1.5 - Styles
-const rowStyle: React.CSSProperties = {
+// ─── Styles ─────────────────────────────────────────────────────────────────
+const gridStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '160px 1fr',
+  gridTemplateColumns: '1fr 1fr',
   gap: 12,
-  padding: '10px 20px',
-  alignItems: 'center',
+  padding: '16px 20px',
 };
 
-const labelStyle: React.CSSProperties = {
+const cellLabel: React.CSSProperties = {
   fontSize: 11,
   color: C.muted,
   fontWeight: 600,
   textTransform: 'uppercase',
   letterSpacing: '0.04em',
+  marginBottom: 4,
 };
 
-const valueStyle: React.CSSProperties = {
+const cellValue: React.CSSProperties = {
   fontSize: 14,
   color: C.text,
   fontWeight: 500,
 };
 
-// Task 1.6 - External links
-const externalLinks = [
-  { label: 'Налоговая', url: 'https://soliq.uz' },
-  { label: 'Гос. услуги my.gov.uz', url: 'https://my.gov.uz/ru/service/77' },
-  { label: 'Госзакупки', url: 'https://zakupki.uz' },
-  { label: 'ЦБ Реестр', url: 'https://csbar.uz' },
-  { label: 'Суды', url: 'https://sud.uz' },
-  { label: 'ТИАЦ', url: 'https://www.tiac.uz' },
-];
-
-// Task 1.7 - Main component
+// ─── Main component (E3-01) ─────────────────────────────────────────────────
 export default function CompanyProfileCard({ data, onClose }: CompanyProfileCardProps) {
   if (!data) return null;
 
-  // Task 1.3 - rows
-  const rows = [
-    { label: 'Название', value: data.name },
-    { label: 'ИНН', value: data.inn },
-    { label: 'ОПФ', value: data.legal_form },
-    { label: 'ОКЭД', value: data.oked ?? data.industry },
-    { label: 'Директор', value: data.director },
-    { label: 'Год основания', value: data.founded_year },
-    { label: 'Адрес', value: data.address },
-    { label: 'Регион', value: data.region },
-    { label: 'Уставной капитал', value: data.authorized_capital },
-    { label: 'Сотрудников', value: data.employee_count },
-    { label: 'Телефон', value: data.phone },
-    { label: 'Email', value: data.email },
-  ].filter(row => row.value !== undefined && row.value !== null && row.value !== '');
+  const profile = toCompanyProfile(data);
+  const currentYear = new Date().getFullYear();
+  const yearsOnMarket = profile.foundedYear ? currentYear - profile.foundedYear : null;
 
   return (
     <div style={{ borderRadius: 12, border: `1px solid ${C.border}`, backgroundColor: C.card, overflow: 'hidden', boxShadow: '0 1px 6px rgba(0,0,0,0.07)' }}>
-      {/* Header */}
+      {/* Header: name + INN */}
       <div style={{ padding: '14px 20px', borderBottom: `1px solid ${C.border}`, backgroundColor: C.bg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{'Профиль компании'}</div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{'Данные из реестра'}</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>{profile.name}</div>
+          {profile.inn && (
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+              ИНН: {profile.inn}
+            </div>
+          )}
         </div>
         {onClose && (
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: C.muted, lineHeight: 1, padding: '4px 8px', borderRadius: 6 }}>
@@ -132,53 +116,89 @@ export default function CompanyProfileCard({ data, onClose }: CompanyProfileCard
         )}
       </div>
 
-      {/* Data rows with alternating background */}
-      {rows.map((row, i) => (
-        <div key={i} style={{ ...rowStyle, backgroundColor: i % 2 === 0 ? C.card : C.bg }}>
-          <span style={labelStyle}>{row.label}</span>
-          <span style={valueStyle}>{row.value}</span>
+      {/* 2x3 grid */}
+      <div style={gridStyle}>
+        {/* 1. ИНН with green check */}
+        <div>
+          <div style={cellLabel}>ИНН</div>
+          <div style={{ ...cellValue, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '2px 8px', borderRadius: 4,
+              backgroundColor: C.successBg, border: `1px solid ${C.successBorder}`,
+              fontSize: 13, fontWeight: 600, color: C.success,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.success} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              {profile.inn || '—'}
+            </span>
+          </div>
         </div>
-      ))}
 
-      {/* Status row */}
-      {data.status && (
-        <div style={{ ...rowStyle, backgroundColor: rows.length % 2 === 0 ? C.card : C.bg }}>
-          <span style={labelStyle}>{'Статус'}</span>
-          <span>{renderStatus(data.status)}</span>
+        {/* 2. Статус */}
+        <div>
+          <div style={cellLabel}>Статус</div>
+          <div style={cellValue}>
+            {profile.isActive ? (
+              <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.successBg, color: C.success, fontSize: 12, fontWeight: 600 }}>
+                Действующее
+              </span>
+            ) : (
+              <span style={{ padding: '2px 8px', borderRadius: 4, backgroundColor: C.errorBg, color: C.error, fontSize: 12, fontWeight: 600 }}>
+                Ликвидировано
+              </span>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* External links - Task 1.6 */}
-      <div style={{ padding: '14px 20px', borderTop: `1px solid ${C.border}`, backgroundColor: C.bg }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase' as const, letterSpacing: '0.04em', marginBottom: 10 }}>
-          {'Внешние источники'}
+        {/* 3. Уставный капитал */}
+        <div>
+          <div style={cellLabel}>Уставный капитал</div>
+          <div style={cellValue}>
+            {profile.authorizedCapital != null
+              ? formatCurrencyUZS(profile.authorizedCapital, { compact: profile.authorizedCapital >= 1_000_000 })
+              : '—'}
+          </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
-          {externalLinks.map((link, i) => (
-            <a
-              key={i}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                fontSize: 12,
-                color: C.primary,
-                textDecoration: 'none',
-                padding: '4px 10px',
-                borderRadius: 6,
-                backgroundColor: C.primaryLight,
-                border: '1px solid #bfdbfe',
-                display: 'inline-block',
-                transition: 'background-color 0.15s',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = '#dbeafe'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = C.primaryLight; }}
-            >
-              {link.label}
-            </a>
-          ))}
+
+        {/* 4. Год основания + лет на рынке */}
+        <div>
+          <div style={cellLabel}>Год основания</div>
+          <div style={cellValue}>
+            {profile.foundedYear
+              ? `${profile.foundedYear} г.${yearsOnMarket != null && yearsOnMarket > 0 ? ` (${yearsOnMarket} лет на рынке)` : ''}`
+              : '—'}
+          </div>
+        </div>
+
+        {/* 5. ОКЭД */}
+        <div>
+          <div style={cellLabel}>ОКЭД</div>
+          <div style={cellValue}>
+            {profile.okedCode || profile.okedName
+              ? `${profile.okedCode ? profile.okedCode + ' — ' : ''}${profile.okedName || ''}`
+              : '—'}
+          </div>
+        </div>
+
+        {/* 6. Директор */}
+        <div>
+          <div style={cellLabel}>Директор</div>
+          <div style={cellValue}>{profile.director || '—'}</div>
         </div>
       </div>
+
+      {/* Extra info if available */}
+      {(profile.legalForm || profile.region || profile.address || (profile.licenses && profile.licenses.length > 0)) && (
+        <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', flexWrap: 'wrap', gap: 16, fontSize: 13, color: C.muted }}>
+          {profile.legalForm && <span>ОПФ: <strong style={{ color: C.text }}>{profile.legalForm}</strong></span>}
+          {(profile.region || profile.address) && <span>Адрес: <strong style={{ color: C.text }}>{profile.address || profile.region}</strong></span>}
+          {profile.licenses && profile.licenses.length > 0 && (
+            <span>Лицензий: <strong style={{ color: C.text }}>{profile.licenses.length}</strong></span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { EmptyState as EmptyStateUI } from '@/components/ui/EmptyState';
 import { LoadingCard } from '@/components/ui/LoadingCard';
 import {
   CompanyProfileCard,
+  ExternalSourcesPanel,
   DueDiligenceLayout,
   ScoreBadge,
   RiskBadge,
@@ -550,6 +551,11 @@ export default function DueDiligencePage() {
                             {lookupResult && (
               <div style={{ marginTop: 12 }}>
                 <CompanyProfileCard data={lookupResult} onClose={() => setLookupResult(null)} />
+                {lookupResult?.inn && (
+                  <div style={{ marginTop: 12 }}>
+                    <ExternalSourcesPanel inn={lookupResult.inn} />
+                  </div>
+                )}
               </div>
             )}
               </div>

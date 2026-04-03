@@ -721,6 +721,21 @@
     },
   },
 
+  /* ─── Этап 3: Due Diligence i18n (E3-06) ─── */
+  dueDiligence: {
+    title: 'Комплексная проверка (Due Diligence)',
+    searchByInn: 'Поиск по ИНН',
+    companyProfile: 'Профиль компании',
+    externalSources: 'Проверить в официальных источниках',
+    riskLevels: {
+      low: 'Низкий',
+      medium: 'Средний',
+      high: 'Высокий',
+      critical: 'Критический',
+    },
+    score: 'Балл DD',
+  },
+
   /* ─── Этап 3, Сессия 3.1: AI-ассистент ─── */
   aiAssistant: {
     title: 'AI-ассистент',
