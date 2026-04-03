@@ -1066,9 +1066,9 @@ def export_full_report(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generate a comprehensive 15-sheet Excel report covering NSBU + IFRS
+    Generate a comprehensive 17-sheet Excel report covering NSBU + IFRS
     balance, P&L, cash flow, equity, fixed assets, adjustments, KPIs,
-    stress tests, and investment decisions.
+    stress tests, investment decisions, and visualizations.
     """
     try:
         result = _do_export_full_report(req, db, current_user)
@@ -1185,7 +1185,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
     wb = Workbook()
 
-    # Sheet names (16 total) — order matters for hyperlinks in TOC
+    # Sheet names (17 total) — order matters for hyperlinks in TOC
     SHEET_NAMES = [
         "Содержание",
         "Баланс НСБУ",
@@ -1203,6 +1203,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         "Стресс-тест МСФО",
         "Решения",
         "AI-анализ",
+        "Визуализации",
     ]
 
     # ===================================================================
@@ -2196,6 +2197,278 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     ws_ai.column_dimensions["B"].width = 15
     ws_ai.column_dimensions["C"].width = 70
     auto_width(ws_ai)
+
+    # ===================================================================
+    # SHEET 17: Визуализации (Visualization data tables + AI explanations)
+    # ===================================================================
+    VIZ_BLUE = PatternFill(start_color="1D4ED8", end_color="1D4ED8", fill_type="solid")
+    VIZ_HEADER_FONT = Font(bold=True, color="FFFFFF", size=11)
+    SECTION_FONT = Font(bold=True, size=13, color="FFFFFF")
+    SECTION_FILL = PatternFill(start_color="2563EB", end_color="2563EB", fill_type="solid")
+    AI_FONT = Font(italic=True, size=10, color="808080")
+    PCT_FMT = '0.0%'
+
+    ws_viz = wb.create_sheet("Визуализации")
+    ws_viz.sheet_properties.tabColor = "2563EB"
+    write_sheet_header(ws_viz, "Визуализации — Данные диаграмм и AI-пояснения", VIZ_BLUE, company_info)
+
+    if agg:
+        # Re-compute visualization data (same logic as GET /analytics/visualizations)
+        viz_start = agg["total_assets_prev"]
+        viz_revenue = agg["revenue"]
+        viz_costs = -agg["expenses"]
+        viz_inv_delta = -(agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
+        viz_end = agg["total_assets"]
+        viz_op_exp = viz_end - (viz_start + viz_revenue + viz_costs) - viz_inv_delta
+
+        # ---- Section 1: Waterfall ----
+        ws_viz.append(["Раздел 1: Каскадная диаграмма (Waterfall) — Движение баланса"])
+        sec1_row = ws_viz.max_row
+        ws_viz.merge_cells(start_row=sec1_row, start_column=1, end_row=sec1_row, end_column=3)
+        ws_viz.cell(sec1_row, 1).font = SECTION_FONT
+        ws_viz.cell(sec1_row, 1).fill = SECTION_FILL
+        for ci in range(1, 4):
+            ws_viz.cell(sec1_row, ci).fill = SECTION_FILL
+
+        ws_viz.append(["Показатель", "Сумма (UZS)", "Тип"])
+        style_header_row(ws_viz, ws_viz.max_row, VIZ_BLUE)
+
+        wf_rows = [
+            ("Начальный баланс", viz_start, "base"),
+            ("+ Выручка", viz_revenue, "positive"),
+            ("- Себестоимость", viz_costs, "negative"),
+        ]
+        if viz_op_exp < 0:
+            wf_rows.append(("- Операционные расходы", viz_op_exp, "negative"))
+        if abs(viz_inv_delta) > 0:
+            sign = "+/-" if viz_inv_delta < 0 else "+"
+            wf_rows.append((f"{sign} Инвестиции", viz_inv_delta, "negative" if viz_inv_delta < 0 else "positive"))
+        wf_rows.append(("= Итоговый баланс", viz_end, "total"))
+
+        for label, val, typ in wf_rows:
+            is_total = typ in ("base", "total")
+            ws_viz.append([label, val, typ])
+            r = ws_viz.max_row
+            style_data_cell(ws_viz.cell(r, 1), is_bold=is_total)
+            style_data_cell(ws_viz.cell(r, 2), is_number=True, is_bold=is_total)
+            style_data_cell(ws_viz.cell(r, 3))
+
+        # AI explanation for waterfall
+        bal_change_pct = round((viz_end - viz_start) / max(abs(viz_start), 1) * 100, 1)
+        cost_rev_pct = round(agg["expenses"] / max(agg["revenue"], 1) * 100, 1)
+        ws_viz.append([])
+        ai_text_wf = (
+            f"AI пояснение: Баланс {'вырос' if bal_change_pct >= 0 else 'снизился'} на {abs(bal_change_pct)}% за период. "
+            f"Основной драйвер {'роста' if viz_revenue > 0 else 'изменения'} — выручка ({viz_revenue:,.0f} сум). "
+            f"Себестоимость составила {cost_rev_pct}% от выручки."
+        )
+        ws_viz.append([ai_text_wf])
+        r = ws_viz.max_row
+        ws_viz.merge_cells(start_row=r, start_column=1, end_row=r, end_column=3)
+        ws_viz.cell(r, 1).font = AI_FONT
+        ws_viz.cell(r, 1).alignment = Alignment(wrap_text=True)
+
+        # Blank separator
+        ws_viz.append([])
+        ws_viz.append([])
+
+        # ---- Section 2: Tornado ----
+        ws_viz.append(["Раздел 2: Диаграмма Торнадо — Анализ чувствительности"])
+        sec2_row = ws_viz.max_row
+        ws_viz.merge_cells(start_row=sec2_row, start_column=1, end_row=sec2_row, end_column=2)
+        ws_viz.cell(sec2_row, 1).font = SECTION_FONT
+        ws_viz.cell(sec2_row, 1).fill = SECTION_FILL
+        for ci in range(1, 3):
+            ws_viz.cell(sec2_row, ci).fill = SECTION_FILL
+
+        ws_viz.append(["Фактор", "Влияние на прибыль (%)"])
+        style_header_row(ws_viz, ws_viz.max_row, VIZ_BLUE)
+
+        base_np = agg["net_profit"]
+        tornado_factors = []
+        cost_impact_val = agg["expenses"] * 0.10
+        cost_impact_pct = round(cost_impact_val / max(abs(base_np), 1) * 100, 1)
+        tornado_factors.append(("Себестоимость ±10%", cost_impact_pct))
+
+        inv_impact_val = abs(viz_inv_delta) * 0.10
+        inv_impact_pct = round(inv_impact_val / max(abs(base_np), 1) * 100, 1)
+        tornado_factors.append(("Инвестиции ±10%", inv_impact_pct))
+
+        fx_impact_val = agg["total_assets"] * 0.005
+        fx_impact_pct = round(fx_impact_val / max(abs(base_np), 1) * 100, 1)
+        tornado_factors.append(("Курсовые разницы ±10%", fx_impact_pct))
+
+        interest_impact_val = agg["lt_liabilities"] * 0.01
+        interest_impact_pct = round(interest_impact_val / max(abs(base_np), 1) * 100, 1)
+        tornado_factors.append(("Процентные расходы ±10%", interest_impact_pct))
+
+        # Sort by absolute impact descending
+        tornado_factors.sort(key=lambda x: abs(x[1]), reverse=True)
+
+        for factor_name, impact_pct in tornado_factors:
+            ws_viz.append([factor_name, impact_pct / 100])
+            r = ws_viz.max_row
+            style_data_cell(ws_viz.cell(r, 1))
+            style_data_cell(ws_viz.cell(r, 2), is_number=True)
+            ws_viz.cell(r, 2).number_format = '±0.0%'
+
+        # AI explanation for tornado
+        top_factor = tornado_factors[0] if tornado_factors else ("—", 0)
+        ws_viz.append([])
+        ai_text_tn = (
+            f"AI пояснение: Наибольшее влияние на прибыль оказывает {top_factor[0].split(' ±')[0]}. "
+            f"При изменении на 10% прибыль изменится на ±{abs(top_factor[1]):.1f}%. "
+            f"Рекомендуется хеджировать риск {top_factor[0].split(' ±')[0].lower()}."
+        )
+        ws_viz.append([ai_text_tn])
+        r = ws_viz.max_row
+        ws_viz.merge_cells(start_row=r, start_column=1, end_row=r, end_column=2)
+        ws_viz.cell(r, 1).font = AI_FONT
+        ws_viz.cell(r, 1).alignment = Alignment(wrap_text=True)
+
+        ws_viz.append([])
+        ws_viz.append([])
+
+        # ---- Section 3: Bubble ----
+        ws_viz.append(["Раздел 3: Пузырьковая диаграмма — Структура активов"])
+        sec3_row = ws_viz.max_row
+        ws_viz.merge_cells(start_row=sec3_row, start_column=1, end_row=sec3_row, end_column=4)
+        ws_viz.cell(sec3_row, 1).font = SECTION_FONT
+        ws_viz.cell(sec3_row, 1).fill = SECTION_FILL
+        for ci in range(1, 5):
+            ws_viz.cell(sec3_row, ci).fill = SECTION_FILL
+
+        ws_viz.append(["Категория", "Стоимость (UZS)", "Доходность (%)", "Доля в активах (%)"])
+        style_header_row(ws_viz, ws_viz.max_row, VIZ_BLUE)
+
+        ta = agg["total_assets"]
+        bubble_items = [
+            ("Основные средства", agg["net_fa"], 5.0),
+            ("Запасы", agg["inventories"], 12.0),
+            ("Дебиторская задолженность", agg["receivables"], 8.0),
+            ("Денежные средства", agg["cash"], 2.0),
+        ]
+        largest_name = ""
+        largest_share = 0.0
+        inv_share = 0.0
+
+        for name, value, yield_pct in bubble_items:
+            share = round(value / max(ta, 1) * 100, 1)
+            if share > largest_share:
+                largest_share = share
+                largest_name = name
+            if name == "Запасы":
+                inv_share = share
+            ws_viz.append([name, value, yield_pct / 100, share / 100])
+            r = ws_viz.max_row
+            style_data_cell(ws_viz.cell(r, 1))
+            style_data_cell(ws_viz.cell(r, 2), is_number=True)
+            ws_viz.cell(r, 3).number_format = '0.0%'
+            ws_viz.cell(r, 3).border = THIN_BORDER
+            ws_viz.cell(r, 4).number_format = '0.0%'
+            ws_viz.cell(r, 4).border = THIN_BORDER
+
+        ws_viz.append([])
+        ai_text_bb = (
+            f"AI пояснение: Наибольшую долю активов составляют {largest_name.lower()} ({largest_share:.1f}%). "
+            f"Запасы занимают {inv_share:.1f}% — рассмотреть оптимизацию складских запасов."
+        )
+        ws_viz.append([ai_text_bb])
+        r = ws_viz.max_row
+        ws_viz.merge_cells(start_row=r, start_column=1, end_row=r, end_column=4)
+        ws_viz.cell(r, 1).font = AI_FONT
+        ws_viz.cell(r, 1).alignment = Alignment(wrap_text=True)
+
+        ws_viz.append([])
+        ws_viz.append([])
+
+        # ---- Section 4: Heatmap ----
+        ws_viz.append(["Раздел 4: Тепловая карта — Корреляция показателей"])
+        sec4_row = ws_viz.max_row
+        ws_viz.merge_cells(start_row=sec4_row, start_column=1, end_row=sec4_row, end_column=7)
+        ws_viz.cell(sec4_row, 1).font = SECTION_FONT
+        ws_viz.cell(sec4_row, 1).fill = SECTION_FILL
+        for ci in range(1, 8):
+            ws_viz.cell(sec4_row, ci).fill = SECTION_FILL
+
+        hm_metrics = {
+            "Выручка": agg["revenue"],
+            "Себестоимость": agg["expenses"],
+            "Чист.прибыль": base_np,
+            "Активы": ta,
+            "Капитал": agg["total_equity"],
+            "Обязательства": agg["total_liabilities"],
+        }
+        hm_names = list(hm_metrics.keys())
+        hm_vals = list(hm_metrics.values())
+        n = len(hm_names)
+
+        # Header row
+        ws_viz.append([""] + hm_names)
+        style_header_row(ws_viz, ws_viz.max_row, VIZ_BLUE)
+
+        # Correlation matrix
+        rev_np_corr = 0.0
+        liab_eq_corr = 0.0
+        for i in range(n):
+            row_data = [hm_names[i]]
+            for j in range(n):
+                if i == j:
+                    row_data.append(100.0)
+                else:
+                    vi, vj = hm_vals[i], hm_vals[j]
+                    if vi != 0 and vj != 0:
+                        ratio = min(abs(vi), abs(vj)) / max(abs(vi), abs(vj)) * 100
+                        sign = 1 if (vi > 0) == (vj > 0) else -1
+                        corr_val = round(ratio * sign, 1)
+                    else:
+                        corr_val = 0.0
+                    row_data.append(corr_val)
+                    # Track specific correlations for AI text
+                    if hm_names[i] == "Выручка" and hm_names[j] == "Чист.прибыль":
+                        rev_np_corr = corr_val
+                    if hm_names[i] == "Обязательства" and hm_names[j] == "Капитал":
+                        liab_eq_corr = corr_val
+            ws_viz.append(row_data)
+            r = ws_viz.max_row
+            style_data_cell(ws_viz.cell(r, 1), is_bold=True)
+            for ci in range(2, n + 2):
+                cell = ws_viz.cell(r, ci)
+                cell.number_format = '0.0'
+                cell.border = THIN_BORDER
+                cell.alignment = Alignment(horizontal="center")
+                # Color-code: green for strong positive, red for negative
+                val = cell.value
+                if isinstance(val, (int, float)):
+                    if val >= 80:
+                        cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+                    elif val >= 50:
+                        cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
+                    elif val < 0:
+                        cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+
+        ws_viz.append([])
+        ai_text_hm = (
+            f"AI пояснение: Сильная положительная корреляция между выручкой и чистой прибылью ({rev_np_corr:.1f}%). "
+            f"{'Отрицательная' if liab_eq_corr < 0 else 'Положительная'} корреляция между обязательствами и капиталом ({liab_eq_corr:.1f}%)."
+        )
+        ws_viz.append([ai_text_hm])
+        r = ws_viz.max_row
+        ws_viz.merge_cells(start_row=r, start_column=1, end_row=r, end_column=7)
+        ws_viz.cell(r, 1).font = AI_FONT
+        ws_viz.cell(r, 1).alignment = Alignment(wrap_text=True)
+
+    else:
+        write_no_data(ws_viz, VIZ_BLUE)
+
+    ws_viz.column_dimensions["A"].width = 35
+    ws_viz.column_dimensions["B"].width = 25
+    ws_viz.column_dimensions["C"].width = 20
+    ws_viz.column_dimensions["D"].width = 22
+    ws_viz.column_dimensions["E"].width = 18
+    ws_viz.column_dimensions["F"].width = 18
+    ws_viz.column_dimensions["G"].width = 18
+    auto_width(ws_viz)
 
     # --- Save and return ---
     try:
