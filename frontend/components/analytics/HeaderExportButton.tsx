@@ -8,10 +8,7 @@ export default function HeaderExportButton() {
   async function handleDownload() {
     setLoading(true);
     try {
-      const token =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('access_token') || localStorage.getItem('token') || ''
-          : '';
+      const token = localStorage.getItem('token') || '';
       const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
       const res = await fetch(`${apiBase}/api/v1/analytics/export/full-report`, {
         method: 'POST',
@@ -19,7 +16,7 @@ export default function HeaderExportButton() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ portfolio_id: 0 }),
+        body: JSON.stringify({ portfolio_id: 1 }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       const blob = await res.blob();

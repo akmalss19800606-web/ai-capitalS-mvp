@@ -16,10 +16,7 @@ export function ExportFullReportButton({ portfolioId, disabled }: ExportFullRepo
   async function handleExport() {
     setLoading(true);
     setError('');
-    const token =
-      typeof window !== 'undefined'
-        ? localStorage.getItem('access_token') || localStorage.getItem('token') || ''
-        : '';
+    const token = localStorage.getItem('token') || '';
 
     try {
       const res = await fetch(`${apiBase}/api/v1/analytics/export/full-report`, {
