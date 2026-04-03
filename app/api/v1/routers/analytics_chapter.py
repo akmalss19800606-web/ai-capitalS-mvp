@@ -1338,7 +1338,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     pnl = cache.get("pnl")
     company_info = cache.get("company_info", {})
 
-    # Compute balance aggregates ONCE at the top — many sheet builders depend on it
+    # Compute balance aggregates ONCE at the top — used by many sheets below
     agg = _get_balance_aggregates(user_id=current_user.id) or {}
 
     wb = Workbook()
