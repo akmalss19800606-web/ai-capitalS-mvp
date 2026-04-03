@@ -163,25 +163,31 @@ def import_1c_excel(
         }
 
     # Fallback: extract revenue/expense from income_expenses list (1C format)
-    if parsed.income_expenses and not revenue_accounts:
-        total_revenue_cur = 0.0
-        total_revenue_prev = 0.0
-        total_expenses_cur = 0.0
-        total_expenses_prev = 0.0
+    # Trigger when no revenue_accounts OR when OSV-derived revenue sums to 0
+    osv_revenue_total = sum(a.get("credit_end", 0) for a in revenue_accounts.values())
+    osv_expense_total = sum(a.get("debit_end", 0) for a in expense_accounts.values())
+    if parsed.income_expenses and (not revenue_accounts or osv_revenue_total == 0):
+        ie_revenue_cur = 0.0
+        ie_revenue_prev = 0.0
+        ie_costs_cur = 0.0
+        ie_costs_prev = 0.0
         for ie in parsed.income_expenses:
-            name_lower = ie.get("name", "").lower()
+            if not isinstance(ie, dict):
+                continue
+            name_str = str(ie.get("name", ""))
+            code = name_str[:4]
             cur_val = float(ie.get("current_year") or 0)
             prev_val = float(ie.get("previous_year") or 0)
-            section_lower = ie.get("section", "").lower()
-            if "доход" in section_lower or "выручк" in name_lower or "реализац" in name_lower:
-                total_revenue_cur += cur_val
-                total_revenue_prev += prev_val
-            else:
-                total_expenses_cur += cur_val
-                total_expenses_prev += prev_val
-        if total_revenue_cur or total_expenses_cur:
-            revenue_accounts["9010"] = {"code": "9010", "name": "Выручка", "credit_start": total_revenue_prev, "credit_end": total_revenue_cur}
-            expense_accounts["2010"] = {"code": "2010", "name": "Себестоимость", "debit_start": total_expenses_prev, "debit_end": total_expenses_cur}
+            if code.startswith("90"):
+                ie_revenue_cur += cur_val
+                ie_revenue_prev += prev_val
+            elif code.startswith("20") or code.startswith("94"):
+                ie_costs_cur += cur_val
+                ie_costs_prev += prev_val
+        if ie_revenue_cur > 0:
+            revenue_accounts = {"9010": {"code": "9010", "name": "Выручка (из доходов/расходов)", "credit_start": ie_revenue_prev, "credit_end": ie_revenue_cur}}
+        if ie_costs_cur > 0 and osv_expense_total == 0:
+            expense_accounts = {"2010": {"code": "2010", "name": "Себестоимость (из доходов/расходов)", "debit_start": ie_costs_prev, "debit_end": ie_costs_cur}}
 
     total_revenue_start = sum(a["credit_start"] for a in revenue_accounts.values())
     total_revenue_end = sum(a["credit_end"] for a in revenue_accounts.values())

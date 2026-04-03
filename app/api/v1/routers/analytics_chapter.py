@@ -78,15 +78,18 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     expenses = pnl.get("total_expenses_end", 0.0)
 
     # Fallback 1: income_expenses list from parsed P&L (most reliable source)
-    if not revenue and not expenses:
+    # Always try when revenue==0 because import may write 0 even when IE data exists
+    if revenue == 0:
         ie_list = cache.get("income_expenses", [])
         if ie_list:
             ie_result = _revenue_costs_from_income_expenses(ie_list)
-            revenue = ie_result["revenue_cur"]
-            expenses = ie_result["costs_cur"] + ie_result["opex_cur"]
+            if ie_result["revenue_cur"] > 0:
+                revenue = ie_result["revenue_cur"]
+            if (ie_result["costs_cur"] + ie_result["opex_cur"]) > 0 and expenses == 0:
+                expenses = ie_result["costs_cur"] + ie_result["opex_cur"]
 
     # Fallback 2: extract from ОСВ balance accounts (less reliable for P&L)
-    if not revenue and not expenses:
+    if revenue == 0 and expenses == 0:
         for code, acc in accounts.items():
             code_str = str(code)
             cur = acc.get("credit_end", 0) or acc.get("current", 0)
