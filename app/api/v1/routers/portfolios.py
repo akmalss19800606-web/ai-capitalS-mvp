@@ -587,16 +587,36 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
     rows = []
 
+    # ---- IFRS adjustments (computed once, applied below) ----
+    net_fa_raw_current = _get("0100", "current") - _get("0200", "current")
+    net_fa_raw_previous = _get("0100", "previous") - _get("0200", "previous")
+
+    # IAS 16 revaluation: +15% on net PP&E
+    ias16_reval_current = round(net_fa_raw_current * 0.15, 2)
+    ias16_reval_previous = round(net_fa_raw_previous * 0.15, 2)
+
+    # IFRS 9 ECL: 5% impairment on trade receivables (2010 only)
+    ecl_current = round(_get("2010", "current") * 0.05, 2)
+    ecl_previous = round(_get("2010", "previous") * 0.05, 2)
+
+    # IFRS 16 ROU asset from lease obligation (7800)
+    rou_asset_current = _get("7800", "current")
+    rou_asset_previous = _get("7800", "previous")
+
     # Non-current assets
     rows.append({"code": "", "label": "Внеоборотные активы", "current": None, "previous": None, "isHeader": True, "note": ""})
 
-    net_fa_current = _get("0100", "current") - _get("0200", "current")
-    net_fa_previous = _get("0100", "previous") - _get("0200", "previous")
+    net_fa_current = net_fa_raw_current + ias16_reval_current
+    net_fa_previous = net_fa_raw_previous + ias16_reval_previous
     rows.append({"code": "0100-0200", "label": "Основные средства (IAS 16)", "current": net_fa_current, "previous": net_fa_previous, "note": "5"})
     rows.append({"code": "0800", "label": "Капитальные вложения (IAS 16)", "current": _get("0800"), "previous": _get("0800", "previous"), "note": "6"})
 
-    total_noncurrent_current = net_fa_current + _get("0800")
-    total_noncurrent_previous = net_fa_previous + _get("0800", "previous")
+    # IFRS 16 ROU asset
+    if rou_asset_current > 0 or rou_asset_previous > 0:
+        rows.append({"code": "ROU", "label": "Актив права пользования (IFRS 16)", "current": rou_asset_current, "previous": rou_asset_previous, "note": "16"})
+
+    total_noncurrent_current = net_fa_current + _get("0800") + rou_asset_current
+    total_noncurrent_previous = net_fa_previous + _get("0800", "previous") + rou_asset_previous
     rows.append({"code": "", "label": "Итого внеоборотные активы", "current": total_noncurrent_current, "previous": total_noncurrent_previous, "isHeader": True, "note": ""})
 
     # Current assets
@@ -604,7 +624,7 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
     rows.append({"code": "1000", "label": "Запасы — материалы (IAS 2)", "current": _get("1000"), "previous": _get("1000", "previous"), "note": "7"})
     rows.append({"code": "1010", "label": "Запасы — НЗП (IAS 2)", "current": _get("1010"), "previous": _get("1010", "previous"), "note": "7"})
-    rows.append({"code": "2010", "label": "Торговая дебиторская задолженность (IFRS 9)", "current": _get("2010"), "previous": _get("2010", "previous"), "note": "8"})
+    rows.append({"code": "2010", "label": "Торговая дебиторская задолженность (IFRS 9)", "current": _get("2010") - ecl_current, "previous": _get("2010", "previous") - ecl_previous, "note": "8"})
     rows.append({"code": "2300", "label": "Авансы выданные (IAS 1)", "current": _get("2300"), "previous": _get("2300", "previous"), "note": "9"})
     rows.append({"code": "5010", "label": "Денежные средства — касса (IAS 7)", "current": _get("5010"), "previous": _get("5010", "previous"), "note": "10"})
     rows.append({"code": "5110", "label": "Денежные средства — р/с (IAS 7)", "current": _get("5110"), "previous": _get("5110", "previous"), "note": "10"})
@@ -614,8 +634,8 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     cash_previous = _get("5010", "previous") + _get("5110", "previous") + _get("5210", "previous")
     inventory_current = _get("1000") + _get("1010")
     inventory_previous = _get("1000", "previous") + _get("1010", "previous")
-    receivables_current = _get("2010") + _get("2300")
-    receivables_previous = _get("2010", "previous") + _get("2300", "previous")
+    receivables_current = (_get("2010") - ecl_current) + _get("2300")
+    receivables_previous = (_get("2010", "previous") - ecl_previous) + _get("2300", "previous")
 
     total_current_assets_current = inventory_current + receivables_current + cash_current
     total_current_assets_previous = inventory_previous + receivables_previous + cash_previous
@@ -629,17 +649,20 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     rows.append({"code": "", "label": "Капитал", "current": None, "previous": None, "isHeader": True, "note": ""})
     rows.append({"code": "8300", "label": "Уставный капитал (IAS 1)", "current": _get("8300"), "previous": _get("8300", "previous"), "note": "11"})
     rows.append({"code": "8500", "label": "Резервный капитал (IAS 1)", "current": _get("8500"), "previous": _get("8500", "previous"), "note": "12"})
-    rows.append({"code": "8700", "label": "Нераспределённая прибыль (IAS 1)", "current": _get("8700"), "previous": _get("8700", "previous"), "note": "13"})
+    # Retained earnings adjusted for ECL
+    rows.append({"code": "8700", "label": "Нераспределённая прибыль (IAS 1)", "current": _get("8700") - ecl_current, "previous": _get("8700", "previous") - ecl_previous, "note": "13"})
+    # OCI — IAS 16 revaluation reserve
+    rows.append({"code": "OCI", "label": "Резерв переоценки (OCI, IAS 16)", "current": ias16_reval_current, "previous": ias16_reval_previous, "note": "12a"})
 
-    # Unclosed P&L adjustment (same logic as NSBU)
+    # Unclosed P&L adjustment — compute from IFRS-adjusted totals
     unclosed_profit_current = 0.0
     unclosed_profit_previous = 0.0
     if pnl:
-        equity_raw_current = _get("8300") + _get("8500") + _get("8700")
+        equity_raw_current = _get("8300") + _get("8500") + (_get("8700") - ecl_current) + ias16_reval_current
         lt_raw = _get("7010") + _get("7800")
         st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
         unclosed_profit_current = total_assets_current - (equity_raw_current + lt_raw + st_raw)
-        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
+        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + (_get("8700", "previous") - ecl_previous) + ias16_reval_previous
         lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
         st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
         unclosed_profit_previous = total_assets_previous - (equity_raw_previous + lt_raw_p + st_raw_p)
@@ -647,8 +670,8 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     if abs(unclosed_profit_current) > 0.01 or abs(unclosed_profit_previous) > 0.01:
         rows.append({"code": "VI-VII", "label": "Прибыль текущего периода (IAS 1)", "current": unclosed_profit_current, "previous": unclosed_profit_previous, "note": "14"})
 
-    equity_current = _get("8300") + _get("8500") + _get("8700") + unclosed_profit_current
-    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous") + unclosed_profit_previous
+    equity_current = _get("8300") + _get("8500") + (_get("8700") - ecl_current) + ias16_reval_current + unclosed_profit_current
+    equity_previous = _get("8300", "previous") + _get("8500", "previous") + (_get("8700", "previous") - ecl_previous) + ias16_reval_previous + unclosed_profit_previous
     rows.append({"code": "", "label": "Итого капитал", "current": equity_current, "previous": equity_previous, "isHeader": True, "note": ""})
 
     # Non-current liabilities

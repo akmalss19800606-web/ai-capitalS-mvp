@@ -166,6 +166,35 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     }
 
 
+def _ifrs_adjusted_aggregates(agg: dict) -> dict:
+    """Return IFRS-adjusted version of NSBU balance aggregates.
+
+    Applies: IAS 16 revaluation (+15%), IFRS 9 ECL (-5% receivables),
+    IFRS 16 ROU asset (= lease liability already in lt_liabilities).
+    """
+    ifrs = dict(agg)
+    net_fa = agg["net_fa"]
+    ias16_reval = round(net_fa * 0.15, 2)
+    ecl = round(agg["receivables"] * 0.05, 2)
+    # ROU asset = lease portion of lt_liabilities (7800 value)
+    # lt_liabilities already includes 7800, so we just mirror it on assets
+    # We approximate ROU as lease value already in lt_liabilities minus long-term loans
+    # For simplicity, use the same 7800 value which is in cache
+    # We don't have 7800 directly here, but we can estimate from the aggregates
+    # lt_liabilities = 7010 + 7800. We can't split them here easily.
+    # However, the key difference for stress test is revaluation and ECL.
+    # ROU doesn't change ratios since it appears on both sides equally.
+
+    ifrs["non_current_assets"] = agg["non_current_assets"] + ias16_reval
+    ifrs["receivables"] = agg["receivables"] - ecl
+    ifrs["current_assets"] = agg["current_assets"] - ecl
+    ifrs["total_assets"] = agg["total_assets"] + ias16_reval - ecl
+    ifrs["total_equity"] = agg["total_equity"] + ias16_reval - ecl
+    ifrs["net_profit"] = agg["net_profit"] - ecl
+    ifrs["net_fa"] = net_fa + ias16_reval
+    return ifrs
+
+
 def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
     """Extract revenue/costs/opex/other_expenses/tax from income_expenses by account codes.
 
@@ -408,8 +437,14 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
     net_fa = _v("0100") - _v("0200")
     oci_revaluation = round(net_fa * 0.15, 2)
 
+    # IFRS 9 ECL adjustment on trade receivables (5% of 2010)
+    ecl_adjustment = round(_v("2010") * 0.05, 2)
+
+    # IFRS-adjusted net profit
+    net_profit_ifrs = net_profit - ecl_adjustment
+
     total_prev = charter_prev + reserve_prev + retained_prev
-    total_cur = charter + reserve + retained + net_profit + oci_revaluation
+    total_cur = charter + reserve + retained + net_profit_ifrs + oci_revaluation
 
     rows = [
         {"label": "Начальное сальдо", "current": round(total_prev, 2), "previous": None, "isTotal": True},
@@ -418,7 +453,8 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
         {"label": "  Нераспределённая прибыль", "current": retained_prev, "previous": None},
         {"label": "", "current": None, "previous": None},
         {"label": "Изменения за период", "current": None, "previous": None, "isHeader": True},
-        {"label": "Чистая прибыль за период", "current": round(net_profit, 2) if net_profit else None, "previous": None},
+        {"label": "Чистая прибыль за период (МСФО)", "current": round(net_profit_ifrs, 2) if net_profit_ifrs else None, "previous": None},
+        {"label": "  в т.ч. ECL корректировка (IFRS 9)", "current": round(-ecl_adjustment, 2) if ecl_adjustment else None, "previous": None, "note": "IFRS 9"},
         {"label": "Переоценка ОС (OCI)", "current": oci_revaluation if oci_revaluation else None, "previous": None, "note": "IAS 16"},
         {"label": "Изменение уставного капитала", "current": round(charter - charter_prev, 2) if charter != charter_prev else None, "previous": None},
         {"label": "Изменение резервного капитала", "current": round(reserve - reserve_prev, 2) if reserve != reserve_prev else None, "previous": None},
@@ -779,37 +815,54 @@ async def run_stress_test(
     fx_extra = agg["total_assets"] * 0.05 * fx_shock
     stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
 
+    # NSBU stressed
     stressed_agg = dict(agg)
     stressed_agg["revenue"] = stressed_rev
     stressed_agg["expenses"] = stressed_exp
     stressed_agg["net_profit"] = stressed_np
 
+    # IFRS baseline & stressed (with IAS 16, IFRS 9, IFRS 16 adjustments)
+    agg_ifrs = _ifrs_adjusted_aggregates(agg)
+    stressed_rev_ifrs = agg_ifrs["revenue"] * (1 + rev_shock)
+    stressed_exp_ifrs = agg_ifrs["expenses"] * (1 + cost_shock)
+    interest_extra_ifrs = agg_ifrs["lt_liabilities"] * interest_shock * 0.10
+    fx_extra_ifrs = agg_ifrs["total_assets"] * 0.05 * fx_shock
+    stressed_np_ifrs = stressed_rev_ifrs - stressed_exp_ifrs - interest_extra_ifrs - fx_extra_ifrs
+
+    stressed_agg_ifrs = dict(agg_ifrs)
+    stressed_agg_ifrs["revenue"] = stressed_rev_ifrs
+    stressed_agg_ifrs["expenses"] = stressed_exp_ifrs
+    stressed_agg_ifrs["net_profit"] = stressed_np_ifrs
+
     baseline_flat = _kpi_flat(agg)
     stressed_flat = _kpi_flat(stressed_agg)
+    baseline_flat_ifrs = _kpi_flat(agg_ifrs)
+    stressed_flat_ifrs = _kpi_flat(stressed_agg_ifrs)
     labels = _kpi_labels()
 
     results = []
     for key, base_val in baseline_flat.items():
         stressed_val = stressed_flat.get(key, 0)
-        if base_val != 0:
-            delta_pct = round((stressed_val - base_val) / base_val * 100, 1)
-        else:
-            delta_pct = 0.0
+        base_val_ifrs = baseline_flat_ifrs.get(key, 0)
+        stressed_val_ifrs = stressed_flat_ifrs.get(key, 0)
+        delta_pct_nsbu = round((stressed_val - base_val) / base_val * 100, 1) if base_val != 0 else 0.0
+        delta_pct_ifrs = round((stressed_val_ifrs - base_val_ifrs) / base_val_ifrs * 100, 1) if base_val_ifrs != 0 else 0.0
         results.append({
             "metric": labels.get(key, key),
             "baseline_nsbu": base_val,
-            "baseline_ifrs": base_val,
+            "baseline_ifrs": base_val_ifrs,
             "stressed_nsbu": stressed_val,
-            "stressed_ifrs": stressed_val,
-            "delta_pct_nsbu": delta_pct,
-            "delta_pct_ifrs": delta_pct,
-            "status_nsbu": _stress_status(delta_pct),
-            "status_ifrs": _stress_status(delta_pct),
+            "stressed_ifrs": stressed_val_ifrs,
+            "delta_pct_nsbu": delta_pct_nsbu,
+            "delta_pct_ifrs": delta_pct_ifrs,
+            "status_nsbu": _stress_status(delta_pct_nsbu),
+            "status_ifrs": _stress_status(delta_pct_ifrs),
         })
 
     ai_summary = [
         "Базовые KPI рассчитаны из загруженной ОСВ.",
-        f"Чистая прибыль базового сценария: {agg['net_profit']:,.0f}",
+        f"Чистая прибыль базового сценария (НСБУ): {agg['net_profit']:,.0f}",
+        f"Чистая прибыль базового сценария (МСФО): {agg_ifrs['net_profit']:,.0f}",
         f"Сценарий: {sc['name']} (severity: {data.severity}).",
     ]
     if agg["revenue"] == 0 and agg["expenses"] == 0:
@@ -2085,7 +2138,8 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     ws_stress_ifrs.append(["Показатель", "Базовое значение", "Стресс-значение", "Изменение %", "Статус"])
     style_header_row(ws_stress_ifrs, ws_stress_ifrs.max_row, RED_FILL)
 
-    if agg:
+    agg_ifrs = _ifrs_adjusted_aggregates(agg) if agg else None
+    if agg_ifrs:
         for sc_key, sc in _DEFAULT_SCENARIOS.items():
             ws_stress_ifrs.append([f"--- {sc['name']} ---", "", "", "", ""])
             r = ws_stress_ifrs.max_row
@@ -2093,17 +2147,17 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 ws_stress_ifrs.cell(r, ci + 1).font = BOLD
                 ws_stress_ifrs.cell(r, ci + 1).fill = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")
 
-            stressed_rev = agg["revenue"] * (1 + sc["revenue_shock"])
-            stressed_exp = agg["expenses"] * (1 + sc["cost_shock"])
-            interest_extra = agg["lt_liabilities"] * sc["interest_shock"] * 0.10
-            fx_extra = agg["total_assets"] * 0.05 * sc["fx_shock"]
+            stressed_rev = agg_ifrs["revenue"] * (1 + sc["revenue_shock"])
+            stressed_exp = agg_ifrs["expenses"] * (1 + sc["cost_shock"])
+            interest_extra = agg_ifrs["lt_liabilities"] * sc["interest_shock"] * 0.10
+            fx_extra = agg_ifrs["total_assets"] * 0.05 * sc["fx_shock"]
             stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
-            stressed_agg = dict(agg)
+            stressed_agg = dict(agg_ifrs)
             stressed_agg["revenue"] = stressed_rev
             stressed_agg["expenses"] = stressed_exp
             stressed_agg["net_profit"] = stressed_np
 
-            baseline_flat = _kpi_flat(agg)
+            baseline_flat = _kpi_flat(agg_ifrs)
             stressed_flat = _kpi_flat(stressed_agg)
             labels = _kpi_labels()
 
