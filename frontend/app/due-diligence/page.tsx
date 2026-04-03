@@ -285,6 +285,9 @@ export default function DueDiligencePage() {
   const [authorizedCapital, setAuthorizedCapital] = useState('');
   const [foundedYear, setFoundedYear] = useState('');
   const [licenseCount, setLicenseCount] = useState('');
+  const [licensesInfo, setLicensesInfo] = useState('');
+  const [servicingBank, setServicingBank] = useState('');
+  const [keyCounterparties, setKeyCounterparties] = useState('');
 
   // ─── Load Decisions ───────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -323,6 +326,7 @@ export default function DueDiligencePage() {
       if (detail?.legalform) setLegalForm(detail.legalform);
       if (detail?.authorizedcapital) setAuthorizedCapital(String(detail.authorizedcapital));
       if (detail?.foundedyear) setFoundedYear(String(detail.foundedyear));
+      if (detail?.servicing_bank) setServicingBank(detail.servicing_bank);
     } catch (e: any) {
       setError(e.message || 'Ошибка поиска компании');
     } finally {
@@ -425,6 +429,9 @@ export default function DueDiligencePage() {
       if (authorizedCapital) payload.authorized_capital = Number(authorizedCapital);
       if (foundedYear) payload.founded_year = Number(foundedYear);
       if (licenseCount) payload.license_count = Number(licenseCount);
+      if (licensesInfo) payload.licenses_info = licensesInfo;
+      if (servicingBank) payload.servicing_bank = servicingBank;
+      if (keyCounterparties) payload.key_counterparties = keyCounterparties;
 
       const res = await ddScoring.run(payload);
       setResult(res);
@@ -497,6 +504,18 @@ export default function DueDiligencePage() {
                       { icon: 'R', label: 'Risk', value: result ? (result.risk_level ?? '---') : '---' },
                         ];
 
+    // E3-05: Build KPI for DueDiligenceLayout
+  const kpiData = result ? {
+    score: result.total_score,
+    riskLevel: result.risk_level as 'low' | 'medium' | 'high' | 'critical',
+    checklistProgress: result.checklist_completion_pct,
+    status: 'completed' as const,
+  } : loading ? {
+    status: 'in_progress' as const,
+  } : {
+    status: 'not_started' as const,
+  };
+
                           // Build sidebar & scoreHeader for DueDiligenceLayout
   const scoreHeader = result ? (
     <div style={{ ...card, borderLeft: `4px solid ${result.risk_level === 'low' ? C.success : result.risk_level === 'medium' ? C.warning : C.error}` }}>
@@ -521,6 +540,8 @@ export default function DueDiligencePage() {
   // ═════════════════════════════════════════════════════════════════════
   return (
           <DueDiligenceLayout
+        title="Комплексная проверка (Due Diligence)"
+        kpi={kpiData}
         sidebar={
                     <>
             <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -632,12 +653,12 @@ export default function DueDiligencePage() {
                   <label style={{ ...labelStyle, fontSize: '11px' }}>ОПФ</label>
                   <select style={inputStyle} value={legalForm} onChange={e => setLegalForm(e.target.value)}>
                     <option value="">Не указана</option>
+                    <option value="ОАО">ОАО</option>
                     <option value="ООО">ООО</option>
+                    <option value="ЧП">ЧП</option>
                     <option value="АО">АО</option>
-                    <option value="ИП">ИП</option>
                     <option value="ГУП">ГУП</option>
-                    <option value="Фермерское хозяйство">Фермерское хозяйство</option>
-                    <option value="СЧЗ">СЧЗ</option>
+                    <option value="СП">СП</option>
                     <option value="Другое">Другое</option>
                   </select>
                 </div>
@@ -652,8 +673,20 @@ export default function DueDiligencePage() {
                   </div>
                 </div>
                 <div>
-                  <label style={{ ...labelStyle, fontSize: '11px' }}>Лицензии</label>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Кол-во лицензий</label>
                   <input style={inputStyle} type="number" min={0} value={licenseCount} onChange={e => setLicenseCount(e.target.value)} placeholder="0" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Лицензии и разрешения</label>
+                  <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={licensesInfo} onChange={e => setLicensesInfo(e.target.value)} placeholder="Перечислите лицензии и разрешения" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Банк-обслуживающий</label>
+                  <input style={inputStyle} value={servicingBank} onChange={e => setServicingBank(e.target.value)} placeholder="Название банка" />
+                </div>
+                <div>
+                  <label style={{ ...labelStyle, fontSize: '11px' }}>Основные контрагенты</label>
+                  <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={keyCounterparties} onChange={e => setKeyCounterparties(e.target.value)} placeholder="Перечислите основных контрагентов" />
                 </div>
               </div>
             </div>

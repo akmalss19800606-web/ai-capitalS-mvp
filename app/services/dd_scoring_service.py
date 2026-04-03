@@ -104,6 +104,14 @@ def run_dd_scoring(
     debt_to_equity: Optional[float] = None,
     years_in_business: Optional[int] = None,
     employee_count: Optional[int] = None,
+    # E3-02: Расширенные поля
+    director_name: Optional[str] = None,
+    legal_form: Optional[str] = None,
+    authorized_capital: Optional[float] = None,
+    founded_year: Optional[int] = None,
+    licenses_info: Optional[str] = None,
+    servicing_bank: Optional[str] = None,
+    key_counterparties: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Автоматический DD-скоринг компании.
@@ -122,7 +130,11 @@ def run_dd_scoring(
     rng = random.Random(seed)
 
     # Генерируем базовые скоры
-    base_scores = _generate_base_scores(rng, revenue_mln, profit_margin_pct, debt_to_equity, years_in_business, employee_count)
+    base_scores = _generate_base_scores(
+        rng, revenue_mln, profit_margin_pct, debt_to_equity,
+        years_in_business, employee_count,
+        licenses_info=licenses_info, founded_year=founded_year,
+    )
 
     # Модификация по географии
     geo_mod = GEOGRAPHY_MODIFIER.get(geography, 1.0)
@@ -194,6 +206,14 @@ def run_dd_scoring(
         "benchmarks": benchmarks,
         "red_flags": red_flags,
         "recommendation": recommendation,
+        # E3-02: Расширенные поля
+        "director_name": director_name,
+        "legal_form": legal_form,
+        "authorized_capital": authorized_capital,
+        "founded_year": founded_year,
+        "licenses_info": licenses_info,
+        "servicing_bank": servicing_bank,
+        "key_counterparties": key_counterparties,
     }
 
 
@@ -208,6 +228,9 @@ def _generate_base_scores(
     debt_to_equity: Optional[float],
     years_in_business: Optional[int],
     employee_count: Optional[int],
+    # E3-02: Расширенные поля для скоринга
+    licenses_info: Optional[str] = None,
+    founded_year: Optional[int] = None,
 ) -> Dict[str, float]:
     """Генерация базовых скоров с учётом финансовых показателей."""
     scores = {
@@ -252,6 +275,17 @@ def _generate_base_scores(
             scores["operational"] = min(100, scores["operational"] + 6)
         elif employee_count < 10:
             scores["operational"] = max(10, scores["operational"] - 8)
+
+    # E3-02: Наличие лицензий +5 к legal
+    if licenses_info and licenses_info.strip():
+        scores["legal"] = min(100, scores["legal"] + 5)
+
+    # E3-02: Длительный стаж (>10 лет по году основания) +3 к management
+    import datetime
+    if founded_year is not None:
+        company_age = datetime.date.today().year - founded_year
+        if company_age > 10:
+            scores["management"] = min(100, scores["management"] + 3)
 
     return scores
 

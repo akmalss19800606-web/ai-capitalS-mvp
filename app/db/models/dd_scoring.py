@@ -52,4 +52,13 @@ class DueDiligenceScore(Base):
     # Рекомендация (текст)
     recommendation = Column(Text, nullable=True)
 
+    # E3-02: Расширенные поля DD
+    director_name = Column(String(200), nullable=True)
+    legal_form = Column(String(50), nullable=True)
+    authorized_capital = Column(Float, nullable=True)
+    founded_year = Column(Integer, nullable=True)
+    licenses_info = Column(Text, nullable=True)
+    servicing_bank = Column(String(200), nullable=True)
+    key_counterparties = Column(Text, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())

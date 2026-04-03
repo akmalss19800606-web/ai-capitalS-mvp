@@ -22,6 +22,14 @@ class DDScoringRequest(BaseModel):
     debt_to_equity: Optional[float] = None
     years_in_business: Optional[int] = None
     employee_count: Optional[int] = None
+    # E3-02: Расширенные поля DD
+    director_name: Optional[str] = Field(default=None, max_length=200)
+    legal_form: Optional[str] = Field(default=None, description="ОАО/ООО/ЧП/АО/ГУП/СП/Другое")
+    authorized_capital: Optional[float] = Field(default=None, description="Уставный капитал (UZS)")
+    founded_year: Optional[int] = Field(default=None, description="Год основания (4 цифры)")
+    licenses_info: Optional[str] = Field(default=None, description="Лицензии и разрешения")
+    servicing_bank: Optional[str] = Field(default=None, max_length=200, description="Банк-обслуживающий")
+    key_counterparties: Optional[str] = Field(default=None, description="Основные контрагенты")
 
 
 class ChecklistUpdateRequest(BaseModel):
@@ -92,6 +100,15 @@ class DDScoringResponse(BaseModel):
     benchmarks: Optional[List[BenchmarkItem]] = None
     red_flags: Optional[List[RedFlag]] = None
     recommendation: Optional[str] = None
+
+    # E3-02: Расширенные поля DD
+    director_name: Optional[str] = None
+    legal_form: Optional[str] = None
+    authorized_capital: Optional[float] = None
+    founded_year: Optional[int] = None
+    licenses_info: Optional[str] = None
+    servicing_bank: Optional[str] = None
+    key_counterparties: Optional[str] = None
 
     created_at: datetime
 

@@ -64,6 +64,14 @@ def create_dd_scoring(
             debt_to_equity=req.debt_to_equity,
             years_in_business=req.years_in_business,
             employee_count=req.employee_count,
+            # E3-02: Расширенные поля
+            director_name=req.director_name,
+            legal_form=req.legal_form,
+            authorized_capital=req.authorized_capital,
+            founded_year=req.founded_year,
+            licenses_info=req.licenses_info,
+            servicing_bank=req.servicing_bank,
+            key_counterparties=req.key_counterparties,
         )
 
         dd = DueDiligenceScore(
@@ -86,6 +94,14 @@ def create_dd_scoring(
             benchmarks=result["benchmarks"],
             red_flags=result["red_flags"],
             recommendation=result["recommendation"],
+            # E3-02: Расширенные поля
+            director_name=result.get("director_name"),
+            legal_form=result.get("legal_form"),
+            authorized_capital=result.get("authorized_capital"),
+            founded_year=result.get("founded_year"),
+            licenses_info=result.get("licenses_info"),
+            servicing_bank=result.get("servicing_bank"),
+            key_counterparties=result.get("key_counterparties"),
         )
         db.add(dd)
         db.commit()
