@@ -14,6 +14,7 @@ export function ExportFullReportButton({ portfolioId, disabled }: ExportFullRepo
   async function handleExport() {
     setLoading(true);
     setError('');
+
     const token = localStorage.getItem('token');
     if (!token) { alert('Необходимо войти в систему'); setLoading(false); return; }
 
@@ -21,9 +22,9 @@ export function ExportFullReportButton({ portfolioId, disabled }: ExportFullRepo
       const res = await fetch('/api/v1/analytics/export/full-report', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portfolio_id: portfolioId }),
+        body: JSON.stringify({ portfolio_id: 1 }),
       });
-      if (!res.ok) { const err = await res.text(); setError(`Ошибка: ${err}`); setLoading(false); return; }
+      if (!res.ok) { const err = await res.text(); alert(`Ошибка: ${err}`); setLoading(false); return; }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

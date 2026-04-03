@@ -484,26 +484,42 @@ export default function PortfoliosPage() {
               <div className="flex gap-3 mt-6">
                 <button onClick={() => setStep(3)} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200">Редактировать</button>
                 <button onClick={async () => {
-                  // FE-11: Use fetch with auth header instead of window.open
                   const token = localStorage.getItem('token');
-                  const res = await fetch(`${API}/organizations/${orgId}/export/pdf?period_date=${periodDate}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  if (!token) { alert('Необходимо войти в систему'); return; }
+                  const res = await fetch('/api/v1/analytics/export/full-report', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ portfolio_id: 1 }),
+                  });
+                  if (!res.ok) { const err = await res.text(); alert(`Ошибка: ${err}`); return; }
                   const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
-                  a.href = URL.createObjectURL(blob);
-                  a.download = 'report.pdf';
+                  a.href = url;
+                  a.download = 'report_nsbu_ifrs.xlsx';
+                  document.body.appendChild(a);
                   a.click();
-                  URL.revokeObjectURL(a.href);
+                  URL.revokeObjectURL(url);
+                  a.remove();
                 }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт PDF</button>
                 <button onClick={async () => {
-                  // FE-11: Use fetch with auth header instead of window.open
                   const token = localStorage.getItem('token');
-                  const res = await fetch(`${API}/organizations/${orgId}/export/excel?period_date=${periodDate}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                  if (!token) { alert('Необходимо войти в систему'); return; }
+                  const res = await fetch('/api/v1/analytics/export/full-report', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ portfolio_id: 1 }),
+                  });
+                  if (!res.ok) { const err = await res.text(); alert(`Ошибка: ${err}`); return; }
                   const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
-                  a.href = URL.createObjectURL(blob);
-                  a.download = 'report.xlsx';
+                  a.href = url;
+                  a.download = 'report_nsbu_ifrs.xlsx';
+                  document.body.appendChild(a);
                   a.click();
-                  URL.revokeObjectURL(a.href);
+                  URL.revokeObjectURL(url);
+                  a.remove();
                 }} className="px-6 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">Экспорт Excel</button>
                 <button onClick={() => { window.location.href = "/analytics"; }} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700">Аналитика →</button>
               </div>
