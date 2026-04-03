@@ -288,7 +288,7 @@ export default function DueDiligencePage() {
   ] : [];
 
   return (
-    <DueDiligenceLayout title="Комплексная проверка (Due Diligence)" kpi={kpiData}
+    <DueDiligenceLayout title="Комплексная проверка (Due Diligence)" kpi={kpiData} hasResult={!!result} activeTab={activeTab as any} onTabChange={setActiveTab as any} loading={loading} error={error}
       sidebar={
         <>
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '16px' }}>
