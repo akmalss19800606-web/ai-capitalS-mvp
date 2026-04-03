@@ -77,7 +77,7 @@
       stressTest: 'Стресс-тест',
       retrospective: 'Ретроспектива',
       dueDiligence: 'Due Diligence',
-      marketUz: 'Рынок УЗ',
+      marketUz: 'Рынок Узбекистана',
       macroUz: 'Макроэкономика',
       charts: 'Визуализации',
       dashboardBuilder: 'Дашборды',
@@ -164,7 +164,7 @@
     },
     /* ─── Market Analysis section (center) ─── */
     marketAnalysis: {
-      title: 'Анализ рынка Узбекистана',
+      title: 'Рынок Узбекистана',
       subtitle: 'AI-анализ инвестиционных возможностей и рыночных трендов',
       inputPlaceholder: 'Например: стоит ли инвестировать в оптовую торговлю мукой в Узбекистане?',
       analyzeBtn: 'Анализировать',

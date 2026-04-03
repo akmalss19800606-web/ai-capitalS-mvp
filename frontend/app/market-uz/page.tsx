@@ -241,7 +241,7 @@ export default function UzMarketPage() {
             <div className="p-2 bg-blue-600 rounded-xl">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-white">Анализ рынка Узбекистана</h1>
+            <h1 className="text-3xl font-bold text-white">Рынок Узбекистана</h1>
             <span className="px-2 py-0.5 bg-blue-600/20 text-blue-400 text-xs rounded-full font-medium border border-blue-500/30">PRO</span>
           </div>
           <p className="text-slate-400 ml-14">AI-анализ инвестиционных возможностей • Данные ЦБ РУз, stat.uz, invest.gov.uz</p>

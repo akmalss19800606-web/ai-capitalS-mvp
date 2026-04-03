@@ -188,7 +188,7 @@ const QUICK_TOOLS = [
   { name: "Портфели", icon: "📊", href: "/analytics/portfolios" },
   { name: "Калькулятор", icon: "🧮", href: "/calculator" },
   { name: "Due Diligence", icon: "🔍", href: "/due-diligence" },
-  { name: "Рынок УЗ", icon: "🌍", href: "/uz-market" },
+  { name: "Рынок Узбекистана", icon: "🌍", href: "/uz-market" },
   { name: "Исламские финансы", icon: "☪️", href: "/islamic-finance" },
   { name: "Отчёты", icon: "📋", href: "/report" },
 ];

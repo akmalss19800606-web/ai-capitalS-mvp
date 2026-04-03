@@ -205,7 +205,7 @@ export default function MarketAnalysisPage(){
   }
 
   return <div style={{minHeight:"100vh",background:C.bg,padding:"2rem 1rem"}}><div style={{maxWidth:960,margin:"0 auto"}}>
-    <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>🇺🇿 Анализ рынка Узбекистана</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>Детальный AI-анализ отрасли по 7 блокам (25 полей) → 12-секционный инвестиционный отчёт</p></div>
+    <div style={{marginBottom:24}}><h1 style={{fontSize:"1.75rem",fontWeight:700,color:C.text,margin:0}}>🇺🇿 Рынок Узбекистана</h1><p style={{color:C.muted,marginTop:6,fontSize:14}}>Детальный AI-анализ отрасли по 7 блокам (25 полей) → 12-секционный инвестиционный отчёт</p></div>
     {/* Quick Ask with tabs */}
     <div style={{marginBottom:20,padding:20,background:C.card,borderRadius:12,border:`1px solid ${C.border}`}}>
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
