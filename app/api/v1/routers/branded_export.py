@@ -120,7 +120,7 @@ async def export_dd_report_pdf(
         ai_analysis=data.ai_analysis,
     )
 
-    safe_name = data.company_name.replace(" ", "_")[:30]
+    safe_name = "".join(c for c in data.company_name if c.isascii() and (c.isalnum() or c in " _-")).strip().replace(" ", "_")[:30] or "company"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

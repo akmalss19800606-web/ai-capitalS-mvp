@@ -625,7 +625,8 @@ async def export_balance_excel(
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    fname = f"balance_{org.name}_{period_date}.xlsx"
+    safe_org = "".join(c for c in org.name if c.isascii() and (c.isalnum() or c in " _-")).strip()[:30] or "org"
+    fname = f"balance_{safe_org}_{period_date}.xlsx"
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -690,9 +691,10 @@ async def export_balance_pdf(
     """
 
     # Return as HTML (browser can print to PDF)
+    safe_org = "".join(c for c in org.name if c.isascii() and (c.isalnum() or c in " _-")).strip()[:30] or "org"
     return StreamingResponse(
         io.BytesIO(html.encode("utf-8")),
         media_type="text/html",
         headers={"Content-Disposition":
-                 f'attachment; filename="balance_{org.name}_{period_date}.html"'},
+                 f'attachment; filename="balance_{safe_org}_{period_date}.html"'},
     )

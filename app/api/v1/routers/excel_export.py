@@ -98,7 +98,8 @@ async def export_portfolio(
         logger.error("Ошибка экспорта портфеля в Excel: %s", e)
         raise HTTPException(status_code=500, detail="Ошибка генерации Excel")
 
-    filename = f"portfolio_{body.name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    safe_name = "".join(c for c in body.name if c.isascii() and (c.isalnum() or c in " _-")).strip().replace(" ", "_")[:30] or "portfolio"
+    filename = f"portfolio_{safe_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return StreamingResponse(
         io.BytesIO(xlsx_bytes),
         media_type=XLSX_CONTENT_TYPE,
@@ -122,7 +123,8 @@ async def export_dd_report(
         logger.error("Ошибка экспорта DD в Excel: %s", e)
         raise HTTPException(status_code=500, detail="Ошибка генерации Excel")
 
-    filename = f"dd_{body.company_name.replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    safe_cname = "".join(c for c in body.company_name if c.isascii() and (c.isalnum() or c in " _-")).strip().replace(" ", "_")[:30] or "company"
+    filename = f"dd_{safe_cname}_{datetime.now().strftime('%Y%m%d')}.xlsx"
     return StreamingResponse(
         io.BytesIO(xlsx_bytes),
         media_type=XLSX_CONTENT_TYPE,
