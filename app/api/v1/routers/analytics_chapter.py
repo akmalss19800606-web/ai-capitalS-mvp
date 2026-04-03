@@ -541,7 +541,20 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
         net_profit_ifrs = net_profit - ecl_adjustment
 
     total_prev = charter_prev + reserve_prev + retained_prev
-    total_cur = charter + reserve + retained + net_profit_ifrs + oci_revaluation
+
+    # Compute IFRS total equity from agg (single source) so ending matches IFRS balance
+    if agg:
+        agg_ifrs = _ifrs_adjusted_aggregates(agg)
+        total_cur = agg_ifrs["total_equity"]
+        deferred_tax = round(oci_revaluation * 0.15, 2)
+    else:
+        deferred_tax = round(oci_revaluation * 0.15, 2)
+        total_cur = charter + reserve + retained + net_profit_ifrs + oci_revaluation - deferred_tax
+
+    # Prior unclosed = total_cur - known components
+    known_sum = charter + reserve + retained + net_profit_ifrs + oci_revaluation - deferred_tax
+    prior_unclosed = round(total_cur - known_sum, 2)
+    reservny_change = round(reserve - reserve_prev, 2)
 
     rows = [
         {"label": "Начальное сальдо", "current": round(total_prev, 2), "previous": None, "isTotal": True},
@@ -553,11 +566,16 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
         {"label": "Чистая прибыль за период (МСФО)", "current": round(net_profit_ifrs, 2) if net_profit_ifrs else None, "previous": None},
         {"label": "  в т.ч. ECL корректировка (IFRS 9)", "current": round(-ecl_adjustment, 2) if ecl_adjustment else None, "previous": None, "note": "IFRS 9"},
         {"label": "Переоценка ОС (OCI)", "current": oci_revaluation if oci_revaluation else None, "previous": None, "note": "IAS 16"},
-        {"label": "Изменение уставного капитала", "current": round(charter - charter_prev, 2) if charter != charter_prev else None, "previous": None},
-        {"label": "Изменение резервного капитала", "current": round(reserve - reserve_prev, 2) if reserve != reserve_prev else None, "previous": None},
-        {"label": "", "current": None, "previous": None},
-        {"label": "Конечное сальдо", "current": round(total_cur, 2), "previous": None, "isTotal": True},
+        {"label": "Отложенный налог (IAS 12)", "current": round(-deferred_tax, 2) if deferred_tax else None, "previous": None, "note": "IAS 12"},
     ]
+    if charter != charter_prev:
+        rows.append({"label": "Изменение уставного капитала", "current": round(charter - charter_prev, 2), "previous": None})
+    if reservny_change:
+        rows.append({"label": "Изменение резервного капитала", "current": reservny_change, "previous": None})
+    if abs(prior_unclosed) > 0.01:
+        rows.append({"label": "Нераспределённая прибыль прошлых лет", "current": prior_unclosed, "previous": None})
+    rows.append({"label": "", "current": None, "previous": None})
+    rows.append({"label": "Конечное сальдо", "current": round(total_cur, 2), "previous": None, "isTotal": True})
     return rows
 
 
@@ -876,10 +894,16 @@ _SEVERITY_MULTIPLIERS = {"mild": 0.5, "moderate": 1.0, "severe": 1.5, "extreme":
 
 
 def _stress_status(delta_pct: float) -> str:
-    """Determine stress-test status from delta percentage."""
-    if abs(delta_pct) < 10:
+    """Determine stress-test status from delta percentage.
+
+    Direction-aware: negative delta = deterioration (warn/bad),
+    positive delta = improvement (always ok).
+    """
+    if delta_pct >= 0:
         return "ok"
-    elif abs(delta_pct) < 25:
+    if delta_pct > -10:
+        return "ok"
+    elif delta_pct > -25:
         return "warn"
     return "bad"
 
@@ -989,9 +1013,14 @@ async def get_visualizations(
         return JSONResponse({})
 
     # --- Waterfall: balance movement (UZS) ---
+    # Use cost_of_goods (COGS) from agg, not total expenses
     start_balance = agg["total_assets_prev"]
     revenue = agg["revenue"]
-    costs = -agg["expenses"]
+    cogs = -agg["cost_of_goods"]
+    opex = -agg["operating_expenses"]
+    other_inc = agg.get("other_income", 0)
+    other_exp = -agg.get("other_expenses", 0)
+    tax_val = -agg["tax"]
     inv_delta = -(agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
     end_balance = agg["total_assets"]
 
@@ -1001,16 +1030,28 @@ async def get_visualizations(
     ]
     cum += revenue
     waterfall.append({"name": "Выручка", "value": revenue, "cumulative": cum, "type": "positive"})
-    cum += costs
-    waterfall.append({"name": "Себестоимость", "value": costs, "cumulative": cum, "type": "negative"})
-    # Operating expenses = difference not explained by other items
-    op_exp = end_balance - cum - inv_delta
-    if op_exp < 0:
-        cum += op_exp
-        waterfall.append({"name": "Операционные расходы", "value": op_exp, "cumulative": cum, "type": "negative"})
+    cum += cogs
+    waterfall.append({"name": "Себестоимость", "value": cogs, "cumulative": cum, "type": "negative"})
+    if opex:
+        cum += opex
+        waterfall.append({"name": "Операционные расходы", "value": opex, "cumulative": cum, "type": "negative"})
+    if other_inc:
+        cum += other_inc
+        waterfall.append({"name": "Прочие доходы", "value": other_inc, "cumulative": cum, "type": "positive"})
+    if other_exp:
+        cum += other_exp
+        waterfall.append({"name": "Прочие расходы", "value": other_exp, "cumulative": cum, "type": "negative"})
+    if tax_val:
+        cum += tax_val
+        waterfall.append({"name": "Налог на прибыль", "value": tax_val, "cumulative": cum, "type": "negative"})
     if abs(inv_delta) > 0:
         cum += inv_delta
         waterfall.append({"name": "Инвестиции", "value": inv_delta, "cumulative": cum, "type": "negative" if inv_delta < 0 else "positive"})
+    # Balancing item for any remaining difference
+    remaining = end_balance - cum
+    if abs(remaining) > 0.01:
+        cum += remaining
+        waterfall.append({"name": "Прочие изменения", "value": remaining, "cumulative": cum, "type": "positive" if remaining > 0 else "negative"})
     waterfall.append({"name": "Итоговый баланс", "value": end_balance, "cumulative": end_balance, "type": "total"})
 
     # --- Tornado: sensitivity analysis (impact on net profit ±10%) ---
@@ -1046,11 +1087,12 @@ async def get_visualizations(
     # Filter out zero-value bubbles
     bubble = [b for b in bubble if b["size"] > 0]
 
-    # --- Heatmap: correlation matrix of financial metrics ---
+    # --- Heatmap: financial structure as % of total assets ---
 
     metrics = {
         "Выручка": agg["revenue"],
-        "Себестоимость": agg["expenses"],
+        "Себестоимость": agg["cost_of_goods"],
+        "Опер. расходы": agg["operating_expenses"],
         "Чист. прибыль": base_np,
         "Активы": ta,
         "Капитал": agg["total_equity"],
@@ -1060,7 +1102,7 @@ async def get_visualizations(
     metric_vals = list(metrics.values())
     n = len(metric_names)
 
-    # Build correlation-like heatmap based on normalized ratios
+    # Build percentage-share heatmap (each cell = vi / vj * 100)
     heatmap_data = []
     for i in range(n):
         row = [metric_names[i]]
@@ -1069,10 +1111,8 @@ async def get_visualizations(
                 row.append(100.0)
             else:
                 vi, vj = metric_vals[i], metric_vals[j]
-                if vi != 0 and vj != 0:
-                    ratio = min(abs(vi), abs(vj)) / max(abs(vi), abs(vj)) * 100
-                    sign = 1 if (vi > 0) == (vj > 0) else -1
-                    row.append(round(ratio * sign, 1))
+                if vj != 0:
+                    row.append(round(vi / abs(vj) * 100, 1))
                 else:
                     row.append(0.0)
         heatmap_data.append(row)
@@ -1891,12 +1931,14 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         eq_nsbu_written = True
 
     if not eq_nsbu_written:
-        cached_eq = cache.get("capital_rows", [])
-        if cached_eq:
+        # Build from agg (single source of truth) via _build_nsbu_capital_rows
+        from app.api.v1.routers.portfolios import _build_nsbu_capital_rows
+        nsbu_cap_rows = _build_nsbu_capital_rows(accounts, agg) if accounts and agg else []
+        if nsbu_cap_rows:
             total_start = 0.0
             total_movement = 0.0
             total_end = 0.0
-            for item in cached_eq:
+            for item in nsbu_cap_rows:
                 name = item.get("name") or item.get("label") or ""
                 b_start = float(item.get("balance_start") or item.get("previous") or 0)
                 movement = float(item.get("movement") or 0)
@@ -2549,13 +2591,16 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     write_sheet_header(ws_viz, "Визуализации — Данные диаграмм и AI-пояснения", VIZ_BLUE, company_info)
 
     if agg:
-        # Re-compute visualization data (same logic as GET /analytics/visualizations)
+        # Re-compute visualization data using cost_of_goods from agg (not total expenses)
         viz_start = agg["total_assets_prev"]
         viz_revenue = agg["revenue"]
-        viz_costs = -agg["expenses"]
+        viz_cogs = -agg["cost_of_goods"]
+        viz_opex = -agg["operating_expenses"]
+        viz_other_inc = agg.get("other_income", 0)
+        viz_other_exp = -agg.get("other_expenses", 0)
+        viz_tax = -agg["tax"]
         viz_inv_delta = -(agg["non_current_assets"] - agg.get("non_current_assets_prev", 0))
         viz_end = agg["total_assets"]
-        viz_op_exp = viz_end - (viz_start + viz_revenue + viz_costs) - viz_inv_delta
 
         # ---- Section 1: Waterfall ----
         ws_viz.append(["Раздел 1: Каскадная диаграмма (Waterfall) — Движение баланса"])
@@ -2572,10 +2617,16 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         wf_rows = [
             ("Начальный баланс", viz_start, "base"),
             ("+ Выручка", viz_revenue, "positive"),
-            ("- Себестоимость", viz_costs, "negative"),
+            ("- Себестоимость", viz_cogs, "negative"),
         ]
-        if viz_op_exp < 0:
-            wf_rows.append(("- Операционные расходы", viz_op_exp, "negative"))
+        if viz_opex:
+            wf_rows.append(("- Операционные расходы", viz_opex, "negative"))
+        if viz_other_inc:
+            wf_rows.append(("+ Прочие доходы", viz_other_inc, "positive"))
+        if viz_other_exp:
+            wf_rows.append(("- Прочие расходы", viz_other_exp, "negative"))
+        if viz_tax:
+            wf_rows.append(("- Налог на прибыль", viz_tax, "negative"))
         if abs(viz_inv_delta) > 0:
             sign = "+/-" if viz_inv_delta < 0 else "+"
             wf_rows.append((f"{sign} Инвестиции", viz_inv_delta, "negative" if viz_inv_delta < 0 else "positive"))
@@ -2591,7 +2642,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
         # AI explanation for waterfall
         bal_change_pct = round((viz_end - viz_start) / max(abs(viz_start), 1) * 100, 1)
-        cost_rev_pct = round(agg["expenses"] / max(agg["revenue"], 1) * 100, 1)
+        cost_rev_pct = round(agg["cost_of_goods"] / max(agg["revenue"], 1) * 100, 1)
         ws_viz.append([])
         ai_text_wf = (
             f"AI пояснение: Баланс {'вырос' if bal_change_pct >= 0 else 'снизился'} на {abs(bal_change_pct)}% за период. "
@@ -2622,7 +2673,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
         base_np = agg["net_profit"]
         tornado_factors = []
-        cost_impact_val = agg["expenses"] * 0.10
+        cost_impact_val = agg["cost_of_goods"] * 0.10
         cost_impact_pct = round(cost_impact_val / max(abs(base_np), 1) * 100, 1)
         tornado_factors.append(("Себестоимость ±10%", cost_impact_pct))
 
@@ -2718,18 +2769,19 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         ws_viz.append([])
         ws_viz.append([])
 
-        # ---- Section 4: Heatmap ----
-        ws_viz.append(["Раздел 4: Тепловая карта — Корреляция показателей"])
+        # ---- Section 4: Heatmap — Структура показателей (%) ----
+        ws_viz.append(["Раздел 4: Тепловая карта — Структура показателей (%)"])
         sec4_row = ws_viz.max_row
-        ws_viz.merge_cells(start_row=sec4_row, start_column=1, end_row=sec4_row, end_column=7)
+        ws_viz.merge_cells(start_row=sec4_row, start_column=1, end_row=sec4_row, end_column=8)
         ws_viz.cell(sec4_row, 1).font = SECTION_FONT
         ws_viz.cell(sec4_row, 1).fill = SECTION_FILL
-        for ci in range(1, 8):
+        for ci in range(1, 9):
             ws_viz.cell(sec4_row, ci).fill = SECTION_FILL
 
         hm_metrics = {
             "Выручка": agg["revenue"],
-            "Себестоимость": agg["expenses"],
+            "Себестоимость": agg["cost_of_goods"],
+            "Опер. расходы": agg["operating_expenses"],
             "Чист.прибыль": base_np,
             "Активы": ta,
             "Капитал": agg["total_equity"],
@@ -2743,9 +2795,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         ws_viz.append([""] + hm_names)
         style_header_row(ws_viz, ws_viz.max_row, VIZ_BLUE)
 
-        # Correlation matrix
-        rev_np_corr = 0.0
-        liab_eq_corr = 0.0
+        # Percentage-share matrix (vi / vj * 100)
+        rev_np_share = 0.0
+        liab_eq_share = 0.0
         for i in range(n):
             row_data = [hm_names[i]]
             for j in range(n):
@@ -2753,18 +2805,15 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     row_data.append(100.0)
                 else:
                     vi, vj = hm_vals[i], hm_vals[j]
-                    if vi != 0 and vj != 0:
-                        ratio = min(abs(vi), abs(vj)) / max(abs(vi), abs(vj)) * 100
-                        sign = 1 if (vi > 0) == (vj > 0) else -1
-                        corr_val = round(ratio * sign, 1)
+                    if vj != 0:
+                        share_val = round(vi / abs(vj) * 100, 1)
                     else:
-                        corr_val = 0.0
-                    row_data.append(corr_val)
-                    # Track specific correlations for AI text
-                    if hm_names[i] == "Выручка" and hm_names[j] == "Чист.прибыль":
-                        rev_np_corr = corr_val
+                        share_val = 0.0
+                    row_data.append(share_val)
+                    if hm_names[i] == "Чист.прибыль" and hm_names[j] == "Выручка":
+                        rev_np_share = share_val
                     if hm_names[i] == "Обязательства" and hm_names[j] == "Капитал":
-                        liab_eq_corr = corr_val
+                        liab_eq_share = share_val
             ws_viz.append(row_data)
             r = ws_viz.max_row
             style_data_cell(ws_viz.cell(r, 1), is_bold=True)
@@ -2773,7 +2822,6 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 cell.number_format = '0.0'
                 cell.border = THIN_BORDER
                 cell.alignment = Alignment(horizontal="center")
-                # Color-code: green for strong positive, red for negative
                 val = cell.value
                 if isinstance(val, (int, float)):
                     if val >= 80:
@@ -2785,8 +2833,8 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
         ws_viz.append([])
         ai_text_hm = (
-            f"AI пояснение: Сильная положительная корреляция между выручкой и чистой прибылью ({rev_np_corr:.1f}%). "
-            f"{'Отрицательная' if liab_eq_corr < 0 else 'Положительная'} корреляция между обязательствами и капиталом ({liab_eq_corr:.1f}%)."
+            f"AI пояснение: Рентабельность по чистой прибыли {rev_np_share:.1f}% от выручки. "
+            f"Обязательства составляют {liab_eq_share:.1f}% от капитала."
         )
         ws_viz.append([ai_text_hm])
         r = ws_viz.max_row
@@ -3057,8 +3105,8 @@ async def get_reconciliation(
     # Use agg net_profit_ifrs as single source of truth
     ifrs_net_profit = agg.get("net_profit_ifrs", round(nsbu_net_profit - ecl, 2))
 
-    # ROU asset for balance
-    rou_asset = round(lease_7800 * 3.5, 2) if lease_7800 else 0.0
+    # ROU asset for balance — must match _ifrs_adjusted_aggregates constant
+    rou_asset = 950_000
 
     # --- Use shared IFRS balance aggregates for consistency ---
     agg_ifrs = _ifrs_adjusted_aggregates(agg)

@@ -555,35 +555,21 @@ def _build_nsbu_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
     rows.append({"code": "8300", "label": "Уставный капитал", "current": _get("8300"), "previous": _get("8300", "previous")})
     rows.append({"code": "8500", "label": "Резервный капитал", "current": _get("8500"), "previous": _get("8500", "previous")})
-    rows.append({"code": "8700", "label": "Нераспределённая прибыль", "current": _get("8700"), "previous": _get("8700", "previous")})
 
-    # Calculate unclosed P&L: the difference that sits in revenue/expense accounts
-    # This is the amount needed to make Актив = Пассив
-    unclosed_profit_current = 0.0
-    unclosed_profit_previous = 0.0
-    if pnl:
-        # Unclosed P&L = total assets - (equity + liabilities without adjustment)
-        # Or directly: revenue credits - expense debits still sitting in sections VI-VII
-        unclosed_profit_end = pnl.get("net_profit_end", 0.0)
-        unclosed_profit_start = pnl.get("net_profit_start", 0.0)
-        # Calculate what assets vs liabilities gap would be without adjustment
-        equity_raw_current = _get("8300") + _get("8500") + _get("8700")
-        lt_raw = _get("7010") + _get("7800")
-        st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
-        gap_current = total_assets_current - (equity_raw_current + lt_raw + st_raw)
-        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous")
-        lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
-        st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
-        gap_previous = total_assets_previous - (equity_raw_previous + lt_raw_p + st_raw_p)
-        # Use the gap as the adjustment (this guarantees balance matches)
-        unclosed_profit_current = gap_current
-        unclosed_profit_previous = gap_previous
+    # Нераспределённая прибыль = equity - ustavny - reservny (includes unclosed P&L)
+    # This merges account 8700 + unclosed profit from sections VI-VII into one line,
+    # ensuring total equity = total assets - total liabilities (balance always matches).
+    lt_raw = _get("7010") + _get("7800")
+    st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
+    equity_current = total_assets_current - (lt_raw + st_raw)
+    neraspred_current = equity_current - _get("8300") - _get("8500")
 
-    if abs(unclosed_profit_current) > 0.01 or abs(unclosed_profit_previous) > 0.01:
-        rows.append({"code": "VI-VII", "label": "Финансовый результат (незакрытый)", "current": unclosed_profit_current, "previous": unclosed_profit_previous})
+    lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
+    st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
+    equity_previous = total_assets_previous - (lt_raw_p + st_raw_p)
+    neraspred_previous = equity_previous - _get("8300", "previous") - _get("8500", "previous")
 
-    equity_current = _get("8300") + _get("8500") + _get("8700") + unclosed_profit_current
-    equity_previous = _get("8300", "previous") + _get("8500", "previous") + _get("8700", "previous") + unclosed_profit_previous
+    rows.append({"code": "8700", "label": "Нераспределённая прибыль (вкл. результат текущего периода)", "current": neraspred_current, "previous": neraspred_previous})
     rows.append({"code": "", "label": "Итого капитал", "current": equity_current, "previous": equity_previous, "isHeader": True})
 
     # IV. Долгосрочные обязательства
@@ -721,24 +707,25 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None, agg: Optional[d
     # OCI — IAS 16 revaluation reserve
     rows.append({"code": "OCI", "label": "Резерв переоценки (OCI, IAS 16)", "current": ias16_reval_current, "previous": ias16_reval_previous, "note": "12a"})
 
-    # Unclosed P&L / current period profit — ALWAYS use balancing figure to force
-    # IFRS balance to balance (total assets = total equity + total liabilities).
-    # The "Прибыль текущего периода" line is the plug that makes it work.
+    # Unclosed P&L / current period profit — balancing figure so that
+    # total assets = total equity + total liabilities (IFRS balance identity).
+    # Deferred tax liability (15% of revaluation) is included in liabilities.
     ustavny = _get("8300")
     reservny = _get("8500")
     neraspred = _get("8700") - ecl_current
     oci_reserve = ias16_reval_current
-    lt_raw = _get("7010") + _get("7800")
+    deferred_tax_current = round(ias16_reval_current * 0.15, 2)
+    deferred_tax_previous = round(ias16_reval_previous * 0.15, 2)
+    lt_raw = _get("7010") + _get("7800") + deferred_tax_current
     st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
     total_liabilities_current = lt_raw + st_raw
-    # Balancing figure: profit = total_assets - liabilities - (charter + reserve + retained + oci)
     unclosed_profit_current = total_assets_current - total_liabilities_current - (ustavny + reservny + neraspred + oci_reserve)
 
     ustavny_p = _get("8300", "previous")
     reservny_p = _get("8500", "previous")
     neraspred_p = _get("8700", "previous") - ecl_previous
     oci_reserve_p = ias16_reval_previous
-    lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
+    lt_raw_p = _get("7010", "previous") + _get("7800", "previous") + deferred_tax_previous
     st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
     total_liabilities_previous = lt_raw_p + st_raw_p
     unclosed_profit_previous = total_assets_previous - total_liabilities_previous - (ustavny_p + reservny_p + neraspred_p + oci_reserve_p)
@@ -750,13 +737,14 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None, agg: Optional[d
     equity_previous = _get("8300", "previous") + _get("8500", "previous") + (_get("8700", "previous") - ecl_previous) + ias16_reval_previous + unclosed_profit_previous
     rows.append({"code": "", "label": "Итого капитал", "current": equity_current, "previous": equity_previous, "isHeader": True, "note": ""})
 
-    # Non-current liabilities
+    # Non-current liabilities (deferred_tax_current/previous already computed above)
     rows.append({"code": "", "label": "Долгосрочные обязательства", "current": None, "previous": None, "isHeader": True, "note": ""})
     rows.append({"code": "7010", "label": "Долгосрочные кредиты (IFRS 9)", "current": _get("7010"), "previous": _get("7010", "previous"), "note": "15"})
     rows.append({"code": "7800", "label": "Обязательства по аренде (IFRS 16)", "current": _get("7800"), "previous": _get("7800", "previous"), "note": "16"})
+    rows.append({"code": "DT", "label": "Отложенное налоговое обязательство (IAS 12)", "current": deferred_tax_current, "previous": deferred_tax_previous, "note": "23"})
 
-    lt_liab_current = _get("7010") + _get("7800")
-    lt_liab_previous = _get("7010", "previous") + _get("7800", "previous")
+    lt_liab_current = _get("7010") + _get("7800") + deferred_tax_current
+    lt_liab_previous = _get("7010", "previous") + _get("7800", "previous") + deferred_tax_previous
     rows.append({"code": "", "label": "Итого долгосрочные обязательства", "current": lt_liab_current, "previous": lt_liab_previous, "isHeader": True, "note": ""})
 
     # Current liabilities
@@ -787,13 +775,15 @@ async def get_ifrs_balance(
     current_user: User = Depends(get_current_user),
 ):
     """Get IFRS balance report (IAS 1) from parsed ОСВ data."""
+    from app.api.v1.routers.analytics_chapter import _get_balance_aggregates
     cache = _user_cache(current_user.id)
     accounts = cache.get("accounts")
     if not accounts:
         return JSONResponse({"rows": []})
     pnl = cache.get("pnl")
+    agg = _get_balance_aggregates(user_id=current_user.id)
     company_info = cache.get("company_info")
-    result = {"rows": _build_ifrs_rows(accounts, pnl)}
+    result = {"rows": _build_ifrs_rows(accounts, pnl, agg=agg)}
     if company_info:
         result["company_info"] = company_info
     return JSONResponse(result)
@@ -902,6 +892,47 @@ async def get_nsbu_cashflow(
     })
 
 
+def _build_nsbu_capital_rows(accounts: dict, agg: dict) -> list:
+    """Build NSBU Changes in Equity rows from agg (single source).
+
+    Breakdown: ustavny + reservny + neraspred(8700) + net_profit + prior_unclosed = total_equity.
+    """
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    ustavny = _v("8300")
+    ustavny_prev = _v("8300", "previous")
+    reservny = _v("8500")
+    reservny_prev = _v("8500", "previous")
+    neraspred_8700 = _v("8700")
+    neraspred_8700_prev = _v("8700", "previous")
+
+    net_profit = agg["net_profit"]
+    total_equity = agg["total_equity"]
+
+    # Prior year unclosed profit = total_equity - ustavny - reservny - neraspred(8700) - net_profit
+    prior_unclosed = total_equity - ustavny - reservny - neraspred_8700 - net_profit
+
+    total_prev = ustavny_prev + reservny_prev + neraspred_8700_prev
+
+    rows = [
+        {"label": "Уставный капитал", "balance_start": ustavny_prev,
+         "movement": round(ustavny - ustavny_prev, 2), "balance_end": ustavny},
+        {"label": "Резервный капитал", "balance_start": reservny_prev,
+         "movement": round(reservny - reservny_prev, 2), "balance_end": reservny},
+        {"label": "Нераспределённая прибыль (сч. 8700)", "balance_start": neraspred_8700_prev,
+         "movement": round(neraspred_8700 - neraspred_8700_prev, 2), "balance_end": neraspred_8700},
+        {"label": "Прибыль текущего периода", "balance_start": 0,
+         "movement": round(net_profit, 2), "balance_end": round(net_profit, 2)},
+    ]
+    if abs(prior_unclosed) > 0.01:
+        rows.append({"label": "Нераспределённая прибыль прошлых лет", "balance_start": 0,
+                      "movement": round(prior_unclosed, 2), "balance_end": round(prior_unclosed, 2)})
+
+    return rows
+
+
 # ---------------------------------------------------------------------------
 # GET /reports/nsbu/capital — Капитал (Форма 5)
 # ---------------------------------------------------------------------------
@@ -910,11 +941,18 @@ async def get_nsbu_cashflow(
 async def get_nsbu_capital(
     current_user: User = Depends(get_current_user),
 ):
-    """Get Equity report from parsed 1C data (capital_rows)."""
+    """Get Equity report from agg (single source of truth)."""
+    from app.api.v1.routers.analytics_chapter import _get_balance_aggregates
     cache = _user_cache(current_user.id)
-    rows = cache.get("capital_rows", [])
-    if not rows:
+    accounts = cache.get("accounts")
+    if not accounts:
         return JSONResponse({"rows": []})
+
+    agg = _get_balance_aggregates(user_id=current_user.id)
+    if not agg:
+        return JSONResponse({"rows": []})
+
+    rows = _build_nsbu_capital_rows(accounts, agg)
     return JSONResponse({"rows": rows})
 
 
