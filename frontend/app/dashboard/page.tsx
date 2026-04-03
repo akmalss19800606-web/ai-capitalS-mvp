@@ -195,17 +195,17 @@ const QUICK_TOOLS = [
 
 function QuickTools() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
       {QUICK_TOOLS.map(t => (
         <Link
           key={t.name}
           href={t.href}
           prefetch
-          className="flex flex-col items-center gap-1 p-5 min-h-[100px] bg-white border border-gray-200 rounded-xl hover:shadow-md hover:scale-[1.02] transition-all text-center"
+          className="flex flex-col items-center justify-center gap-2 p-6 min-h-[120px] bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-lg hover:border-blue-300 transition-all duration-200 text-center"
         >
-          <span className="text-3xl">{t.icon}</span>
-          <span className="text-base font-medium text-gray-800">{t.name}</span>
-          <span className="text-xs text-gray-500">{t.desc}</span>
+          <span className="text-4xl">{t.icon}</span>
+          <span className="text-lg font-semibold text-gray-800">{t.name}</span>
+          <span className="text-sm text-gray-500">{t.desc}</span>
         </Link>
       ))}
     </div>
@@ -288,9 +288,10 @@ export default function DashboardPage() {
           {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded" /> : <SectorsWidget sectors={sectors} />}
         </WidgetCard>
 
-        <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2 bg-gray-50">
+        <div className="xl:col-span-2 bg-white rounded-2xl shadow p-4">
+          <h3 className="text-lg font-bold text-gray-800 mb-4">⚡ Быстрые инструменты</h3>
           <QuickTools />
-        </WidgetCard>
+        </div>
 
       </div>
 
