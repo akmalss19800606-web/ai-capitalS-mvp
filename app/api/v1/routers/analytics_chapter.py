@@ -543,17 +543,16 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
     total_prev = charter_prev + reserve_prev + retained_prev
 
     # Compute IFRS total equity from agg (single source) so ending matches IFRS balance
+    deferred_tax = round(oci_revaluation * 0.15, 2)
     if agg:
         agg_ifrs = _ifrs_adjusted_aggregates(agg)
         total_cur = agg_ifrs["total_equity"]
-        deferred_tax = round(oci_revaluation * 0.15, 2)
     else:
-        deferred_tax = round(oci_revaluation * 0.15, 2)
         total_cur = charter + reserve + retained + net_profit_ifrs + oci_revaluation - deferred_tax
 
-    # Prior unclosed = total_cur - known components
-    known_sum = charter + reserve + retained + net_profit_ifrs + oci_revaluation - deferred_tax
-    prior_unclosed = round(total_cur - known_sum, 2)
+    # Prior unclosed = total_cur - known components (retained = balancing figure)
+    known_sum = charter + reserve + net_profit_ifrs + oci_revaluation - deferred_tax
+    prior_unclosed = round(total_cur - known_sum - retained, 2)
     reservny_change = round(reserve - reserve_prev, 2)
 
     rows = [
@@ -930,8 +929,11 @@ async def run_stress_test(
     interest_shock = sc["interest_shock"] * severity_mult
     fx_shock = sc["fx_shock"] * severity_mult
 
+    # Costs are semi-fixed: when revenue drops, costs drop by HALF the revenue
+    # shock factor.  cost_shock from scenario adds on top (e.g. commodity price rise).
+    cost_adj = rev_shock * 0.5  # semi-fixed: costs move half as much as revenue
     stressed_rev = agg["revenue"] * (1 + rev_shock)
-    stressed_exp = agg["expenses"] * (1 + cost_shock)
+    stressed_exp = agg["expenses"] * (1 + cost_shock + cost_adj)
     interest_extra = agg["lt_liabilities"] * interest_shock * 0.10
     fx_extra = agg["total_assets"] * 0.05 * fx_shock
     stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
@@ -945,7 +947,7 @@ async def run_stress_test(
     # IFRS baseline & stressed (with IAS 16, IFRS 9, IFRS 16 adjustments)
     agg_ifrs = _ifrs_adjusted_aggregates(agg)
     stressed_rev_ifrs = agg_ifrs["revenue"] * (1 + rev_shock)
-    stressed_exp_ifrs = agg_ifrs["expenses"] * (1 + cost_shock)
+    stressed_exp_ifrs = agg_ifrs["expenses"] * (1 + cost_shock + cost_adj)
     interest_extra_ifrs = agg_ifrs["lt_liabilities"] * interest_shock * 0.10
     fx_extra_ifrs = agg_ifrs["total_assets"] * 0.05 * fx_shock
     stressed_np_ifrs = stressed_rev_ifrs - stressed_exp_ifrs - interest_extra_ifrs - fx_extra_ifrs
@@ -1087,10 +1089,10 @@ async def get_visualizations(
     # Filter out zero-value bubbles
     bubble = [b for b in bubble if b["size"] > 0]
 
-    # --- Heatmap: financial structure as % of total assets ---
+    # --- Heatmap: Структура финансовых показателей (% от выручки) ---
 
+    rev = agg["revenue"]
     metrics = {
-        "Выручка": agg["revenue"],
         "Себестоимость": agg["cost_of_goods"],
         "Опер. расходы": agg["operating_expenses"],
         "Чист. прибыль": base_np,
@@ -1098,24 +1100,11 @@ async def get_visualizations(
         "Капитал": agg["total_equity"],
         "Обязательства": agg["total_liabilities"],
     }
-    metric_names = list(metrics.keys())
-    metric_vals = list(metrics.values())
-    n = len(metric_names)
-
-    # Build percentage-share heatmap (each cell = vi / vj * 100)
+    metric_names = ["Структура финансовых показателей (% от выручки)"]
     heatmap_data = []
-    for i in range(n):
-        row = [metric_names[i]]
-        for j in range(n):
-            if i == j:
-                row.append(100.0)
-            else:
-                vi, vj = metric_vals[i], metric_vals[j]
-                if vj != 0:
-                    row.append(round(vi / abs(vj) * 100, 1))
-                else:
-                    row.append(0.0)
-        heatmap_data.append(row)
+    for label, val in metrics.items():
+        pct = round(val / rev * 100, 1) if rev else 0.0
+        heatmap_data.append([label, pct])
 
     return JSONResponse({
         "waterfall": waterfall,
@@ -2257,7 +2246,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
             pv_factor = (1 - (1 + discount_rate) ** (-lease_term)) / discount_rate
             ifrs16_rou = round(lease_payment * pv_factor, 2)
         elif lease_val > 0:
-            ifrs16_rou = round(lease_val * 0.10, 2)  # Approximate ROU adjustment
+            ifrs16_rou = 950_000  # ROU asset — must match _ifrs_adjusted_aggregates constant
 
         # IAS 12: Deferred tax on revaluation (15% of IAS 16 revaluation)
         deferred_tax = round(ias16_reval * 0.15, 2)
@@ -2356,8 +2345,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 ws_stress_nsbu.cell(r, ci + 1).font = BOLD
                 ws_stress_nsbu.cell(r, ci + 1).fill = PatternFill(start_color="F5B7B1", end_color="F5B7B1", fill_type="solid")
 
+            cost_adj = sc["revenue_shock"] * 0.5  # semi-fixed costs
             stressed_rev = agg["revenue"] * (1 + sc["revenue_shock"])
-            stressed_exp = agg["expenses"] * (1 + sc["cost_shock"])
+            stressed_exp = agg["expenses"] * (1 + sc["cost_shock"] + cost_adj)
             interest_extra = agg["lt_liabilities"] * sc["interest_shock"] * 0.10
             fx_extra = agg["total_assets"] * 0.05 * sc["fx_shock"]
             stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
@@ -2432,8 +2422,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 ws_stress_ifrs.cell(r, ci + 1).font = BOLD
                 ws_stress_ifrs.cell(r, ci + 1).fill = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")
 
+            cost_adj = sc["revenue_shock"] * 0.5  # semi-fixed costs
             stressed_rev = agg_ifrs["revenue"] * (1 + sc["revenue_shock"])
-            stressed_exp = agg_ifrs["expenses"] * (1 + sc["cost_shock"])
+            stressed_exp = agg_ifrs["expenses"] * (1 + sc["cost_shock"] + cost_adj)
             interest_extra = agg_ifrs["lt_liabilities"] * sc["interest_shock"] * 0.10
             fx_extra = agg_ifrs["total_assets"] * 0.05 * sc["fx_shock"]
             stressed_np = stressed_rev - stressed_exp - interest_extra - fx_extra
