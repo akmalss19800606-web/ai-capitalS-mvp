@@ -185,21 +185,27 @@ function MacroWidget({ data }: { data: MacroData | null }) {
 
 // === Quick Tools ===
 const QUICK_TOOLS = [
-  { name: "Портфели", icon: "📊", href: "/analytics/portfolios" },
-  { name: "Калькулятор", icon: "🧮", href: "/calculator" },
-  { name: "Due Diligence", icon: "🔍", href: "/due-diligence" },
-  { name: "Рынок Узбекистана", icon: "🌍", href: "/uz-market" },
-  { name: "Исламские финансы", icon: "☪️", href: "/islamic-finance" },
-  { name: "Отчёты", icon: "📋", href: "/report" },
+  { name: "Портфели", icon: "📊", href: "/analytics/portfolios", desc: "Финансовый анализ НСБУ/МСФО" },
+  { name: "Калькулятор", icon: "🧮", href: "/calculator", desc: "Инвестиционные расчёты" },
+  { name: "Due Diligence", icon: "🔍", href: "/due-diligence", desc: "Комплексная проверка" },
+  { name: "Рынок Узбекистана", icon: "🌍", href: "/uz-market", desc: "AI-анализ рынка" },
+  { name: "Исламские финансы", icon: "☪️", href: "/islamic-finance", desc: "Шариатский скрининг" },
+  { name: "Отчёты", icon: "📋", href: "/report", desc: "Генерация отчётов" },
 ];
 
 function QuickTools() {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
       {QUICK_TOOLS.map(t => (
-        <Link key={t.name} href={t.href} prefetch className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 text-sm">
-          <span>{t.icon}</span>
-          <span>{t.name}</span>
+        <Link
+          key={t.name}
+          href={t.href}
+          prefetch
+          className="flex flex-col items-center gap-1 p-5 min-h-[100px] bg-white border border-gray-200 rounded-xl hover:shadow-md hover:scale-[1.02] transition-all text-center"
+        >
+          <span className="text-3xl">{t.icon}</span>
+          <span className="text-base font-medium text-gray-800">{t.name}</span>
+          <span className="text-xs text-gray-500">{t.desc}</span>
         </Link>
       ))}
     </div>
@@ -282,7 +288,7 @@ export default function DashboardPage() {
           {loading ? <div className="h-40 bg-gray-100 animate-pulse rounded" /> : <SectorsWidget sectors={sectors} />}
         </WidgetCard>
 
-        <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2">
+        <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2 bg-gray-50">
           <QuickTools />
         </WidgetCard>
       </div>
