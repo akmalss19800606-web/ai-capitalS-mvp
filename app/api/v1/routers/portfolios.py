@@ -641,8 +641,12 @@ async def get_nsbu_balance(
 # GET /reports/ifrs/balance — МСФО баланс (IAS 1)
 # ---------------------------------------------------------------------------
 
-def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
-    """Build IFRS-style balance sheet rows (IAS 1 labels, note refs)."""
+def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None, agg: Optional[dict] = None) -> list:
+    """Build IFRS-style balance sheet rows (IAS 1 labels, note refs).
+
+    When agg is provided, uses agg["net_profit_ifrs"] for the current-period profit line
+    instead of computing unclosed profit as a balancing figure.
+    """
 
     def _get(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
@@ -658,9 +662,9 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     ias16_reval_current = round(net_fa_raw_current * 0.15, 2)
     ias16_reval_previous = round(net_fa_raw_previous * 0.15, 2)
 
-    # IFRS 9 ECL: 5% impairment on trade receivables (2010 only)
-    ecl_current = round(_get("2010", "current") * 0.05, 2)
-    ecl_previous = round(_get("2010", "previous") * 0.05, 2)
+    # IFRS 9 ECL: 5% impairment on trade receivables (2010 + 2300)
+    ecl_current = round((_get("2010", "current") + _get("2300", "current")) * 0.05, 2)
+    ecl_previous = round((_get("2010", "previous") + _get("2300", "previous")) * 0.05, 2)
 
     # IFRS 16 ROU asset from lease obligation (7800)
     rou_asset_current = _get("7800", "current")
@@ -717,10 +721,18 @@ def _build_ifrs_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     # OCI — IAS 16 revaluation reserve
     rows.append({"code": "OCI", "label": "Резерв переоценки (OCI, IAS 16)", "current": ias16_reval_current, "previous": ias16_reval_previous, "note": "12a"})
 
-    # Unclosed P&L adjustment — compute from IFRS-adjusted totals
+    # Unclosed P&L adjustment — use agg net_profit_ifrs as single source if available,
+    # otherwise compute from IFRS-adjusted totals as balancing figure
     unclosed_profit_current = 0.0
     unclosed_profit_previous = 0.0
-    if pnl:
+    if agg and "net_profit_ifrs" in agg:
+        unclosed_profit_current = agg["net_profit_ifrs"]
+        # Previous period: compute as balancing figure (no agg data for previous)
+        equity_raw_previous = _get("8300", "previous") + _get("8500", "previous") + (_get("8700", "previous") - ecl_previous) + ias16_reval_previous
+        lt_raw_p = _get("7010", "previous") + _get("7800", "previous")
+        st_raw_p = _get("6010", "previous") + _get("6110", "previous") + _get("6310", "previous") + _get("6710", "previous") + _get("6820", "previous") + _get("6610", "previous")
+        unclosed_profit_previous = total_assets_previous - (equity_raw_previous + lt_raw_p + st_raw_p)
+    elif pnl:
         equity_raw_current = _get("8300") + _get("8500") + (_get("8700") - ecl_current) + ias16_reval_current
         lt_raw = _get("7010") + _get("7800")
         st_raw = _get("6010") + _get("6110") + _get("6310") + _get("6710") + _get("6820") + _get("6610")
