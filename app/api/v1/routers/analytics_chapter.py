@@ -95,16 +95,13 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
                 expenses += abs(cur_d) if cur_d else abs(cur)
 
     # Fallback: if still zero, use income_expenses list from 1C parsed data
+    # Extract by NSBU account codes: 90xx=revenue, 20xx=COGS, 94xx=OpEx
     if revenue == 0 and expenses == 0:
         ie_list = cache.get("income_expenses", [])
-        for ie in ie_list:
-            name = ie.get("name", "")
-            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
-            section = ie.get("section", "").lower()
-            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
-                revenue += cur_val
-            else:
-                expenses += cur_val
+        if ie_list:
+            ie_result = _revenue_costs_from_income_expenses(ie_list)
+            revenue = ie_result["revenue_cur"]
+            expenses = ie_result["costs_cur"] + ie_result["opex_cur"]
 
     net_profit = revenue - expenses
 
@@ -146,6 +143,43 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     }
 
 
+def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
+    """Extract revenue/costs/opex from income_expenses cache items by account codes.
+
+    Account code prefixes (NSBU chart of accounts):
+      90xx = revenue (sales)
+      20xx = cost of goods sold
+      94xx = operating expenses (admin, selling, other)
+    """
+    import re as _re
+    revenue_cur = 0.0
+    revenue_prev = 0.0
+    costs_cur = 0.0
+    costs_prev = 0.0
+    opex_cur = 0.0
+    opex_prev = 0.0
+    for item in (income_expenses or []):
+        name = str(item.get("name", ""))
+        m = _re.match(r"(\d{4})", name)
+        code = m.group(1) if m else ""
+        cur = float(item.get("current_year") or item.get("current_period") or item.get("current") or 0)
+        prev = float(item.get("previous_year") or item.get("previous_period") or item.get("previous") or 0)
+        if code.startswith("90"):
+            revenue_cur += cur
+            revenue_prev += prev
+        elif code.startswith("20"):
+            costs_cur += cur
+            costs_prev += prev
+        elif code.startswith("94"):
+            opex_cur += cur
+            opex_prev += prev
+    return {
+        "revenue_cur": revenue_cur, "revenue_prev": revenue_prev,
+        "costs_cur": costs_cur, "costs_prev": costs_prev,
+        "opex_cur": opex_cur, "opex_prev": opex_prev,
+    }
+
+
 def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
                              income_expenses: Optional[list] = None) -> list:
     """Build IFRS Comprehensive Income (IAS 1) rows from cache data.
@@ -163,19 +197,13 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
     revenue_prev = pnl.get("total_revenue_start", pnl.get("total_revenue_begin", 0))
     expenses_prev = pnl.get("total_expenses_start", pnl.get("total_expenses_begin", 0))
 
-    # If pnl totals are zero, extract from income_expenses list (1C parsed data)
+    # If pnl totals are zero, extract from income_expenses by account codes
     if revenue == 0 and expenses == 0 and income_expenses:
-        for ie in income_expenses:
-            name = ie.get("name", "")
-            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
-            prev_val = float(ie.get("previous_year") or ie.get("previous_period") or 0)
-            section = ie.get("section", "").lower()
-            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
-                revenue += cur_val
-                revenue_prev += prev_val
-            else:
-                expenses += cur_val
-                expenses_prev += prev_val
+        ie = _revenue_costs_from_income_expenses(income_expenses)
+        revenue = ie["revenue_cur"]
+        expenses = ie["costs_cur"] + ie["opex_cur"]
+        revenue_prev = ie["revenue_prev"]
+        expenses_prev = ie["costs_prev"] + ie["opex_prev"]
 
     gross_profit = revenue - expenses
     gross_profit_prev = revenue_prev - expenses_prev
@@ -244,16 +272,11 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
     revenue = pnl.get("total_revenue_end", 0)
     expenses = pnl.get("total_expenses_end", 0)
 
-    # If pnl totals are zero, extract from income_expenses list
+    # If pnl totals are zero, extract from income_expenses by account codes
     if revenue == 0 and expenses == 0 and income_expenses:
-        for ie in income_expenses:
-            name = ie.get("name", "")
-            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
-            section = ie.get("section", "").lower()
-            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
-                revenue += cur_val
-            else:
-                expenses += cur_val
+        ie = _revenue_costs_from_income_expenses(income_expenses)
+        revenue = ie["revenue_cur"]
+        expenses = ie["costs_cur"] + ie["opex_cur"]
 
     # Cash positions
     cash_end = _v("5010") + _v("5110") + _v("5210")
@@ -834,7 +857,11 @@ def export_full_report(
     stress tests, and investment decisions.
     """
     try:
-        return _do_export_full_report(req, db, current_user)
+        result = _do_export_full_report(req, db, current_user)
+        logger.info("Export full report succeeded for user %s", current_user.id)
+        return result
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Export full report failed: %s\n%s", e, traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Ошибка генерации отчёта: {str(e)}")
@@ -1637,9 +1664,13 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     auto_width(ws_dec)
 
     # --- Save and return ---
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
+    try:
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+    except Exception as e:
+        logger.error("Failed to save workbook: %s\n%s", e, traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения Excel: {str(e)}")
 
     org_name = company_info.get("name", "portfolio") if company_info else "portfolio"
     safe_name = "".join(c for c in org_name if c.isalnum() or c in " _-").strip()[:30] or "report"
