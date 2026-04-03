@@ -90,6 +90,104 @@ function KpiCard({ metric }: { metric: KpiMetric }) {
   );
 }
 
+interface AiConclusion {
+  category: string;
+  status: 'ok' | 'warn' | 'bad';
+  text: string;
+}
+
+function AiAnalysisBlock() {
+  const [conclusions, setConclusions] = useState<AiConclusion[]>([]);
+  const [overall, setOverall] = useState('');
+  const [score, setScore] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/analytics/ai-analysis`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          setConclusions(d.conclusions || []);
+          setOverall(d.overall || '');
+          setScore(d.score || 0);
+        }
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [token]);
+
+  const statusStyle = {
+    ok: { bg: 'bg-emerald-50 border-emerald-200', badge: 'bg-emerald-100 text-emerald-700', icon: 'text-emerald-600' },
+    warn: { bg: 'bg-yellow-50 border-yellow-200', badge: 'bg-yellow-100 text-yellow-700', icon: 'text-yellow-600' },
+    bad: { bg: 'bg-red-50 border-red-200', badge: 'bg-red-100 text-red-700', icon: 'text-red-600' },
+  };
+  const statusLabel = { ok: 'OK', warn: 'ВНИМАНИЕ', bad: 'КРИТИЧНО' };
+  const statusIcon = { ok: '\u2705', warn: '\u26a0\ufe0f', bad: '\u274c' };
+
+  if (loading) return <div className="text-center py-4 text-gray-400">AI-анализ загружается...</div>;
+  if (!conclusions.length) return null;
+
+  const overallColor = score >= 70 ? 'from-emerald-500 to-green-600' : score >= 40 ? 'from-yellow-500 to-amber-600' : 'from-red-500 to-rose-600';
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${overallColor} flex items-center justify-center text-white text-lg`}>
+            AI
+          </div>
+          <div className="text-left">
+            <h3 className="text-lg font-semibold text-gray-900">AI-анализ финансового состояния</h3>
+            <p className="text-sm text-gray-500">{overall}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            score >= 70 ? 'bg-emerald-100 text-emerald-700' : score >= 40 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+          }`}>
+            {score.toFixed(0)}% в норме
+          </span>
+          <svg className={`w-5 h-5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-6 pb-6 space-y-3">
+          {conclusions.map((c, i) => {
+            const s = statusStyle[c.status] || statusStyle.warn;
+            return (
+              <div key={i} className={`rounded-xl border p-4 ${s.bg}`}>
+                <div className="flex items-start gap-3">
+                  <span className="text-lg mt-0.5">{statusIcon[c.status]}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-gray-900">{c.category}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.badge}`}>
+                        {statusLabel[c.status]}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700">{c.text}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DcfBlock() {
   const [dcf, setDcf] = useState<DcfResult | null>(null);
   const [wacc, setWacc] = useState('');
@@ -279,6 +377,7 @@ export default function AnalyticsAnalyticsPage() {
         ))
       )}
 
+      <AiAnalysisBlock />
       <DcfBlock />
       <MultipliersBlock />
 
