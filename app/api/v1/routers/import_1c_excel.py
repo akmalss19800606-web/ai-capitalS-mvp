@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
+from app.db.models.organization_models import Organization
 from app.services.excel_1c_parser import Excel1CParser
 from app.api.v1.routers.portfolios import _user_cache, _is_credit_account, _classify_account
 
@@ -106,6 +107,43 @@ def import_1c_excel(
         "capital": parsed.capital_rows,
         "tax": parsed.tax_rows,
     }
+
+    # ── Persist organization to DB (upsert by INN + user_id) ─────────
+    try:
+        org = None
+        if parsed.inn:
+            org = db.query(Organization).filter(
+                Organization.inn == parsed.inn,
+                Organization.user_id == current_user.id,
+            ).first()
+        if not org:
+            org = Organization(
+                user_id=current_user.id,
+                name=parsed.organization_name or "Без названия",
+                inn=parsed.inn,
+            )
+            db.add(org)
+        # Update fields from parsed data
+        if parsed.organization_name:
+            org.name = parsed.organization_name
+        if parsed.director:
+            org.director = parsed.director
+        if parsed.accountant:
+            org.accountant = parsed.accountant
+        if parsed.address:
+            org.address = parsed.address
+        if parsed.activity:
+            org.oked_name = parsed.activity
+        if parsed.period_from:
+            org.period_from = parsed.period_from
+        if parsed.period_to:
+            org.period_to = parsed.period_to
+        db.commit()
+        db.refresh(org)
+        logger.info("1C import: org saved to DB, id=%s inn=%s", org.id, org.inn)
+    except Exception as exc:
+        logger.warning("1C import: failed to persist org to DB: %s", exc)
+        db.rollback()
 
     # Cache parsed 1C data for report endpoints (P&L, CashFlow, Capital, FixedAssets)
     cache = _user_cache(current_user.id)

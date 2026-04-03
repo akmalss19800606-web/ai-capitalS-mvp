@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.api.v1.deps import get_db, get_current_user
 from app.db.models.user import User
 from app.db.models.portfolio import Portfolio
+from app.db.models.organization_models import Organization
 from app.schemas.portfolio import PortfolioCreate, PortfolioRead, PortfolioUpdate
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -117,9 +118,10 @@ class CompanyRegistration(BaseModel):
 @router.post("/register")
 async def register_company(
     data: CompanyRegistration,
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Register company manually (without file upload)."""
+    """Register company manually (without file upload) — also persists to DB."""
     cache = _user_cache(current_user.id)
     cache["company_info"] = {
         "name": data.name,
@@ -131,19 +133,73 @@ async def register_company(
         "size": data.size,
         "org_type": data.org_type,
     }
+
+    # Persist to DB
+    try:
+        org = None
+        if data.inn:
+            org = db.query(Organization).filter(
+                Organization.inn == data.inn,
+                Organization.user_id == current_user.id,
+            ).first()
+        if not org:
+            org = Organization(
+                user_id=current_user.id,
+                name=data.name or "Без названия",
+                inn=data.inn,
+            )
+            db.add(org)
+        org.name = data.name or org.name
+        org.director = data.director or org.director
+        org.accountant = data.accountant or org.accountant
+        org.address = data.address or org.address
+        org.oked_name = data.oked or org.oked_name
+        org.mode = data.org_type or org.mode
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return JSONResponse({"status": "ok", "message": "Организация зарегистрирована"})
 
 
 @router.get("/company-info")
 async def get_company_info(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return cached company info."""
+    """Return cached company info, falling back to DB if cache is empty."""
     cache = _user_cache(current_user.id)
     info = cache.get("company_info")
-    if not info:
-        return JSONResponse({"status": "empty", "company_info": None})
-    return JSONResponse({"status": "ok", "company_info": info})
+    if info:
+        return JSONResponse({"status": "ok", "company_info": info})
+
+    # Fallback: load from DB
+    org = db.query(Organization).filter(
+        Organization.user_id == current_user.id,
+        Organization.is_active == True,
+    ).order_by(Organization.updated_at.desc().nullslast(), Organization.id.desc()).first()
+    if org:
+        period_str = ""
+        if org.period_from and org.period_to:
+            period_str = f"{org.period_from.strftime('%d.%m.%Y')} — {org.period_to.strftime('%d.%m.%Y')}"
+        db_info = {
+            "name": org.name,
+            "inn": org.inn or "",
+            "address": org.address or "",
+            "activity": org.oked_name or org.oked or "",
+            "director": org.director or "",
+            "accountant": org.accountant or "",
+            "unit": "",
+            "period": period_str,
+        }
+        return JSONResponse({
+            "status": "ok",
+            "company_info": db_info,
+            "source": "db",
+            "message": "Загрузите файл 1С для обновления данных",
+        })
+
+    return JSONResponse({"status": "empty", "company_info": None})
 
 
 # ---------------------------------------------------------------------------

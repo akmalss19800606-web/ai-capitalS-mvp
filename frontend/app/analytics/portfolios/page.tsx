@@ -1425,7 +1425,7 @@ export default function PortfoliosPage() {
 
   const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
 
-  // Load company info on mount and auto-fill registration form
+  // Load company info on mount and auto-fill registration form (cache or DB fallback)
   useEffect(() => {
     fetch(`${apiBase}/api/v1/portfolios/company-info`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
@@ -1434,7 +1434,7 @@ export default function PortfoliosPage() {
         if (d?.company_info) {
           setCompanyInfo(d.company_info);
           setActiveOrg(d.company_info.inn || 'org', d.company_info.name || '');
-          // Auto-fill registration form from cached 1C data
+          // Auto-fill registration form from cached/DB data
           setRegForm(prev => ({
             ...prev,
             name: d.company_info.name || prev.name,
@@ -1444,6 +1444,10 @@ export default function PortfoliosPage() {
             director: d.company_info.director || prev.director,
             accountant: d.company_info.accountant || prev.accountant,
           }));
+          // If data loaded from DB (not cache), show reload hint
+          if (d.source === 'db') {
+            setImportStatus(d.message || 'Загрузите файл 1С для обновления данных');
+          }
         }
       })
       .catch(() => {});
