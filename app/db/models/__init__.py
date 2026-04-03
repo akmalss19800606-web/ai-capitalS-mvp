@@ -42,3 +42,6 @@ from app.db.models.ifrs import IFRSAdjustment, FinancialStatement
 
 # News Models (E1-02)
 from app.db.models.news import NewsArticle
+
+# QuickAsk History (E5-03)
+from app.db.models.quick_ask_record import QuickAskRecord

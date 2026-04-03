@@ -15,6 +15,8 @@ from pydantic import BaseModel, Field
 
 from app.api.v1.deps import get_current_user
 from app.services.uz_market_analysis_service import UZMarketAnalysisService
+from app.db.session import SessionLocal
+from app.db.models.quick_ask_record import QuickAskRecord
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/uz-market", tags=["UZ Market Analysis"])
@@ -147,11 +149,62 @@ async def get_oked_sections():
 @router.post("/quick-ask", summary="Быстрый вопрос по рынку УЗ")
 async def quick_ask(body: QuickAskRequest, _u=Depends(get_optional_user)):
     try:
-        return await svc.quick_ask(body.question, body.sector, body.provider)
+        data = await svc.quick_ask(body.question, body.sector, body.provider)
+        # E5-03: persist Q&A to DB
+        try:
+            db = SessionLocal()
+            rec = QuickAskRecord(
+                user_id=getattr(_u, "id", None) if _u else None,
+                question=body.question,
+                answer=data.get("answer", ""),
+                provider=body.provider,
+            )
+            db.add(rec)
+            db.commit()
+            data["record_id"] = str(rec.id)
+            db.close()
+        except Exception as db_err:
+            logger.warning(f"QuickAsk DB save failed (non-blocking): {db_err}")
+        return data
     except Exception as e:
         logger.error(f"Quick ask error: {e}")
         # MKT-05: Don't expose internal error details to client
         raise HTTPException(500, "Internal server error")
+
+
+# ---------------------------------------------------------------------------
+# Quick Ask History (E5-03)
+# ---------------------------------------------------------------------------
+
+@router.get("/quick-ask/history", summary="История быстрых вопросов")
+async def quick_ask_history(
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    _u=Depends(get_optional_user),
+):
+    db = SessionLocal()
+    try:
+        q = db.query(QuickAskRecord)
+        uid = getattr(_u, "id", None) if _u else None
+        if uid:
+            q = q.filter(QuickAskRecord.user_id == uid)
+        else:
+            q = q.filter(QuickAskRecord.user_id.is_(None))
+        total = q.count()
+        rows = q.order_by(QuickAskRecord.created_at.desc()).offset(offset).limit(limit).all()
+        items = [
+            {
+                "id": str(r.id),
+                "question": r.question,
+                "answer": r.answer,
+                "provider": r.provider,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ]
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
