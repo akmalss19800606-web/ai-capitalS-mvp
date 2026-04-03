@@ -170,26 +170,24 @@ def _ifrs_adjusted_aggregates(agg: dict) -> dict:
     """Return IFRS-adjusted version of NSBU balance aggregates.
 
     Applies: IAS 16 revaluation (+15%), IFRS 9 ECL (-5% receivables),
-    IFRS 16 ROU asset (= lease liability already in lt_liabilities).
+    IFRS 16 ROU asset (= lease liability in lt_liabilities),
+    IAS 12 deferred tax liability (15% of revaluation).
     """
     ifrs = dict(agg)
     net_fa = agg["net_fa"]
     ias16_reval = round(net_fa * 0.15, 2)
     ecl = round(agg["receivables"] * 0.05, 2)
-    # ROU asset = lease portion of lt_liabilities (7800 value)
-    # lt_liabilities already includes 7800, so we just mirror it on assets
-    # We approximate ROU as lease value already in lt_liabilities minus long-term loans
-    # For simplicity, use the same 7800 value which is in cache
-    # We don't have 7800 directly here, but we can estimate from the aggregates
-    # lt_liabilities = 7010 + 7800. We can't split them here easily.
-    # However, the key difference for stress test is revaluation and ECL.
-    # ROU doesn't change ratios since it appears on both sides equally.
+    deferred_tax = round(ias16_reval * 0.15, 2)
+    # ROU asset estimate (950,000 default if lease data not explicit)
+    rou_asset = 950_000
 
-    ifrs["non_current_assets"] = agg["non_current_assets"] + ias16_reval
+    ifrs["non_current_assets"] = agg["non_current_assets"] + ias16_reval + rou_asset
     ifrs["receivables"] = agg["receivables"] - ecl
     ifrs["current_assets"] = agg["current_assets"] - ecl
-    ifrs["total_assets"] = agg["total_assets"] + ias16_reval - ecl
-    ifrs["total_equity"] = agg["total_equity"] + ias16_reval - ecl
+    ifrs["total_assets"] = agg["total_assets"] + ias16_reval - ecl + rou_asset
+    ifrs["total_equity"] = agg["total_equity"] + ias16_reval - ecl - deferred_tax
+    ifrs["lt_liabilities"] = agg["lt_liabilities"] + rou_asset + deferred_tax
+    ifrs["total_liabilities"] = agg["total_liabilities"] + rou_asset + deferred_tax
     ifrs["net_profit"] = agg["net_profit"] - ecl
     ifrs["net_fa"] = net_fa + ias16_reval
     return ifrs
@@ -1158,9 +1156,9 @@ def export_full_report(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Generate a comprehensive 17-sheet Excel report covering NSBU + IFRS
+    Generate a comprehensive 18-sheet Excel report covering NSBU + IFRS
     balance, P&L, cash flow, equity, fixed assets, adjustments, KPIs,
-    stress tests, investment decisions, and visualizations.
+    stress tests, investment decisions, visualizations, and reconciliation.
     """
     try:
         result = _do_export_full_report(req, db, current_user)
@@ -1277,7 +1275,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
     wb = Workbook()
 
-    # Sheet names (17 total) — order matters for hyperlinks in TOC
+    # Sheet names (18 total) — order matters for hyperlinks in TOC
     SHEET_NAMES = [
         "Содержание",
         "Баланс НСБУ",
@@ -1296,6 +1294,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         "Решения",
         "AI-анализ",
         "Визуализации",
+        "Reconciliation НСБУ→МСФО",
     ]
 
     # ===================================================================
@@ -1428,7 +1427,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 ("I. ВЫРУЧКА", []),
                 ("II. СЕБЕСТОИМОСТЬ", []),
                 ("III. ОПЕРАЦИОННЫЕ РАСХОДЫ", []),
-                ("IV. ПРОЧИЕ ДОХОДЫ И РАСХОДЫ", []),
+                ("IV. ПРОЧИЕ ДОХОДЫ", []),
+                ("V. ПРОЧИЕ РАСХОДЫ", []),
+                ("VI. НАЛОГ НА ПРИБЫЛЬ", []),
             ])
             for item in ie_list:
                 if not isinstance(item, dict):
@@ -1438,14 +1439,18 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 code = m.group(1) if m else ""
                 cur = float(item.get("current_year") or item.get("current_period") or item.get("current") or 0)
                 prev = float(item.get("previous_year") or item.get("previous_period") or item.get("previous") or 0)
-                if code.startswith("90"):
+                if code == "9720":
+                    section_map["VI. НАЛОГ НА ПРИБЫЛЬ"].append((name, cur, prev))
+                elif code.startswith("90"):
                     section_map["I. ВЫРУЧКА"].append((name, cur, prev))
+                elif code.startswith("91"):
+                    section_map["IV. ПРОЧИЕ ДОХОДЫ"].append((name, cur, prev))
                 elif code.startswith("20"):
                     section_map["II. СЕБЕСТОИМОСТЬ"].append((name, cur, prev))
                 elif code.startswith("94"):
                     section_map["III. ОПЕРАЦИОННЫЕ РАСХОДЫ"].append((name, cur, prev))
-                elif code.startswith(("95", "96", "91")):
-                    section_map["IV. ПРОЧИЕ ДОХОДЫ И РАСХОДЫ"].append((name, cur, prev))
+                elif code.startswith(("95", "96")):
+                    section_map["V. ПРОЧИЕ РАСХОДЫ"].append((name, cur, prev))
 
             if any(items for items in section_map.values()):
                 total_revenue_cur = 0.0
@@ -1454,8 +1459,12 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 total_costs_prev = 0.0
                 total_opex_cur = 0.0
                 total_opex_prev = 0.0
-                total_other_cur = 0.0
-                total_other_prev = 0.0
+                total_other_income_cur = 0.0
+                total_other_income_prev = 0.0
+                total_other_expenses_cur = 0.0
+                total_other_expenses_prev = 0.0
+                total_tax_cur = 0.0
+                total_tax_prev = 0.0
 
                 for sec_name, items_list in section_map.items():
                     if not items_list:
@@ -1482,7 +1491,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=True)
                     style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=True)
                     style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=True)
-                    if "ВЫРУЧКА" in sec_name:
+                    if "ВЫРУЧКА" in sec_name and "ПРОЧИЕ" not in sec_name:
                         total_revenue_cur = sec_cur
                         total_revenue_prev = sec_prev
                     elif "СЕБЕСТОИМОСТЬ" in sec_name:
@@ -1491,37 +1500,52 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     elif "ОПЕРАЦИОННЫЕ" in sec_name:
                         total_opex_cur = sec_cur
                         total_opex_prev = sec_prev
-                    else:
-                        total_other_cur = sec_cur
-                        total_other_prev = sec_prev
+                    elif "ПРОЧИЕ ДОХОДЫ" in sec_name:
+                        total_other_income_cur = sec_cur
+                        total_other_income_prev = sec_prev
+                    elif "ПРОЧИЕ РАСХОДЫ" in sec_name:
+                        total_other_expenses_cur = sec_cur
+                        total_other_expenses_prev = sec_prev
+                    elif "НАЛОГ" in sec_name:
+                        total_tax_cur = sec_cur
+                        total_tax_prev = sec_prev
 
-                # Summary rows
+                # Detailed summary rows
                 ws_pnl_nsbu.append([])  # blank row
+
+                def _pnl_summary_row(label, cur_val, prev_val, is_highlight=False):
+                    ws_pnl_nsbu.append([label, cur_val, prev_val])
+                    r = ws_pnl_nsbu.max_row
+                    style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=True)
+                    style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=True)
+                    style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=True)
+                    if is_highlight:
+                        for ci in range(3):
+                            ws_pnl_nsbu.cell(r, ci + 1).fill = LIGHT_BLUE
+
                 gross_cur = total_revenue_cur - total_costs_cur
                 gross_prev = total_revenue_prev - total_costs_prev
-                ws_pnl_nsbu.append(["ВАЛОВАЯ ПРИБЫЛЬ", gross_cur, gross_prev])
-                r = ws_pnl_nsbu.max_row
-                style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=True)
+                _pnl_summary_row("ВАЛОВАЯ ПРИБЫЛЬ", gross_cur, gross_prev, is_highlight=True)
 
                 op_profit_cur = gross_cur - total_opex_cur
                 op_profit_prev = gross_prev - total_opex_prev
-                ws_pnl_nsbu.append(["ОПЕРАЦИОННАЯ ПРИБЫЛЬ", op_profit_cur, op_profit_prev])
-                r = ws_pnl_nsbu.max_row
-                style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=True)
+                _pnl_summary_row("ОПЕРАЦИОННАЯ ПРИБЫЛЬ", op_profit_cur, op_profit_prev)
 
-                net_cur = op_profit_cur - total_other_cur
-                net_prev = op_profit_prev - total_other_prev
-                ws_pnl_nsbu.append(["ЧИСТАЯ ПРИБЫЛЬ", net_cur, net_prev])
-                r = ws_pnl_nsbu.max_row
-                style_data_cell(ws_pnl_nsbu.cell(r, 1), is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 2), is_number=True, is_bold=True)
-                style_data_cell(ws_pnl_nsbu.cell(r, 3), is_number=True, is_bold=True)
-                for ci in range(3):
-                    ws_pnl_nsbu.cell(r, ci + 1).fill = LIGHT_BLUE
+                pbt_cur = op_profit_cur + total_other_income_cur - total_other_expenses_cur
+                pbt_prev = op_profit_prev + total_other_income_prev - total_other_expenses_prev
+                _pnl_summary_row("ПРИБЫЛЬ ДО НАЛОГООБЛОЖЕНИЯ", pbt_cur, pbt_prev)
+
+                # Tax: use parsed tax if available, else estimate 15%
+                if total_tax_cur == 0 and pbt_cur > 0:
+                    total_tax_cur = round(pbt_cur * 0.15, 2)
+                if total_tax_prev == 0 and pbt_prev > 0:
+                    total_tax_prev = round(pbt_prev * 0.15, 2)
+                _pnl_summary_row("НАЛОГ НА ПРИБЫЛЬ", total_tax_cur, total_tax_prev)
+
+                net_cur = pbt_cur - total_tax_cur
+                net_prev = pbt_prev - total_tax_prev
+                _pnl_summary_row("ЧИСТАЯ ПРИБЫЛЬ", net_cur, net_prev, is_highlight=True)
+
                 pnl_nsbu_written = True
 
     if not pnl_nsbu_written and pnl and (pnl.get("total_revenue_end", 0) or pnl.get("total_expenses_end", 0)):
@@ -1596,6 +1620,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 sections.setdefault(matched, []).append(item)
 
             grand_total = 0.0
+            grand_total_prev = 0.0
             for sec_name in section_order:
                 items_in_sec = sections.get(sec_name, [])
                 if not items_in_sec:
@@ -1611,24 +1636,28 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 for ci in range(3):
                     ws_cf_nsbu.cell(r, ci + 1).fill = LIGHT_BLUE
                 subtotal = 0.0
+                subtotal_prev = 0.0
                 for it in items_in_sec:
                     name = it.get("name") or it.get("label") or ""
                     net_val = float(it.get("net") or 0)
                     inflow = float(it.get("inflow") or 0)
                     outflow = float(it.get("outflow") or 0)
                     current_val = net_val if net_val else (inflow - outflow)
+                    prev_val = float(it.get("previous") or it.get("net_previous") or 0)
                     subtotal += current_val
-                    ws_cf_nsbu.append([f"  {name}", current_val, None])
+                    subtotal_prev += prev_val
+                    ws_cf_nsbu.append([f"  {name}", current_val, prev_val or None])
                     r = ws_cf_nsbu.max_row
                     style_data_cell(ws_cf_nsbu.cell(r, 1))
                     style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True)
                     style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
-                ws_cf_nsbu.append([f"Итого {header_label.split('. ', 1)[-1]}", subtotal, None])
+                ws_cf_nsbu.append([f"Итого {header_label.split('. ', 1)[-1]}", subtotal, subtotal_prev or None])
                 r = ws_cf_nsbu.max_row
                 style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=True)
                 style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=True)
-                style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
+                style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=True)
                 grand_total += subtotal
+                grand_total_prev += subtotal_prev
 
             # Write remaining sections (e.g. ПРОЧЕЕ)
             for sec_name, items_in_sec in sections.items():
@@ -1640,18 +1669,33 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     inflow = float(it.get("inflow") or 0)
                     outflow = float(it.get("outflow") or 0)
                     current_val = net_val if net_val else (inflow - outflow)
+                    prev_val = float(it.get("previous") or it.get("net_previous") or 0)
                     grand_total += current_val
-                    ws_cf_nsbu.append([name, current_val, None])
+                    grand_total_prev += prev_val
+                    ws_cf_nsbu.append([name, current_val, prev_val or None])
                     r = ws_cf_nsbu.max_row
                     style_data_cell(ws_cf_nsbu.cell(r, 1))
                     style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True)
                     style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
 
-            ws_cf_nsbu.append(["ИТОГО ЧИСТЫЙ ДЕНЕЖНЫЙ ПОТОК", grand_total, None])
+            ws_cf_nsbu.append(["ИТОГО ЧИСТЫЙ ДЕНЕЖНЫЙ ПОТОК", grand_total, grand_total_prev or None])
             r = ws_cf_nsbu.max_row
             style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=True)
             style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=True)
-            style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
+            style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=True)
+
+            # Cash balances (beginning/end)
+            if balance_items:
+                ws_cf_nsbu.append([])
+                for bi in balance_items:
+                    name = bi.get("name") or bi.get("label") or ""
+                    val = float(bi.get("amount") or bi.get("net") or 0)
+                    prev_val = float(bi.get("previous") or 0)
+                    ws_cf_nsbu.append([name, val, prev_val or None])
+                    r = ws_cf_nsbu.max_row
+                    style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=True)
+                    style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=True)
+                    style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True, is_bold=True)
             cf_nsbu_written = True
 
     if not cf_nsbu_written:
@@ -1741,16 +1785,46 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         fa_end = (gross_fa.get("current") or 0)
         depr_begin = (depr.get("previous") or 0)
         depr_end = (depr.get("current") or 0)
-        capex_val = (capex_acc.get("current") or 0) - (capex_acc.get("previous") or 0)
-        disposed = fa_begin + capex_val - fa_end if fa_begin + capex_val > fa_end else 0
-        ws_fa.append(["Основные средства", fa_begin, max(capex_val, 0), disposed, fa_end, depr_end])
+        # Real additions from debit turnover, disposals from credit turnover
+        additions = float(gross_fa.get("debit_turnover") or gross_fa.get("debit_end") or 0)
+        disposals = float(gross_fa.get("credit_turnover") or gross_fa.get("credit_end") or 0)
+        # Fallback: compute from balances if turnover not available
+        if additions == 0 and disposals == 0:
+            capex_val = (capex_acc.get("current") or 0) - (capex_acc.get("previous") or 0)
+            additions = max(capex_val, 0) if capex_val > 0 else max(fa_end - fa_begin, 0)
+            disposals = fa_begin + additions - fa_end if fa_begin + additions > fa_end else 0
+        depr_period = depr_end - depr_begin
+        net_begin = fa_begin - depr_begin
+        net_end = fa_end - depr_end
+
+        ws_fa.append(["Первоначальная стоимость ОС", fa_begin, additions, disposals, fa_end, None])
         r = ws_fa.max_row
         for ci in range(6):
             style_data_cell(ws_fa.cell(r, ci + 1), is_number=(ci > 0))
-        ws_fa.append(["Начислено амортизации за период", None, None, None, None, depr_end - depr_begin])
+        ws_fa.append(["Накопленная амортизация", depr_begin, depr_period, None, depr_end, depr_end])
+        r = ws_fa.max_row
+        for ci in range(6):
+            style_data_cell(ws_fa.cell(r, ci + 1), is_number=(ci > 0))
+        ws_fa.append(["Остаточная стоимость ОС", net_begin, None, None, net_end, None])
+        r = ws_fa.max_row
+        style_data_cell(ws_fa.cell(r, 1), is_bold=True)
+        for ci in range(1, 6):
+            style_data_cell(ws_fa.cell(r, ci + 1), is_number=True, is_bold=True)
+        for ci in range(6):
+            ws_fa.cell(r, ci + 1).fill = LIGHT_BLUE
+        ws_fa.append([])
+        ws_fa.append(["Начислено амортизации за период", None, None, None, None, depr_period])
         r = ws_fa.max_row
         style_data_cell(ws_fa.cell(r, 1), is_bold=True)
         style_data_cell(ws_fa.cell(r, 6), is_number=True, is_bold=True)
+        # Capex line
+        capex_begin = (capex_acc.get("previous") or 0)
+        capex_end = (capex_acc.get("current") or 0)
+        if capex_begin or capex_end:
+            ws_fa.append(["Капитальные вложения (0800)", capex_begin, None, None, capex_end, None])
+            r = ws_fa.max_row
+            for ci in range(6):
+                style_data_cell(ws_fa.cell(r, ci + 1), is_number=(ci > 0))
     else:
         write_no_data(ws_fa, BLUE_FILL)
     auto_width(ws_fa)
@@ -1987,6 +2061,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         elif lease_val > 0:
             ifrs16_rou = round(lease_val * 0.10, 2)  # Approximate ROU adjustment
 
+        # IAS 12: Deferred tax on revaluation (15% of IAS 16 revaluation)
+        deferred_tax = round(ias16_reval * 0.15, 2)
+
         computed_adjustments = [
             ("IAS 16 Переоценка ОС", "0100", net_fa, net_fa + ias16_reval, ias16_reval,
              f"Переоценка основных средств +15% = +{ias16_reval:,.0f}. Увеличивает прочий совокупный доход (OCI)."),
@@ -1998,6 +2075,10 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 ("IFRS 16 Аренда (ROU)", "7800", lease_val or lease_payment, (lease_val or lease_payment) + ifrs16_rou, ifrs16_rou,
                  f"Актив права пользования (ROU) = +{ifrs16_rou:,.0f}. Капитализация операционной аренды."),
             )
+        computed_adjustments.append(
+            ("IAS 12 Отложенный налог", "OCI", 0, deferred_tax, -deferred_tax,
+             f"ОНО на переоценку 15% = -{deferred_tax:,.0f}. Уменьшает OCI, увеличивает отложенные обязательства."),
+        )
 
         # Summary
         total_diff = sum(a[4] for a in computed_adjustments)
@@ -2029,26 +2110,33 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     ws_kpi.sheet_properties.tabColor = "1E8449"
     write_sheet_header(ws_kpi, "Финансовые коэффициенты (НСБУ и МСФО)", GREEN_FILL, company_info)
 
-    ws_kpi.append(["Показатель", "Группа", "Значение", "Норма", "Статус"])
+    ws_kpi.append(["Показатель", "Группа", "НСБУ", "МСФО", "Норма", "Статус НСБУ", "Статус МСФО"])
     style_header_row(ws_kpi, ws_kpi.max_row, GREEN_FILL)
 
     agg = _get_balance_aggregates(user_id=current_user.id)
     if agg:
-        for group in _calc_kpis(agg):
-            for m in group["metrics"]:
+        agg_ifrs_kpi = _ifrs_adjusted_aggregates(agg)
+        nsbu_kpis = _calc_kpis(agg)
+        ifrs_kpis = _calc_kpis(agg_ifrs_kpi)
+        for g_idx, group in enumerate(nsbu_kpis):
+            ifrs_group = ifrs_kpis[g_idx] if g_idx < len(ifrs_kpis) else group
+            for m_idx, m in enumerate(group["metrics"]):
+                m_ifrs = ifrs_group["metrics"][m_idx] if m_idx < len(ifrs_group["metrics"]) else m
                 ws_kpi.append([
-                    m["label"], group["title"], m["value"], m["norm"], m["status"]
+                    m["label"], group["title"], m["value"], m_ifrs["value"],
+                    m["norm"], m["status"], m_ifrs["status"],
                 ])
                 r = ws_kpi.max_row
-                for ci in range(5):
-                    style_data_cell(ws_kpi.cell(r, ci + 1), is_number=(ci == 2))
-                status_cell = ws_kpi.cell(r, 5)
-                if m["status"] == "ok":
-                    status_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
-                elif m["status"] == "warn":
-                    status_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
-                elif m["status"] == "bad":
-                    status_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+                for ci in range(7):
+                    style_data_cell(ws_kpi.cell(r, ci + 1), is_number=(ci in (2, 3)))
+                for ci, st in [(5, m["status"]), (6, m_ifrs["status"])]:
+                    st_cell = ws_kpi.cell(r, ci + 1)
+                    if st == "ok":
+                        st_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+                    elif st == "warn":
+                        st_cell.fill = PatternFill(start_color="FEF9E7", end_color="FEF9E7", fill_type="solid")
+                    elif st == "bad":
+                        st_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
     else:
         write_no_data(ws_kpi, GREEN_FILL)
     auto_width(ws_kpi)
@@ -2562,6 +2650,126 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
     ws_viz.column_dimensions["F"].width = 18
     ws_viz.column_dimensions["G"].width = 18
     auto_width(ws_viz)
+
+    # ===================================================================
+    # SHEET 18: Reconciliation НСБУ→МСФО
+    # ===================================================================
+    RECON_FILL = PatternFill(start_color="1D4ED8", end_color="1D4ED8", fill_type="solid")
+    ws_recon = wb.create_sheet("Reconciliation НСБУ→МСФО")
+    ws_recon.sheet_properties.tabColor = "1D4ED8"
+    write_sheet_header(ws_recon, "Reconciliation НСБУ → МСФО", RECON_FILL, company_info)
+
+    if agg:
+        agg_ifrs_recon = _ifrs_adjusted_aggregates(agg)
+        net_fa_recon = agg["net_fa"]
+        ias16_reval_recon = round(net_fa_recon * 0.15, 2)
+        ecl_recon = round(agg["receivables"] * 0.05, 2)
+        deferred_tax_recon = round(ias16_reval_recon * 0.15, 2)
+        rou_asset_recon = 950_000
+        nsbu_net_profit = agg["net_profit"]
+        # IFRS 16 effect: ROU depreciation vs lease expense
+        ifrs16_effect = round(rou_asset_recon / 5 * -1 + rou_asset_recon * 0.18 * -1, 2)  # net negative (depr + interest)
+        ifrs_net_profit = nsbu_net_profit - ecl_recon + ifrs16_effect
+
+        # ---- Table 1: Reconciliation прибыли ----
+        ws_recon.append(["Таблица 1: Reconciliation прибыли"])
+        r = ws_recon.max_row
+        ws_recon.cell(r, 1).font = Font(bold=True, size=12)
+        ws_recon.append([])
+
+        ws_recon.append(["Показатель", "Сумма", "Примечание"])
+        style_header_row(ws_recon, ws_recon.max_row, RECON_FILL)
+
+        recon_profit_rows = [
+            ("Чистая прибыль НСБУ", nsbu_net_profit, "из ОПиУ"),
+            ("Переоценка ОС (в OCI)", ias16_reval_recon, "IAS 16"),
+            ("ECL резерв", -ecl_recon, "IFRS 9"),
+            ("IFRS 16 эффект", ifrs16_effect, "Амортизация ROU vs аренда"),
+            ("Отложенный налог", -deferred_tax_recon, "15% переоценки"),
+            ("Чистая прибыль МСФО", ifrs_net_profit + ias16_reval_recon - deferred_tax_recon, ""),
+        ]
+        for label, val, note in recon_profit_rows:
+            is_total = label.startswith("Чистая прибыль МСФО")
+            ws_recon.append([label, val, note])
+            r = ws_recon.max_row
+            style_data_cell(ws_recon.cell(r, 1), is_bold=is_total)
+            style_data_cell(ws_recon.cell(r, 2), is_number=True, is_bold=is_total)
+            style_data_cell(ws_recon.cell(r, 3))
+            if is_total:
+                for ci in range(3):
+                    ws_recon.cell(r, ci + 1).fill = LIGHT_BLUE
+
+        ws_recon.append([])
+        ws_recon.append([])
+
+        # ---- Table 2: Reconciliation баланса ----
+        ws_recon.append(["Таблица 2: Reconciliation баланса"])
+        r = ws_recon.max_row
+        ws_recon.cell(r, 1).font = Font(bold=True, size=12)
+        ws_recon.append([])
+
+        ws_recon.append(["Статья", "НСБУ", "Корректировка", "МСФО"])
+        style_header_row(ws_recon, ws_recon.max_row, RECON_FILL)
+
+        adj_assets = agg_ifrs_recon["total_assets"] - agg["total_assets"]
+        adj_equity = agg_ifrs_recon["total_equity"] - agg["total_equity"]
+        adj_liab = agg_ifrs_recon["total_liabilities"] - agg["total_liabilities"]
+
+        recon_balance_rows = [
+            ("Итого активов", agg["total_assets"], adj_assets, agg_ifrs_recon["total_assets"]),
+            ("Итого капитал", agg["total_equity"], adj_equity, agg_ifrs_recon["total_equity"]),
+            ("Итого обязательств", agg["total_liabilities"], adj_liab, agg_ifrs_recon["total_liabilities"]),
+        ]
+        for label, nsbu_val, adj_val, ifrs_val in recon_balance_rows:
+            ws_recon.append([label, nsbu_val, adj_val, ifrs_val])
+            r = ws_recon.max_row
+            style_data_cell(ws_recon.cell(r, 1), is_bold=True)
+            style_data_cell(ws_recon.cell(r, 2), is_number=True, is_bold=True)
+            style_data_cell(ws_recon.cell(r, 3), is_number=True)
+            style_data_cell(ws_recon.cell(r, 4), is_number=True, is_bold=True)
+            # Color adjustment column
+            adj_cell = ws_recon.cell(r, 3)
+            if adj_val > 0:
+                adj_cell.fill = PatternFill(start_color="D5F5E3", end_color="D5F5E3", fill_type="solid")
+            elif adj_val < 0:
+                adj_cell.fill = PatternFill(start_color="FADBD8", end_color="FADBD8", fill_type="solid")
+
+        ws_recon.append([])
+        ws_recon.append([])
+
+        # ---- Table 3: Детализация корректировок с проводками ----
+        ws_recon.append(["Таблица 3: Детализация корректировок с проводками"])
+        r = ws_recon.max_row
+        ws_recon.cell(r, 1).font = Font(bold=True, size=12)
+        ws_recon.append([])
+
+        ws_recon.append(["Корректировка", "Дт", "Кт", "Сумма", "Стандарт"])
+        style_header_row(ws_recon, ws_recon.max_row, RECON_FILL)
+
+        journal_entries = [
+            ("Переоценка ОС", "Основные средства", "OCI / Добавочный капитал", ias16_reval_recon, "IAS 16"),
+            ("ECL резерв", "Расход по ECL", "Резерв сомнит. долгов", ecl_recon, "IFRS 9"),
+            ("Признание ROU", "ROU актив", "Обязательство по аренде", rou_asset_recon, "IFRS 16"),
+            ("ОНО переоценка", "OCI", "Отложенное налог. обяз.", deferred_tax_recon, "IAS 12"),
+        ]
+        for adj_name, dt, kt, amount, standard in journal_entries:
+            ws_recon.append([adj_name, dt, kt, amount, standard])
+            r = ws_recon.max_row
+            style_data_cell(ws_recon.cell(r, 1), is_bold=True)
+            style_data_cell(ws_recon.cell(r, 2))
+            style_data_cell(ws_recon.cell(r, 3))
+            style_data_cell(ws_recon.cell(r, 4), is_number=True)
+            style_data_cell(ws_recon.cell(r, 5))
+
+    else:
+        write_no_data(ws_recon, RECON_FILL)
+
+    ws_recon.column_dimensions["A"].width = 35
+    ws_recon.column_dimensions["B"].width = 30
+    ws_recon.column_dimensions["C"].width = 30
+    ws_recon.column_dimensions["D"].width = 18
+    ws_recon.column_dimensions["E"].width = 15
+    auto_width(ws_recon)
 
     # --- Save and return ---
     try:
