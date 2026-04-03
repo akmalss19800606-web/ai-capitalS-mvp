@@ -36,20 +36,38 @@ export interface CompanyProfile {
   isActive: boolean;
 }
 
-// Adapter: maps raw lookup result to CompanyProfile
+// ─── Helper: clean dirty name from orginfo.uz parser ────────────────────────
+function cleanCompanyName(raw: string): string {
+  let name = raw || '';
+  // Remove leading INN (9–12 digits)
+  name = name.replace(/^\d{9,12}/, '');
+  // Remove liquidation/status text
+  name = name.replace(/^(Ликвидирован[аоы]?|Действующее|Действует|Реорганизовано)/i, '');
+  // Remove date pattern DD.MM.YYYY
+  name = name.replace(/^\d{2}\.\d{2}\.\d{4}/, '');
+  // Trim and remove wrapping quotes
+  name = name.trim().replace(/^["']+|["']+$/g, '').trim();
+  return name;
+}
+
+// ─── Adapter: maps raw lookup result to CompanyProfile ──────────────────────
 function toCompanyProfile(data: Record<string, any>): CompanyProfile {
   const yearRaw = data.founded_year ?? data.foundedyear ?? data.foundedYear;
-  const capitalRaw = data.authorized_capital ?? data.authorizedcapital ?? data.authorizedCapital;
+  // Support both backend field names: charter_fund (backend) and authorizedCapital (legacy)
+  const capitalRaw = data.charter_fund ?? data.authorized_capital ?? data.authorizedcapital ?? data.authorizedCapital;
   const statusRaw = (data.status || '').toLowerCase();
   const isActive = !statusRaw || statusRaw.includes('действ') || statusRaw.includes('active');
 
+  // Clean the name from dirty orginfo.uz parser artefacts
+  const cleanName = cleanCompanyName(data.name || data.shortName || '');
+
   return {
     inn: data.inn || '',
-    name: data.name || data.shortName || '',
+    name: cleanName,
     shortName: data.shortName ?? data.short_name,
-    director: data.director,
+    director: data.director || undefined,
     legalForm: data.legal_form ?? data.legalform ?? data.legalForm,
-    authorizedCapital: capitalRaw ? Number(capitalRaw) : undefined,
+    authorizedCapital: capitalRaw != null && capitalRaw !== '' ? Number(capitalRaw) : undefined,
     foundedYear: yearRaw ? Number(yearRaw) : undefined,
     okedCode: data.oked ?? data.okedCode,
     okedName: data.industry ?? data.okedName,
