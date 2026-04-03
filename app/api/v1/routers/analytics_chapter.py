@@ -77,16 +77,28 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     revenue = pnl.get("total_revenue_end", 0.0)
     expenses = pnl.get("total_expenses_end", 0.0)
 
+    # Detailed P&L breakdown — populated from income_expenses
+    cost_of_goods = 0.0
+    operating_expenses = 0.0
+    other_expenses = 0.0
+    tax = 0.0
+    gross_profit = 0.0
+    operating_profit = 0.0
+    profit_before_tax = 0.0
+
     # Fallback 1: income_expenses list from parsed P&L (most reliable source)
     # Always try when revenue==0 because import may write 0 even when IE data exists
-    if revenue == 0:
-        ie_list = cache.get("income_expenses", [])
-        if ie_list:
-            ie_result = _revenue_costs_from_income_expenses(ie_list)
-            if ie_result["revenue_cur"] > 0:
-                revenue = ie_result["revenue_cur"]
-            if (ie_result["costs_cur"] + ie_result["opex_cur"]) > 0 and expenses == 0:
-                expenses = ie_result["costs_cur"] + ie_result["opex_cur"]
+    ie_list = cache.get("income_expenses", [])
+    if ie_list:
+        ie_result = _revenue_costs_from_income_expenses(ie_list)
+        if ie_result["revenue_cur"] > 0:
+            revenue = ie_result["revenue_cur"]
+        cost_of_goods = ie_result["costs_cur"]
+        operating_expenses = ie_result["opex_cur"]
+        other_expenses = ie_result["other_expenses_cur"]
+        tax = ie_result["tax_cur"]
+        if expenses == 0 and (cost_of_goods + operating_expenses) > 0:
+            expenses = cost_of_goods + operating_expenses + other_expenses
 
     # Fallback 2: extract from ОСВ balance accounts (less reliable for P&L)
     if revenue == 0 and expenses == 0:
@@ -101,7 +113,13 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
             elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
                 expenses += abs(cur_d) if cur_d else abs(cur)
 
-    net_profit = revenue - expenses
+    # Compute detailed P&L breakdown
+    gross_profit = revenue - cost_of_goods
+    operating_profit = gross_profit - operating_expenses
+    profit_before_tax = operating_profit - other_expenses
+    if tax == 0 and profit_before_tax > 0:
+        tax = round(profit_before_tax * 0.15, 2)
+    net_profit = profit_before_tax - tax
 
     # Previous period
     net_fa_p = _v("0100", "previous") - _v("0200", "previous")
@@ -128,6 +146,13 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
         "total_liabilities": total_liabilities,
         "revenue": revenue,
         "expenses": expenses,
+        "cost_of_goods": cost_of_goods,
+        "gross_profit": gross_profit,
+        "operating_expenses": operating_expenses,
+        "operating_profit": operating_profit,
+        "other_expenses": other_expenses,
+        "profit_before_tax": profit_before_tax,
+        "tax": tax,
         "net_profit": net_profit,
         "net_fa": net_fa,
         "capex": capex,
@@ -142,12 +167,14 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
 
 
 def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
-    """Extract revenue/costs/opex from income_expenses cache items by account codes.
+    """Extract revenue/costs/opex/other_expenses/tax from income_expenses by account codes.
 
     Account code prefixes (NSBU chart of accounts):
-      90xx = revenue (sales)
+      90xx = revenue (sales + other income)
       20xx = cost of goods sold
       94xx = operating expenses (admin, selling, other)
+      95xx, 96xx = other expenses (financial, extraordinary)
+      9720 = income tax
     """
     import re as _re
     revenue_cur = 0.0
@@ -156,6 +183,10 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
     costs_prev = 0.0
     opex_cur = 0.0
     opex_prev = 0.0
+    other_expenses_cur = 0.0
+    other_expenses_prev = 0.0
+    tax_cur = 0.0
+    tax_prev = 0.0
     for item in (income_expenses or []):
         if not isinstance(item, dict):
             continue
@@ -164,7 +195,10 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
         code = m.group(1) if m else ""
         cur = float(item.get("current_year") or item.get("current_period") or item.get("current") or 0)
         prev = float(item.get("previous_year") or item.get("previous_period") or item.get("previous") or 0)
-        if code.startswith("90"):
+        if code == "9720":
+            tax_cur += cur
+            tax_prev += prev
+        elif code.startswith("90"):
             revenue_cur += cur
             revenue_prev += prev
         elif code.startswith("20"):
@@ -173,10 +207,15 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
         elif code.startswith("94"):
             opex_cur += cur
             opex_prev += prev
+        elif code.startswith("95") or code.startswith("96"):
+            other_expenses_cur += cur
+            other_expenses_prev += prev
     return {
         "revenue_cur": revenue_cur, "revenue_prev": revenue_prev,
         "costs_cur": costs_cur, "costs_prev": costs_prev,
         "opex_cur": opex_cur, "opex_prev": opex_prev,
+        "other_expenses_cur": other_expenses_cur, "other_expenses_prev": other_expenses_prev,
+        "tax_cur": tax_cur, "tax_prev": tax_prev,
     }
 
 
@@ -424,7 +463,7 @@ def _calc_kpis(agg: dict) -> list:
     tl = agg["total_liabilities"]
     np_ = agg["net_profit"]
     rev = agg["revenue"]
-    exp = agg["expenses"]
+    gp = agg.get("gross_profit", rev - agg.get("cost_of_goods", agg.get("expenses", 0)))
     recv = agg["receivables"]
 
     current_ratio = _safe_div(ca, cl)
@@ -433,7 +472,7 @@ def _calc_kpis(agg: dict) -> list:
     roa = _safe_div(np_, ta)
     roe = _safe_div(np_, te)
     net_margin = _safe_div(np_, rev)
-    gross_margin = _safe_div(rev - exp, rev)
+    gross_margin = _safe_div(gp, rev)
     debt_to_equity = _safe_div(tl, te)
     debt_ratio = _safe_div(tl, ta)
     equity_ratio = _safe_div(te, ta)
