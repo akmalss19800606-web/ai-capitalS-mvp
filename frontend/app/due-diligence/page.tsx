@@ -277,6 +277,8 @@ export default function DueDiligencePage() {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [uploadedDocs, setUploadedDocs] = useState<any[]>([]);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
     const [directorName, setDirectorName] = useState('');
   const [legalForm, setLegalForm] = useState('');
   const [authorizedCapital, setAuthorizedCapital] = useState('');
@@ -327,29 +329,77 @@ export default function DueDiligencePage() {
     }
   };
 
-  // ─── Document Upload ────────────────────────────────────────────────────
-  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ─── Document Upload (FormData multipart) ────────────────────────────────
+  const ALLOWED_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword', 'image/png', 'image/jpeg'];
+  const ALLOWED_EXT = ['.pdf', '.xlsx', '.xls', '.docx', '.doc', '.png', '.jpg', '.jpeg'];
+  const MAX_SIZE = 10 * 1024 * 1024;
+
+  const fileIcon = (name: string) => {
+    const ext = name.split('.').pop()?.toLowerCase() || '';
+    if (ext === 'pdf') return '\u{1F4C4}';
+    if (['xlsx', 'xls'].includes(ext)) return '\u{1F4CA}';
+    if (['png', 'jpg', 'jpeg'].includes(ext)) return '\u{1F5BC}';
+    if (['docx', 'doc'].includes(ext)) return '\u{1F4DD}';
+    return '\u{1F4CE}';
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' Б';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' МБ';
+  };
+
+  const uploadFile = async (file: File) => {
+    const ext = '.' + (file.name.split('.').pop()?.toLowerCase() || '');
+    if (!ALLOWED_EXT.includes(ext)) {
+      setError(`Формат ${ext} не поддерживается. Допустимые: ${ALLOWED_EXT.join(', ')}`);
+      return;
+    }
+    if (file.size > MAX_SIZE) {
+      setError(`Файл слишком большой (${formatSize(file.size)}). Максимум: 10 МБ`);
+      return;
+    }
     setUploadingDoc(true);
+    setUploadProgress(0);
     setError(null);
     try {
-      const res = await ddDocuments.upload(innQuery || companyName, file);
+      const res = await ddDocuments.upload(file, {
+        sessionId: innQuery || companyName || undefined,
+        onProgress: (pct) => setUploadProgress(pct),
+      });
       setUploadedDocs(prev => [...prev, res]);
-      if (res?.extracteddata) {
-        const ed = res.extracteddata;
-        if (ed.revenue_mln) setRevenueMln(String(ed.revenue_mln));
-        if (ed.profit_margin_pct) setProfitMargin(String(ed.profit_margin_pct));
-        if (ed.debt_to_equity) setDebtToEquity(String(ed.debt_to_equity));
-        if (ed.employee_count) setEmployeeCount(String(ed.employee_count));
-        if (ed.authorized_capital) setAuthorizedCapital(String(ed.authorized_capital));
-        if (ed.founded_year) setFoundedYear(String(ed.founded_year));
-      }
     } catch (err: any) {
       setError(err.message || 'Ошибка загрузки документа');
     } finally {
       setUploadingDoc(false);
-      e.target.value = '';
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    for (let i = 0; i < files.length; i++) {
+      await uploadFile(files[i]);
+    }
+    e.target.value = '';
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = e.dataTransfer.files;
+    for (let i = 0; i < files.length; i++) {
+      await uploadFile(files[i]);
+    }
+  };
+
+  const handleDeleteDoc = async (docId: string) => {
+    try {
+      await ddDocuments.delete(docId);
+      setUploadedDocs(prev => prev.filter(d => d.id !== docId));
+    } catch (err: any) {
+      setError(err.message || 'Ошибка удаления документа');
     }
   };
   // ─── Run Scoring ──────────────────────────────────────────────────────
@@ -612,22 +662,102 @@ export default function DueDiligencePage() {
                 {loading ? 'Анализ...' : 'Запустить DD-скоринг'}
               </button>
 
-                            {/* ─── DD Document Upload ─── */}
-              <div style={{ marginTop: '16px', padding: '12px', border: `1px dashed ${C.border}`, borderRadius: '8px' }}>
-                <label style={labelStyle}>Загрузка DD-документа</label>
-                <input
-                  type="file"
-                  accept=".pdf,.docx,.doc,.xlsx,.xls,.txt"
-                  onChange={handleDocUpload}
-                  disabled={uploadingDoc}
-                  style={{ fontSize: '13px', color: C.textMuted }}
-                />
-                {uploadingDoc && <div style={{ marginTop: '6px', fontSize: '12px', color: C.primary }}><IconSpinner /> Анализ документа...</div>}
+                            {/* ─── DD Document Upload (Drag & Drop) ─── */}
+              <div style={{ marginTop: '16px' }}>
+                <label style={labelStyle}>Загрузка DD-документов</label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={handleDrop}
+                  onClick={() => { if (!uploadingDoc) document.getElementById('dd-file-input')?.click(); }}
+                  style={{
+                    border: `2px dashed ${dragOver ? C.primary : C.border}`,
+                    borderRadius: '10px',
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    cursor: uploadingDoc ? 'wait' : 'pointer',
+                    backgroundColor: dragOver ? C.primaryLight : C.white,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <input
+                    id="dd-file-input"
+                    type="file"
+                    accept=".pdf,.docx,.doc,.xlsx,.xls,.png,.jpg,.jpeg"
+                    onChange={handleDocUpload}
+                    disabled={uploadingDoc}
+                    multiple
+                    style={{ display: 'none' }}
+                  />
+                  <div style={{ fontSize: '28px', marginBottom: '8px' }}>{dragOver ? '\u{1F4E5}' : '\u{1F4C1}'}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: C.text }}>
+                    {dragOver ? 'Отпустите файл для загрузки' : 'Перетащите файлы сюда'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: C.textMuted, marginTop: '4px' }}>
+                    или нажмите для выбора файлов
+                  </div>
+                  <div style={{ fontSize: '11px', color: C.textLight, marginTop: '6px' }}>
+                    PDF, Excel, Word, PNG, JPG — до 10 МБ
+                  </div>
+                </div>
+
+                {/* Upload progress */}
+                {uploadingDoc && (
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: C.primary }}>
+                      <IconSpinner /> Загрузка файла... {uploadProgress}%
+                    </div>
+                    <div style={{ width: '100%', height: '4px', backgroundColor: C.border, borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
+                      <div style={{ width: `${uploadProgress}%`, height: '100%', backgroundColor: C.primary, borderRadius: '2px', transition: 'width 0.2s' }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Uploaded files list */}
                 {uploadedDocs.length > 0 && (
-                  <div style={{ marginTop: '8px' }}>
-                    {uploadedDocs.map((doc, i) => (
-                      <div key={i} style={{ fontSize: '12px', padding: '4px 8px', backgroundColor: C.successLight, borderRadius: '4px', marginBottom: '4px', color: C.success }}>
-                        ✅ {doc.filename || `Документ ${i + 1}`} — {doc.risk_indicators?.length || 0} рисков
+                  <div style={{ marginTop: '12px' }}>
+                    {uploadedDocs.map((doc) => (
+                      <div
+                        key={doc.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px 12px',
+                          backgroundColor: C.bg,
+                          borderRadius: '8px',
+                          marginBottom: '6px',
+                          border: `1px solid ${C.border}`,
+                        }}
+                      >
+                        <span style={{ fontSize: '20px', flexShrink: 0 }}>{fileIcon(doc.filename)}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {doc.filename}
+                          </div>
+                          <div style={{ fontSize: '11px', color: C.textMuted }}>
+                            {doc.doc_type_label || 'Прочие'} — {formatSize(doc.size_bytes)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteDoc(doc.id); }}
+                          title="Удалить документ"
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            color: C.textMuted,
+                            fontSize: '16px',
+                            lineHeight: 1,
+                            flexShrink: 0,
+                          }}
+                          onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.color = C.error; (e.currentTarget as HTMLButtonElement).style.backgroundColor = C.errorLight; }}
+                          onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.color = C.textMuted; (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent'; }}
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>

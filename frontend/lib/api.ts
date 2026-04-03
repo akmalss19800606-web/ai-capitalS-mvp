@@ -204,23 +204,41 @@ export const ddScoring = {
 };
 
 export const ddDocuments = {
-  list: (inn: string) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}`),
-    analyze: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}/analyze`, { method: 'POST' }),
-  delete: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`, { method: 'DELETE' }),
-  get: (inn: string, docId: number) => apiRequest(`/dd/documents/${encodeURIComponent(inn)}/${docId}`),
-  upload: async (inn: string, file: File): Promise<any> => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('company_id', inn);
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`/api/v1/dd/documents/${encodeURIComponent(inn)}`, {
-      method: 'POST', headers, body: formData, credentials: 'include',
+  list: () => apiRequest('/dd/documents/'),
+  listBySession: (sessionId: string) => apiRequest(`/dd/documents/${encodeURIComponent(sessionId)}`),
+  delete: (docId: string) => apiRequest(`/dd/documents/${encodeURIComponent(docId)}`, { method: 'DELETE' }),
+  templates: () => apiRequest('/dd/documents/templates'),
+  upload: (
+    file: File,
+    options?: { docType?: string; sessionId?: string; onProgress?: (pct: number) => void },
+  ): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const xhr = new XMLHttpRequest();
+      const params = new URLSearchParams();
+      if (options?.docType) params.set('doc_type', options.docType);
+      if (options?.sessionId) params.set('session_id', options.sessionId);
+      const qs = params.toString();
+      xhr.open('POST', `/api/v1/dd/documents/upload${qs ? '?' + qs : ''}`);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && options?.onProgress) {
+          options.onProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); } catch { resolve(null); }
+        } else {
+          reject(new Error(xhr.responseText || `Ошибка загрузки (${xhr.status})`));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Сетевая ошибка при загрузке файла'));
+      const formData = new FormData();
+      formData.append('file', file);
+      xhr.send(formData);
     });
-    if (!res.ok) throw new Error(await res.text());
-    if (res.status === 204) return null;
-    return res.json();
   },
 };
 
