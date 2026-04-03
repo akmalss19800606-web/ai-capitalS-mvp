@@ -11,42 +11,30 @@ export function ExportFullReportButton({ portfolioId, disabled }: ExportFullRepo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
-
   async function handleExport() {
     setLoading(true);
     setError('');
-    const token = localStorage.getItem('token') || '';
+    const token = localStorage.getItem('token');
+    if (!token) { alert('Необходимо войти в систему'); setLoading(false); return; }
 
     try {
-      const res = await fetch(`${apiBase}/api/v1/analytics/export/full-report`, {
+      const res = await fetch('/api/v1/analytics/export/full-report', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ portfolio_id: portfolioId }),
       });
-
-      if (!res.ok) {
-        throw new Error(`${res.status}`);
-      }
-
+      if (!res.ok) { const err = await res.text(); setError(`Ошибка: ${err}`); setLoading(false); return; }
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-
-      const disposition = res.headers.get('Content-Disposition');
-      const match = disposition?.match(/filename="?([^"]+)"?/);
-      a.download = match?.[1] || `report_portfolio_${portfolioId}.xlsx`;
-
+      a.download = 'report_nsbu_ifrs.xlsx';
       document.body.appendChild(a);
       a.click();
+      URL.revokeObjectURL(url);
       a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      setError('Не удалось сгенерировать отчёт');
+    } catch (e) {
+      setError(`Не удалось скачать отчёт: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
     }

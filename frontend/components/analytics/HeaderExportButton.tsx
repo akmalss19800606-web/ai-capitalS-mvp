@@ -8,30 +8,25 @@ export default function HeaderExportButton() {
   async function handleDownload() {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
-      const res = await fetch(`${apiBase}/api/v1/analytics/export/full-report`, {
+      const token = localStorage.getItem('token');
+      if (!token) { alert('Необходимо войти в систему'); setLoading(false); return; }
+      const res = await fetch('/api/v1/analytics/export/full-report', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ portfolio_id: 1 }),
       });
-      if (!res.ok) throw new Error(`${res.status}`);
+      if (!res.ok) { const err = await res.text(); alert(`Ошибка: ${err}`); setLoading(false); return; }
       const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const disposition = res.headers.get('Content-Disposition');
-      const match = disposition?.match(/filename="?([^"]+)"?/);
-      a.download = match?.[1] || 'report_nsbu_ifrs.xlsx';
+      a.download = 'report_nsbu_ifrs.xlsx';
       document.body.appendChild(a);
       a.click();
+      URL.revokeObjectURL(url);
       a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch {
-      alert('Не удалось скачать отчёт. Попробуйте позже.');
+    } catch (e) {
+      alert(`Не удалось скачать отчёт: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setLoading(false);
     }
