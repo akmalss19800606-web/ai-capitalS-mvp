@@ -878,7 +878,7 @@ async def get_ifrs_equity(
         return JSONResponse({"rows": []})
     pnl = cache.get("pnl")
     company_info = cache.get("company_info")
-    result = {"rows": _build_ifrs_equity_rows(accounts, pnl)}
+    result = {"rows": _build_ifrs_equity_rows(accounts, pnl, income_expenses=cache.get("income_expenses", []))}
     if company_info:
         result["company_info"] = company_info
     return JSONResponse(result)

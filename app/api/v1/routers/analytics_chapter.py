@@ -339,7 +339,8 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
     return rows
 
 
-def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
+def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
+                             income_expenses: Optional[list] = None) -> list:
     """Build IFRS Changes in Equity (IAS 1) rows from cache data."""
     def _v(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
@@ -355,6 +356,13 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
 
     revenue = pnl.get("total_revenue_end", 0)
     expenses = pnl.get("total_expenses_end", 0)
+
+    # Fallback: if pnl totals are zero, extract from income_expenses by account codes
+    if revenue == 0 and expenses == 0 and income_expenses:
+        ie = _revenue_costs_from_income_expenses(income_expenses)
+        revenue = ie["revenue_cur"]
+        expenses = ie["costs_cur"] + ie["opex_cur"]
+
     net_profit = revenue - expenses
 
     # OCI from IAS 16 revaluation
@@ -1403,7 +1411,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         eq_ifrs_written = True
 
     if not eq_ifrs_written and accounts:
-        _ifrs_eq_rows = _build_ifrs_equity_rows(accounts, pnl)
+        _ifrs_eq_rows = _build_ifrs_equity_rows(accounts, pnl, income_expenses=cache.get("income_expenses", []))
         for item in _ifrs_eq_rows:
             ws_eq_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
             r = ws_eq_ifrs.max_row
