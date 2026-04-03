@@ -1,10 +1,8 @@
-"""
-Сервис поиска и получения данных о компаниях Узбекистана через orginfo.uz.
+# Сервис поиска и получения данных о компаниях Узбекистана.
+# Кэширование результатов в БД (CompanyProfile).
+# Источник: orginfo.uz
 
-Парсинг HTML-страниц orginfo.uz для получения информации о юридических лицах
-по ИНН или наименованию. Кэширование результатов в БД (CompanyProfile).
-"""
-
+import json as _json
 import logging
 import re
 from datetime import datetime, timezone
@@ -21,41 +19,34 @@ BASE_URL = "https://orginfo.uz"
 SEARCH_URL = f"{BASE_URL}/ru/search"
 DEFAULT_TIMEOUT = 15.0
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/120.0.0.0 Safari/537.36"
-    ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.5",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
 }
 
 
+def _clean_company_name(raw: str) -> str:
+    """Очищает название компании от артефактов парсера orginfo.uz."""
+    name = raw or ''
+    # Убираем ИНН (цифры) в начале строки
+    name = re.sub(r'^\d{9,12}', '', name)
+    # Убираем статус (если попал в начало)
+    name = re.sub(r'^(Ликвидирован[аоы]?|Действующее|Действует|Реорганизовано)', '', name)
+    # Убираем дату DD.MM.YYYY в начале
+    name = re.sub(r'^\d{2}\.\d{2}\.\d{4}', '', name)
+    # Убираем обрамляющие кавычки и пробелы
+    name = name.strip().strip('"').strip("'").strip()
+    return name
+
+
 async def search_company_orginfo(query: str) -> list[dict]:
-    """
-    Поиск компании на orginfo.uz по ИНН или наименованию.
-
-    Выполняет GET-запрос на страницу поиска, парсит результаты
-    и возвращает список найденных организаций.
-
-    Args:
-        query: ИНН или наименование компании для поиска.
-
-    Returns:
-        Список словарей с полями: inn, name, url, status.
-    """
+    """Поиск компании на orginfo.uz по ИНН или наименованию."""
     results = []
     try:
-        async with httpx.AsyncClient(
-            timeout=DEFAULT_TIMEOUT, headers=HEADERS, follow_redirects=True
-        ) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, headers=HEADERS, follow_redirects=True) as client:
             response = await client.get(SEARCH_URL, params={"q": query})
             response.raise_for_status()
 
-        # Парсим HTML страницы результатов поиска
         soup = BeautifulSoup(response.text, "lxml")
-
-        # Ищем ссылки на организации вида /ru/organization/{hash}/
         org_links = soup.find_all("a", href=re.compile(r"/ru/organization/[\w-]+/?"))
 
         seen_urls = set()
@@ -65,25 +56,22 @@ async def search_company_orginfo(query: str) -> list[dict]:
                 continue
             seen_urls.add(href)
 
-            # Извлекаем название из текста ссылки или родительского элемента
-            name = link.get_text(strip=True)
+            raw_name = link.get_text(strip=True)
+            if not raw_name:
+                continue
+
+            # Очищаем name: убираем ИНН, статус и дату с начала строки
+            name = _clean_company_name(raw_name)
             if not name:
                 continue
 
-            # Полный URL организации
             org_url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
-            # Пытаемся извлечь ИНН и статус из окружающего контекста
             parent = link.find_parent(["div", "li", "tr", "article"])
             inn = _extract_inn_from_element(parent) if parent else ""
             status = _extract_status_from_element(parent) if parent else ""
 
-            results.append({
-                "inn": inn,
-                "name": name,
-                "url": org_url,
-                "status": status,
-            })
+            results.append({"inn": inn, "name": name, "url": org_url, "status": status})
 
     except httpx.HTTPStatusError as e:
         logger.error("Ошибка HTTP при поиске на orginfo.uz: %s", e)
@@ -96,53 +84,36 @@ async def search_company_orginfo(query: str) -> list[dict]:
 
 
 async def fetch_company_details(org_url: str) -> dict:
-    """
-    Получение детальной информации о компании со страницы организации на orginfo.uz.
-
-    Парсит страницу организации и извлекает: ИНН, название, директор,
-    адрес, ОКЭД, уставный фонд, статус, телефон, email.
-
-    Args:
-        org_url: Полный URL страницы организации на orginfo.uz.
-
-    Returns:
-        Словарь с детальными данными компании.
-    """
-    details = {
-        "inn": "",
-        "name": "",
-        "director": "",
-        "address": "",
-        "oked": "",
-        "charter_fund": "",
-        "status": "",
-        "phone": "",
-        "email": "",
+    """Получение детальной информации о компании со страницы orginfo.uz."""
+    details: dict = {
+        "inn": "", "name": "", "director": "", "address": "",
+        "oked": "", "charter_fund": "", "status": "",
+        "phone": "", "email": "",
+        "registration_date": "", "founded_year": None,
     }
     try:
-        async with httpx.AsyncClient(
-            timeout=DEFAULT_TIMEOUT, headers=HEADERS, follow_redirects=True
-        ) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, headers=HEADERS, follow_redirects=True) as client:
             response = await client.get(org_url)
             response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "lxml")
 
-        # Извлекаем название из заголовка страницы
         title_tag = soup.find("h1") or soup.find("title")
         if title_tag:
             raw_title = title_tag.get_text(strip=True)
-            # Убираем суффиксы типа "- orginfo.uz"
-            details["name"] = re.sub(r"\s*[-–|].*orginfo.*$", "", raw_title).strip()
+            raw_name = re.sub(r"\s*[-–|].*orginfo.*$", "", raw_title).strip()
+            details["name"] = _clean_company_name(raw_name)
 
-        # Парсим таблицы и карточки с данными организации
-        # Ищем пары «Ключ: Значение» в таблицах, dl, div-карточках
         _parse_tables(soup, details)
         _parse_definition_lists(soup, details)
         _parse_card_blocks(soup, details)
-
-        # Извлекаем контакты
         _extract_contacts(soup, details)
+
+        # Извлекаем год из даты регистрации
+        if details.get("registration_date") and not details.get("founded_year"):
+            m = re.search(r'(\d{4})', details["registration_date"])
+            if m:
+                details["founded_year"] = int(m.group(1))
 
     except httpx.HTTPStatusError as e:
         logger.error("Ошибка HTTP при загрузке страницы организации: %s", e)
@@ -155,129 +126,87 @@ async def fetch_company_details(org_url: str) -> dict:
 
 
 async def lookup_by_inn(db: Session, inn: str) -> dict | None:
-    """
-    Поиск компании по ИНН: сначала в кэше БД, затем на orginfo.uz.
-
-    Если компания найдена на orginfo.uz, сохраняет результат в БД
-    для последующего кэширования.
-
-    Args:
-        db: Сессия SQLAlchemy.
-        inn: ИНН компании (строка из цифр).
-
-    Returns:
-        Словарь с данными компании или None, если не найдена.
-    """
-    # Проверяем кэш в БД
+    """Поиск компании по ИНН: сначала в кэше БД, затем на orginfo.uz."""
     cached = get_cached_company(db, inn)
     if cached:
-        logger.info("Компания с ИНН %s найдена в кэше БД", inn)
         return _company_to_dict(cached)
 
-    # Ищем на orginfo.uz
-    logger.info("Поиск компании с ИНН %s на orginfo.uz", inn)
     search_results = await search_company_orginfo(inn)
     if not search_results:
-        logger.warning("Компания с ИНН %s не найдена на orginfo.uz", inn)
         return None
 
-    # Берём первый результат и загружаем детали
-    first_result = search_results[0]
-    org_url = first_result.get("url", "")
-    if not org_url:
+    company_url = search_results[0].get("url", "")
+    if not company_url:
         return None
 
-    details = await fetch_company_details(org_url)
+    details = await fetch_company_details(company_url)
     if not details.get("name"):
-        # Используем данные из поисковой выдачи, если детальная страница не распарсилась
-        details["name"] = first_result.get("name", "")
+        return None
 
-    # Устанавливаем ИНН из запроса, если не удалось извлечь со страницы
     if not details.get("inn"):
         details["inn"] = inn
+    details["source"] = "orginfo.uz"
 
-    # Сохраняем в БД
-    company = _save_company_to_db(db, details)
-    return _company_to_dict(company)
+    try:
+        company = _save_company_to_db(db, details)
+        return _company_to_dict(company)
+    except Exception as e:
+        logger.error("Ошибка сохранения компании в БД: %s", e)
+        return details
 
 
 async def force_lookup_by_inn(db: Session, inn: str) -> dict | None:
-    """
-    Принудительный поиск компании по ИНН на orginfo.uz (минуя кэш БД).
-
-    Всегда обращается к orginfo.uz, обновляет запись в БД.
-
-    Args:
-        db: Сессия SQLAlchemy.
-        inn: ИНН компании.
-
-    Returns:
-        Словарь с данными компании или None.
-    """
-    inn = inn.strip()
-
+    """Принудительное обновление данных из orginfo.uz (игнорирует кэш)."""
     search_results = await search_company_orginfo(inn)
     if not search_results:
-        logger.warning("Компания с ИНН %s не найдена на orginfo.uz (force)", inn)
         return None
 
-    first_result = search_results[0]
-    org_url = first_result.get("url", "")
-    if not org_url:
+    company_url = search_results[0].get("url", "")
+    if not company_url:
         return None
 
-    details = await fetch_company_details(org_url)
+    details = await fetch_company_details(company_url)
+    if not details.get("name"):
+        return None
+
     if not details.get("inn"):
         details["inn"] = inn
-    if not details.get("name"):
-        details["name"] = first_result.get("name", "")
+    details["source"] = "orginfo.uz"
 
-    company = _save_company_to_db(db, details)
-    return _company_to_dict(company)
+    try:
+        company = _save_company_to_db(db, details)
+        return _company_to_dict(company)
+    except Exception as e:
+        logger.error("Ошибка force lookup в БД: %s", e)
+        return details
 
 
 def get_cached_company(db: Session, inn: str) -> CompanyProfile | None:
-    """
-    Получение компании из кэша БД по ИНН.
-
-    Args:
-        db: Сессия SQLAlchemy.
-        inn: ИНН компании.
-
-    Returns:
-        Объект CompanyProfile или None.
-    """
     return db.query(CompanyProfile).filter(CompanyProfile.inn == inn).first()
 
 
-# ─── Вспомогательные функции парсинга ───────────────────────────────────────
-
-
 def _extract_inn_from_element(element) -> str:
-    """Извлекает ИНН из текста HTML-элемента."""
     if element is None:
         return ""
     text = element.get_text(" ", strip=True)
-    # ИНН — последовательность из 9 цифр
-    match = re.search(r"\b(\d{9})\b", text)
+    match = re.search(r"\b(\d{9,12})\b", text)
     return match.group(1) if match else ""
 
 
 def _extract_status_from_element(element) -> str:
-    """Извлекает статус организации из HTML-элемента."""
     if element is None:
         return ""
     text = element.get_text(" ", strip=True).lower()
-    if "действующ" in text:
+    if "действ" in text or "active" in text:
         return "Действующее"
-    if "ликвидир" in text:
+    if "ликвид" in text:
         return "Ликвидировано"
-    if "реорганиз" in text:
+    if "реорг" in text:
         return "Реорганизовано"
     return ""
 
 
-# Маппинг ключей со страницы orginfo.uz на поля нашей модели
+# Маппинг ключей со страницы orginfo.uz на поля модели
 _FIELD_MAP = {
     "инн": "inn",
     "ИНН": "inn",
@@ -292,6 +221,10 @@ _FIELD_MAP = {
     "уставной фонд": "charter_fund",
     "статус": "status",
     "состояние": "status",
+    "дата регистрации": "registration_date",
+    "зарегистрирован": "registration_date",
+    "дата государственной регистрации": "registration_date",
+    "дата ликвидации": "liquidation_date",
     "телефон": "phone",
     "тел": "phone",
     "email": "email",
@@ -302,7 +235,6 @@ _FIELD_MAP = {
 
 
 def _map_field(label: str) -> str | None:
-    """Определяет поле модели по тексту метки со страницы."""
     label_lower = label.lower().strip().rstrip(":")
     for key, field in _FIELD_MAP.items():
         if key.lower() in label_lower:
@@ -311,7 +243,6 @@ def _map_field(label: str) -> str | None:
 
 
 def _parse_tables(soup: BeautifulSoup, details: dict) -> None:
-    """Парсит HTML-таблицы на странице организации."""
     for table in soup.find_all("table"):
         for row in table.find_all("tr"):
             cells = row.find_all(["td", "th"])
@@ -324,7 +255,6 @@ def _parse_tables(soup: BeautifulSoup, details: dict) -> None:
 
 
 def _parse_definition_lists(soup: BeautifulSoup, details: dict) -> None:
-    """Парсит списки определений (dl/dt/dd) на странице."""
     for dl in soup.find_all("dl"):
         terms = dl.find_all("dt")
         definitions = dl.find_all("dd")
@@ -337,14 +267,11 @@ def _parse_definition_lists(soup: BeautifulSoup, details: dict) -> None:
 
 
 def _parse_card_blocks(soup: BeautifulSoup, details: dict) -> None:
-    """Парсит div-карточки с парами «метка: значение»."""
-    # Ищем элементы с классами, характерными для карточек
     for block in soup.find_all(["div", "section"], class_=re.compile(
         r"(card|info|detail|field|item|param|prop)", re.I
     )):
         text = block.get_text(" ", strip=True)
-        # Пробуем найти пары «Ключ: Значение» или «Ключ\nЗначение»
-        for pattern in [r"([А-Яа-яA-Za-z\s]+?):\s*(.+)", r"([А-Яа-яA-Za-z\s]+?)\n\s*(.+)"]:
+        for pattern in [r"([\u0410-\u044fA-Za-z\s]+?):\s*(.+)", r"([\u0410-\u044fA-Za-z\s]+?)\n\s*(.+)"]:
             for match in re.finditer(pattern, text):
                 label = match.group(1).strip()
                 value = match.group(2).strip()
@@ -354,42 +281,22 @@ def _parse_card_blocks(soup: BeautifulSoup, details: dict) -> None:
 
 
 def _extract_contacts(soup: BeautifulSoup, details: dict) -> None:
-    """Извлекает контактные данные (телефон, email) со страницы."""
     page_text = soup.get_text(" ", strip=True)
-
-    # Телефон: формат +998XXXXXXXXX или аналогичный
-    if not details.get("phone"):
-        phone_match = re.search(
-            r"(\+?\d{3}[\s\-]?\d{2}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})", page_text
-        )
-        if phone_match:
-            details["phone"] = phone_match.group(1).strip()
-
-    # Email
-    if not details.get("email"):
-        email_match = re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", page_text)
-        if email_match:
-            details["email"] = email_match.group(0)
+    phone_match = re.search(r"(\+998[\s\-]?\(?\d{2}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})", page_text)
+    if phone_match and not details["phone"]:
+        details["phone"] = phone_match.group(1)
+    email_match = re.search(r"([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})", page_text)
+    if email_match and not details["email"]:
+        details["email"] = email_match.group(1)
 
 
 def _save_company_to_db(db: Session, details: dict) -> CompanyProfile:
-    """
-    Сохраняет или обновляет данные компании в БД.
-
-    Args:
-        db: Сессия SQLAlchemy.
-        details: Словарь с данными компании.
-
-    Returns:
-        Сохранённый объект CompanyProfile.
-    """
     inn = details.get("inn", "")
     existing = db.query(CompanyProfile).filter(CompanyProfile.inn == inn).first()
-
     now = datetime.now(timezone.utc)
+    raw_json = _json.dumps(details, ensure_ascii=False) if isinstance(details, dict) else details
 
     if existing:
-        # Обновляем существующую запись
         existing.name = details.get("name", existing.name)
         existing.director = details.get("director", existing.director)
         existing.address = details.get("address", existing.address)
@@ -399,13 +306,12 @@ def _save_company_to_db(db: Session, details: dict) -> CompanyProfile:
         existing.phone = details.get("phone", existing.phone)
         existing.email = details.get("email", existing.email)
         existing.source = "orginfo.uz"
-        existing.raw_data = details
+        existing.raw_data = raw_json
         existing.updated_at = now
         db.commit()
         db.refresh(existing)
         return existing
 
-    # Создаём новую запись
     company = CompanyProfile(
         inn=inn,
         name=details.get("name", ""),
@@ -417,7 +323,7 @@ def _save_company_to_db(db: Session, details: dict) -> CompanyProfile:
         phone=details.get("phone", ""),
         email=details.get("email", ""),
         source="orginfo.uz",
-        raw_data=details,
+        raw_data=raw_json,
         created_at=now,
         updated_at=now,
     )
@@ -427,7 +333,17 @@ def _save_company_to_db(db: Session, details: dict) -> CompanyProfile:
     return company
 
 
-# ─── DD Extended Search (Phase 3, DD-001) ──────────────────────────────────
+async def search_by_founder(db: Session, founder_name: str) -> list[dict]:
+    """Поиск по имени директора/учредителя."""
+    try:
+        cached = db.query(CompanyProfile).filter(
+            CompanyProfile.director.ilike(f"%{founder_name}%")
+        ).limit(20).all()
+        if cached:
+            return [_company_to_dict(c) for c in cached]
+    except Exception:
+        pass
+    return []
 
 
 async def advanced_dd_search(
@@ -435,197 +351,43 @@ async def advanced_dd_search(
     query: str,
     filters: dict | None = None,
 ) -> list[dict]:
-    """
-    Расширенный DD-поиск компаний с фильтрами.
+    """Расширенный DD-поиск с фильтрами."""
+    results = await search_company_orginfo(query)
 
-    Поиск по orginfo.uz с дополнительной фильтрацией результатов
-    по ОКЭД, региону, статусу и другим критериям.
+    if filters:
+        status_filter = (filters.get("status") or "").lower()
+        if status_filter:
+            results = [r for r in results if status_filter in (r.get("status") or "").lower()]
 
-    Args:
-        db: Сессия SQLAlchemy.
-        query: Поисковый запрос (ИНН, наименование, ключевые слова).
-        filters: Необязательные фильтры {oked, region, status, min_charter_fund}.
+    enriched = []
+    for r in results[:10]:
+        inn = r.get("inn", "")
+        cached = get_cached_company(db, inn) if inn else None
+        if cached:
+            company_dict = _company_to_dict(cached)
+        else:
+            company_dict = dict(r)
+        enriched.append({**company_dict, "dd_relevance": "high", "risk_flags": []})
 
-    Returns:
-        Список компаний с DD-релевантными данными.
-    """
-    filters = filters or {}
-    results = []
-
-    # 1. Поиск на orginfo.uz
-    search_results = await search_company_orginfo(query)
-    if not search_results:
-        # Fallback: поиск в локальном кэше БД
-        cached = db.query(CompanyProfile).filter(
-            CompanyProfile.name.ilike(f"%{query}%")
-        ).limit(20).all()
-        return [_company_to_dict(c) for c in cached]
-
-    # 2. Загружаем детали для каждого результата (первые 10)
-    for item in search_results[:10]:
-        org_url = item.get("url", "")
-        if not org_url:
-            continue
-
-        details = await fetch_company_details(org_url)
-        if not details.get("name"):
-            details["name"] = item.get("name", "")
-        if not details.get("inn"):
-            details["inn"] = item.get("inn", "")
-
-        # 3. Применяем фильтры
-        if not _matches_filters(details, filters):
-            continue
-
-        # 4. Добавляем DD-метаданные
-        dd_entry = {
-            **details,
-            "dd_relevance": _calculate_dd_relevance(details, query),
-            "risk_flags": _detect_risk_flags(details),
-            "source_url": org_url,
-        }
-        results.append(dd_entry)
-
-        # Кэшируем в БД
-        if details.get("inn"):
-            _save_company_to_db(db, details)
-
-    # Сортировка по релевантности
-    results.sort(key=lambda x: x.get("dd_relevance", 0), reverse=True)
-    return results
-
-
-async def search_by_founder(
-    db: Session,
-    founder_name: str,
-) -> list[dict]:
-    """
-    Поиск компаний по имени основателя/директора.
-
-    Ищет сначала в локальном кэше БД, затем на orginfo.uz.
-
-    Args:
-        db: Сессия SQLAlchemy.
-        founder_name: Имя директора/основателя.
-
-    Returns:
-        Список компаний, где указанное лицо является директором.
-    """
-    results = []
-
-    # 1. Поиск в локальном кэше БД
-    cached = db.query(CompanyProfile).filter(
-        CompanyProfile.director.ilike(f"%{founder_name}%")
-    ).all()
-    for company in cached:
-        results.append({
-            **_company_to_dict(company),
-            "match_source": "database_cache",
-        })
-
-    # 2. Поиск на orginfo.uz по имени
-    search_results = await search_company_orginfo(founder_name)
-    seen_inns = {r.get("inn") for r in results if r.get("inn")}
-
-    for item in search_results[:10]:
-        org_url = item.get("url", "")
-        if not org_url:
-            continue
-
-        details = await fetch_company_details(org_url)
-        director = details.get("director", "").lower()
-        if founder_name.lower() not in director:
-            continue
-
-        inn = details.get("inn", "") or item.get("inn", "")
-        if inn in seen_inns:
-            continue
-        seen_inns.add(inn)
-
-        if not details.get("name"):
-            details["name"] = item.get("name", "")
-        if not details.get("inn"):
-            details["inn"] = inn
-
-        results.append({
-            **details,
-            "match_source": "orginfo.uz",
-        })
-
-        # Кэшируем
-        if inn:
-            _save_company_to_db(db, details)
-
-    return results
-
-
-def _matches_filters(details: dict, filters: dict) -> bool:
-    """Проверка соответствия компании фильтрам DD-поиска."""
-    if not filters:
-        return True
-
-    # Фильтр по ОКЭД
-    if "oked" in filters and filters["oked"]:
-        if filters["oked"] not in details.get("oked", ""):
-            return False
-
-    # Фильтр по региону (из адреса)
-    if "region" in filters and filters["region"]:
-        if filters["region"].lower() not in details.get("address", "").lower():
-            return False
-
-    # Фильтр по статусу
-    if "status" in filters and filters["status"]:
-        if filters["status"].lower() not in details.get("status", "").lower():
-            return False
-
-    return True
-
-
-def _calculate_dd_relevance(details: dict, query: str) -> float:
-    """Оценка DD-релевантности результата (0-100)."""
-    score = 50.0  # базовый
-
-    # Наличие ключевых данных
-    if details.get("inn"):
-        score += 10
-    if details.get("director"):
-        score += 10
-    if details.get("oked"):
-        score += 5
-    if details.get("charter_fund"):
-        score += 10
-    if details.get("address"):
-        score += 5
-    if details.get("status") and "действующ" in details["status"].lower():
-        score += 10
-
-    return min(score, 100.0)
-
-
-def _detect_risk_flags(details: dict) -> list[str]:
-    """Выявление рисковых индикаторов для DD."""
-    flags = []
-
-    status = details.get("status", "").lower()
-    if "ликвидир" in status:
-        flags.append("ЛИКВИДИРОВАНО — компания не действует")
-    elif "реорганиз" in status:
-        flags.append("РЕОРГАНИЗОВАНО — проверьте правопреемника")
-    elif not status or "действующ" not in status:
-        flags.append("СТАТУС НЕИЗВЕСТЕН — требуется ручная проверка")
-
-    if not details.get("director"):
-        flags.append("ДИРЕКТОР НЕ УКАЗАН")
-
-    if not details.get("charter_fund"):
-        flags.append("УСТАВНЫЙ ФОНД НЕ УКАЗАН")
-
-    return flags
+    return enriched
 
 
 def _company_to_dict(company: CompanyProfile) -> dict:
     """Преобразует объект CompanyProfile в словарь для ответа API."""
+    # Извлекаем founded_year из raw_data (JSON)
+    founded_year = None
+    if company.raw_data:
+        try:
+            raw = _json.loads(company.raw_data) if isinstance(company.raw_data, str) else company.raw_data
+            founded_year = raw.get("founded_year")
+            if not founded_year:
+                reg_date = raw.get("registration_date", "")
+                if reg_date:
+                    m = re.search(r'(\d{4})', str(reg_date))
+                    if m:
+                        founded_year = int(m.group(1))
+        except Exception:
+            pass
     return {
         "id": company.id,
         "inn": company.inn,
@@ -638,6 +400,7 @@ def _company_to_dict(company: CompanyProfile) -> dict:
         "phone": company.phone,
         "email": company.email,
         "source": company.source,
+        "founded_year": founded_year,
         "created_at": company.created_at.isoformat() if company.created_at else None,
         "updated_at": company.updated_at.isoformat() if company.updated_at else None,
     }
