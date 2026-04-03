@@ -35,7 +35,7 @@ const C = {
   neutral: 'text-slate-400',
 };
 
-type ActiveTab = 'nsbu' | 'ifrs' | 'diff' | 'adjustments';
+type ActiveTab = 'nsbu' | 'ifrs' | 'diff' | 'adjustments' | 'reconciliation';
 
 interface NsbuRow {
   code?: string;
@@ -81,6 +81,9 @@ interface CashFlowRow {
   inflow: number;
   outflow: number;
   net: number;
+  previous_inflow?: number;
+  previous_outflow?: number;
+  previous_net?: number;
   source?: string;
 }
 
@@ -248,6 +251,7 @@ function NsbuCashFlowTable() {
     <EmptyState icon={<span>---</span>} title="Нет данных ДДС" description="Загрузите выгрузку 1С с листом Денежные Средства" />
   );
 
+  const hasPrevious = rows.some(r => (r.previous_inflow ?? 0) !== 0 || (r.previous_outflow ?? 0) !== 0 || (r.previous_net ?? 0) !== 0);
   let currentGroup = '';
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0]">
@@ -255,21 +259,41 @@ function NsbuCashFlowTable() {
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-slate-800 text-white">
-              <th className="text-left py-3 px-4 rounded-tl-lg">Наименование</th>
-              <th className="text-right py-3 px-4">Поступления</th>
-              <th className="text-right py-3 px-4">Выбытие</th>
-              <th className="text-right py-3 px-4 rounded-tr-lg">Нетто</th>
+              <th className="text-left py-3 px-4 rounded-tl-lg" rowSpan={hasPrevious ? 2 : 1}>Наименование</th>
+              {hasPrevious ? (
+                <>
+                  <th className="text-center py-2 px-4 border-b border-slate-600" colSpan={3}>Текущий период</th>
+                  <th className="text-center py-2 px-4 border-b border-slate-600 rounded-tr-lg" colSpan={3}>Предыдущий период</th>
+                </>
+              ) : (
+                <>
+                  <th className="text-right py-3 px-4">Поступления</th>
+                  <th className="text-right py-3 px-4">Выбытие</th>
+                  <th className="text-right py-3 px-4 rounded-tr-lg">Нетто</th>
+                </>
+              )}
             </tr>
+            {hasPrevious && (
+              <tr className="bg-slate-700 text-white text-xs">
+                <th className="text-right py-2 px-4">Поступления</th>
+                <th className="text-right py-2 px-4">Выбытие</th>
+                <th className="text-right py-2 px-4">Нетто</th>
+                <th className="text-right py-2 px-4">Поступления</th>
+                <th className="text-right py-2 px-4">Выбытие</th>
+                <th className="text-right py-2 px-4">Нетто</th>
+              </tr>
+            )}
           </thead>
           <tbody>
             {rows.map((row, i) => {
               const showGroup = row.group && row.group !== currentGroup;
               if (showGroup) currentGroup = row.group;
+              const colCount = hasPrevious ? 7 : 4;
               return (
                 <React.Fragment key={i}>
                   {showGroup && (
                     <tr className="bg-blue-50">
-                      <td colSpan={4} className="py-2 px-4 font-semibold text-blue-800 uppercase text-xs">
+                      <td colSpan={colCount} className="py-2 px-4 font-semibold text-blue-800 uppercase text-xs">
                         {row.group}
                       </td>
                     </tr>
@@ -283,6 +307,17 @@ function NsbuCashFlowTable() {
                     <td className={`py-2 px-4 text-right font-medium ${row.net < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                       {formatCurrencyUZS(row.net)}
                     </td>
+                    {hasPrevious && (
+                      <>
+                        <td className="py-2 px-4 text-right text-gray-500">{formatCurrencyUZS(row.previous_inflow ?? 0)}</td>
+                        <td className={`py-2 px-4 text-right text-gray-500 ${(row.previous_outflow ?? 0) > 0 ? 'text-red-400' : ''}`}>
+                          {formatCurrencyUZS(row.previous_outflow ?? 0)}
+                        </td>
+                        <td className={`py-2 px-4 text-right font-medium ${(row.previous_net ?? 0) < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                          {formatCurrencyUZS(row.previous_net ?? 0)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 </React.Fragment>
               );
@@ -343,8 +378,23 @@ function NsbuCapitalTable() {
   );
 }
 
+interface FixedAssetTotals {
+  cost_balance_start: number;
+  cost_inflow: number;
+  cost_disposal: number;
+  cost_revaluation: number;
+  cost_balance_end: number;
+  depr_accum_start: number;
+  depr_charged: number;
+  depr_disposal_accum: number;
+  depr_accum_end: number;
+  net_book_start: number;
+  net_book_end: number;
+}
+
 function NsbuFixedAssetsTable() {
   const [rows, setRows] = useState<FixedAssetRow[]>([]);
+  const [totals, setTotals] = useState<FixedAssetTotals | null>(null);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
@@ -353,7 +403,7 @@ function NsbuFixedAssetsTable() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/fixed-assets`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .then(d => { if (d?.rows) setRows(d.rows); if (d?.totals) setTotals(d.totals); setLoading(false); })
       .catch(() => setLoading(false));
   }, [token]);
 
@@ -394,6 +444,16 @@ function NsbuFixedAssetsTable() {
                   <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(row.balance_end ?? 0)}</td>
                 </tr>
               ))}
+              {totals && (
+                <tr className="bg-slate-800 text-white font-bold">
+                  <td className="py-2 px-4">ИТОГО</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.cost_balance_start)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.cost_inflow)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.cost_disposal)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.cost_revaluation)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.cost_balance_end)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -423,8 +483,32 @@ function NsbuFixedAssetsTable() {
                   <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(row.accum_end ?? 0)}</td>
                 </tr>
               ))}
+              {totals && (
+                <tr className="bg-slate-800 text-white font-bold">
+                  <td className="py-2 px-4">ИТОГО</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.depr_accum_start)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.depr_charged)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.depr_disposal_accum)}</td>
+                  <td className="py-2 px-4 text-right">{formatCurrencyUZS(totals.depr_accum_end)}</td>
+                </tr>
+              )}
             </tbody>
           </table>
+        </div>
+      )}
+      {totals && (
+        <div className="overflow-x-auto p-6 pt-0">
+          <h4 className="font-semibold text-blue-800 mb-3 uppercase text-xs">Балансовая (остаточная) стоимость</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-xs text-blue-600">На начало периода</p>
+              <p className="text-xl font-bold text-blue-900">{formatCurrencyUZS(totals.net_book_start)}</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-xs text-blue-600">На конец периода</p>
+              <p className="text-xl font-bold text-blue-900">{formatCurrencyUZS(totals.net_book_end)}</p>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1160,6 +1244,132 @@ function DiffReport() {
   );
 }
 
+// ── Reconciliation НСБУ → МСФО ──────────────────────────────────────
+interface ReconcProfitRow {
+  label: string;
+  nsbu: number | null;
+  adjustment: number | null;
+  ifrs: number | null;
+  note?: string;
+  isTotal?: boolean;
+}
+
+interface ReconcBalanceRow {
+  label: string;
+  nsbu: number;
+  adjustment: number;
+  ifrs: number;
+  detail?: string;
+}
+
+function ReconciliationReport() {
+  const [profitRows, setProfitRows] = useState<ReconcProfitRow[]>([]);
+  const [balanceRows, setBalanceRows] = useState<ReconcBalanceRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const token = typeof window !== 'undefined'
+    ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
+
+  useEffect(() => {
+    let mounted = true;
+    fetch(`${apiBase}/api/v1/analytics/reconciliation`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!mounted) return;
+        if (d?.profit_rows) setProfitRows(d.profit_rows);
+        if (d?.balance_rows) setBalanceRows(d.balance_rows);
+        setLoading(false);
+      })
+      .catch(() => { if (mounted) setLoading(false); });
+    return () => { mounted = false; };
+  }, [token, apiBase]);
+
+  if (loading) return <LoadingCard rows={6} />;
+  if (!profitRows.length && !balanceRows.length) return (
+    <EmptyState icon={<span>---</span>} title="Нет данных для сверки" description="Загрузите данные из 1С для формирования сверки НСБУ → МСФО" />
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-[#e2e8f0]">
+        <div className="p-6">
+          <div className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg text-sm text-indigo-800">
+            <strong>Reconciliation НСБУ → МСФО:</strong> Сверка показателей национальной и международной отчётности с детализацией корректировок
+          </div>
+
+          <h4 className="font-semibold text-gray-800 mb-3 text-base">Сверка прибыли (P&L bridge)</h4>
+          <div className="overflow-x-auto mb-8">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-indigo-800 to-purple-900 text-white">
+                  <th className="text-left py-3 px-4 rounded-tl-lg">Показатель</th>
+                  <th className="text-right py-3 px-4">НСБУ</th>
+                  <th className="text-right py-3 px-4">Корректировка</th>
+                  <th className="text-right py-3 px-4">МСФО</th>
+                  <th className="text-left py-3 px-4 rounded-tr-lg">Примечание</th>
+                </tr>
+              </thead>
+              <tbody>
+                {profitRows.map((row, i) => (
+                  <tr key={i} className={`border-b border-gray-100 ${
+                    row.isTotal ? 'bg-indigo-50 font-bold' : 'hover:bg-gray-50'
+                  }`}>
+                    <td className="py-2 px-4">{row.label}</td>
+                    <td className="py-2 px-4 text-right">
+                      {row.nsbu !== null ? formatCurrencyUZS(row.nsbu) : ''}
+                    </td>
+                    <td className={`py-2 px-4 text-right font-medium ${
+                      row.adjustment !== null && row.adjustment > 0 ? 'text-emerald-600' :
+                      row.adjustment !== null && row.adjustment < 0 ? 'text-red-600' : ''
+                    }`}>
+                      {row.adjustment !== null ? (row.adjustment > 0 ? '+' : '') + formatCurrencyUZS(row.adjustment) : ''}
+                    </td>
+                    <td className="py-2 px-4 text-right font-semibold">
+                      {row.ifrs !== null ? formatCurrencyUZS(row.ifrs) : ''}
+                    </td>
+                    <td className="py-2 px-4 text-gray-500 text-xs">{row.note || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h4 className="font-semibold text-gray-800 mb-3 text-base">Сверка баланса (Balance bridge)</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-indigo-800 to-purple-900 text-white">
+                  <th className="text-left py-3 px-4 rounded-tl-lg">Статья</th>
+                  <th className="text-right py-3 px-4">НСБУ</th>
+                  <th className="text-right py-3 px-4">Корректировка</th>
+                  <th className="text-right py-3 px-4">МСФО</th>
+                  <th className="text-left py-3 px-4 rounded-tr-lg">Детализация</th>
+                </tr>
+              </thead>
+              <tbody>
+                {balanceRows.map((row, i) => (
+                  <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-2 px-4 font-medium">{row.label}</td>
+                    <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.nsbu)}</td>
+                    <td className={`py-2 px-4 text-right font-medium ${
+                      row.adjustment > 0 ? 'text-emerald-600' : row.adjustment < 0 ? 'text-red-600' : ''
+                    }`}>
+                      {(row.adjustment > 0 ? '+' : '') + formatCurrencyUZS(row.adjustment)}
+                    </td>
+                    <td className="py-2 px-4 text-right font-semibold">{formatCurrencyUZS(row.ifrs)}</td>
+                    <td className="py-2 px-4 text-gray-500 text-xs">{row.detail || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type OrgType = 'solo' | 'branch' | 'holding';
 type OrgSize = 'small' | 'medium' | 'large';
 
@@ -1495,8 +1705,8 @@ export default function PortfoliosPage() {
 
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-2">
         <div className="flex flex-wrap items-center gap-2">
-          {(['nsbu', 'ifrs', 'diff', 'adjustments'] as ActiveTab[]).map(tab => {
-            const labels: Record<ActiveTab, string> = { nsbu: '🇺🇿 НСБУ', ifrs: '🌍 МСФО (IAS 1)', diff: 'Δ Разница', adjustments: '🔄 Корректировки МСФО' };
+          {(['nsbu', 'ifrs', 'diff', 'adjustments', 'reconciliation'] as ActiveTab[]).map(tab => {
+            const labels: Record<ActiveTab, string> = { nsbu: '🇺🇿 НСБУ', ifrs: '🌍 МСФО (IAS 1)', diff: 'Δ Разница', adjustments: '🔄 Корректировки МСФО', reconciliation: '🔗 Reconciliation' };
             return (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`px-5 py-2 rounded-lg text-sm font-medium transition ${
@@ -1504,6 +1714,7 @@ export default function PortfoliosPage() {
                     ? tab === 'nsbu' ? 'bg-blue-600 text-white'
                       : tab === 'ifrs' ? 'bg-purple-600 text-white shadow-md shadow-purple-500/25'
                       : tab === 'adjustments' ? 'bg-indigo-600 text-white'
+                      : tab === 'reconciliation' ? 'bg-indigo-700 text-white shadow-md shadow-indigo-500/25'
                       : 'bg-violet-600 text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}>
@@ -1523,6 +1734,7 @@ export default function PortfoliosPage() {
       {activeTab === 'adjustments' && (
         <IfrsAdjustmentsPanel portfolioId={1} periodFrom="2025-01-01" periodTo="2025-12-31" />
       )}
+      {activeTab === 'reconciliation' && <ReconciliationReport />}
 
       <NextStepBanner
         label="Перейти к Аналитике KPI →"

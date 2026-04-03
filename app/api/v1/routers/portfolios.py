@@ -832,8 +832,30 @@ async def get_nsbu_fixed_assets(
     cache = _user_cache(current_user.id)
     rows = cache.get("fixed_assets", [])
     if not rows:
-        return JSONResponse({"rows": []})
-    return JSONResponse({"rows": rows})
+        return JSONResponse({"rows": [], "totals": {}})
+
+    # Calculate totals from cost-section rows
+    cost_rows = [r for r in rows if r.get("section") == "cost"]
+    depr_rows = [r for r in rows if r.get("section") == "depreciation"]
+
+    def _sum(items, field):
+        return sum(float(r.get(field) or 0) for r in items)
+
+    totals = {
+        "cost_balance_start": _sum(cost_rows, "balance_start"),
+        "cost_inflow": _sum(cost_rows, "inflow"),
+        "cost_disposal": _sum(cost_rows, "disposal"),
+        "cost_revaluation": _sum(cost_rows, "revaluation"),
+        "cost_balance_end": _sum(cost_rows, "balance_end"),
+        "depr_accum_start": _sum(depr_rows, "accum_start"),
+        "depr_charged": _sum(depr_rows, "charged"),
+        "depr_disposal_accum": _sum(depr_rows, "disposal_accum"),
+        "depr_accum_end": _sum(depr_rows, "accum_end"),
+    }
+    totals["net_book_start"] = totals["cost_balance_start"] - totals["depr_accum_start"]
+    totals["net_book_end"] = totals["cost_balance_end"] - totals["depr_accum_end"]
+
+    return JSONResponse({"rows": rows, "totals": totals})
 
 
 # ---------------------------------------------------------------------------

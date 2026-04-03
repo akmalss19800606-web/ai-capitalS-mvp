@@ -1643,15 +1643,18 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     inflow = float(it.get("inflow") or 0)
                     outflow = float(it.get("outflow") or 0)
                     current_val = net_val if net_val else (inflow - outflow)
-                    prev_val = float(it.get("previous") or it.get("net_previous") or 0)
+                    prev_net = float(it.get("previous_net") or it.get("previous") or it.get("net_previous") or 0)
+                    prev_in = float(it.get("previous_inflow") or 0)
+                    prev_out = float(it.get("previous_outflow") or 0)
+                    prev_val = prev_net if prev_net else (prev_in - prev_out)
                     subtotal += current_val
                     subtotal_prev += prev_val
-                    ws_cf_nsbu.append([f"  {name}", current_val, prev_val or None])
+                    ws_cf_nsbu.append([f"  {name}", current_val, prev_val if prev_val else None])
                     r = ws_cf_nsbu.max_row
                     style_data_cell(ws_cf_nsbu.cell(r, 1))
                     style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True)
                     style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
-                ws_cf_nsbu.append([f"Итого {header_label.split('. ', 1)[-1]}", subtotal, subtotal_prev or None])
+                ws_cf_nsbu.append([f"Итого {header_label.split('. ', 1)[-1]}", subtotal, subtotal_prev if subtotal_prev else None])
                 r = ws_cf_nsbu.max_row
                 style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=True)
                 style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=True)
@@ -1669,16 +1672,19 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     inflow = float(it.get("inflow") or 0)
                     outflow = float(it.get("outflow") or 0)
                     current_val = net_val if net_val else (inflow - outflow)
-                    prev_val = float(it.get("previous") or it.get("net_previous") or 0)
+                    prev_net = float(it.get("previous_net") or it.get("previous") or it.get("net_previous") or 0)
+                    prev_in = float(it.get("previous_inflow") or 0)
+                    prev_out = float(it.get("previous_outflow") or 0)
+                    prev_val = prev_net if prev_net else (prev_in - prev_out)
                     grand_total += current_val
                     grand_total_prev += prev_val
-                    ws_cf_nsbu.append([name, current_val, prev_val or None])
+                    ws_cf_nsbu.append([name, current_val, prev_val if prev_val else None])
                     r = ws_cf_nsbu.max_row
                     style_data_cell(ws_cf_nsbu.cell(r, 1))
                     style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True)
                     style_data_cell(ws_cf_nsbu.cell(r, 3), is_number=True)
 
-            ws_cf_nsbu.append(["ИТОГО ЧИСТЫЙ ДЕНЕЖНЫЙ ПОТОК", grand_total, grand_total_prev or None])
+            ws_cf_nsbu.append(["ИТОГО ЧИСТЫЙ ДЕНЕЖНЫЙ ПОТОК", grand_total, grand_total_prev if grand_total_prev else None])
             r = ws_cf_nsbu.max_row
             style_data_cell(ws_cf_nsbu.cell(r, 1), is_bold=True)
             style_data_cell(ws_cf_nsbu.cell(r, 2), is_number=True, is_bold=True)
@@ -2789,3 +2795,146 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ---------------------------------------------------------------------------
+# GET /analytics/reconciliation — НСБУ → МСФО reconciliation
+# ---------------------------------------------------------------------------
+
+@router.get("/analytics/reconciliation")
+async def get_reconciliation(
+    current_user: User = Depends(get_current_user),
+):
+    """Reconciliation of NSBU to IFRS: profit bridge + balance bridge."""
+    agg = _get_balance_aggregates(user_id=current_user.id)
+    if not agg:
+        return JSONResponse({"profit_rows": [], "balance_rows": []})
+
+    cache = _user_cache(current_user.id)
+
+    net_fa = agg["net_fa"]
+    receivables = agg["receivables"]
+    nsbu_net_profit = agg["net_profit"]
+
+    # IFRS adjustments (same logic as _ifrs_adjusted_aggregates)
+    ias16_reval = round(net_fa * 0.15, 2)         # IAS 16 revaluation surplus
+    ecl = round(receivables * 0.05, 2)            # IFRS 9 expected credit loss
+    deferred_tax = round(ias16_reval * 0.15, 2)   # Deferred tax on revaluation (15%)
+
+    # IFRS 16 lease effect: ROU depreciation vs operating lease payments
+    # Approximate from account 7800 (lease liability)
+    accounts = cache.get("accounts", {})
+    lease_7800 = 0.0
+    acc_7800 = accounts.get("7800")
+    if acc_7800:
+        lease_7800 = float(acc_7800.get("current", 0))
+
+    # IFRS 16 effect on P&L: depreciation of ROU + interest - operating lease payment
+    # ROU depreciation ~= lease_liability / remaining_term (approx 3.5 yrs)
+    # Interest ~= lease_liability * discount_rate (approx 10%)
+    # Operating lease payment under NSBU ~= lease_liability / 3
+    ifrs16_depr = round(lease_7800 / 3.5, 2) if lease_7800 else 0.0
+    ifrs16_interest = round(lease_7800 * 0.10, 2) if lease_7800 else 0.0
+    ifrs16_nsbu_expense = round(lease_7800 / 3.0, 2) if lease_7800 else 0.0
+    ifrs16_pnl_effect = round(ifrs16_nsbu_expense - ifrs16_depr - ifrs16_interest, 2)
+
+    ifrs_net_profit = round(nsbu_net_profit + ias16_reval - ecl + ifrs16_pnl_effect - deferred_tax, 2)
+
+    # ROU asset for balance
+    rou_asset = round(lease_7800 * 3.5, 2) if lease_7800 else 0.0
+
+    # --- Profit reconciliation ---
+    profit_rows = [
+        {
+            "label": "Чистая прибыль НСБУ",
+            "nsbu": nsbu_net_profit,
+            "adjustment": None,
+            "ifrs": None,
+            "note": "из ОПиУ НСБУ",
+        },
+        {
+            "label": "+ Переоценка ОС (OCI)",
+            "nsbu": None,
+            "adjustment": ias16_reval,
+            "ifrs": None,
+            "note": "IAS 16, в OCI",
+        },
+        {
+            "label": "- ECL резерв (IFRS 9)",
+            "nsbu": None,
+            "adjustment": -ecl,
+            "ifrs": None,
+            "note": "уменьшает прибыль",
+        },
+        {
+            "label": "+/- IFRS 16 эффект",
+            "nsbu": None,
+            "adjustment": ifrs16_pnl_effect,
+            "ifrs": None,
+            "note": "амортизация ROU vs арендные платежи",
+        },
+        {
+            "label": "- Отложенный налог",
+            "nsbu": None,
+            "adjustment": -deferred_tax,
+            "ifrs": None,
+            "note": "15% от переоценки",
+        },
+        {
+            "label": "= Чистая прибыль МСФО",
+            "nsbu": None,
+            "adjustment": None,
+            "ifrs": ifrs_net_profit,
+            "note": "",
+            "isTotal": True,
+        },
+    ]
+
+    # --- Balance reconciliation ---
+    nsbu_total_assets = agg["total_assets"]
+    nsbu_total_equity = agg["total_equity"]
+    nsbu_total_liabilities = agg["total_liabilities"]
+
+    asset_adj = round(ias16_reval - ecl + rou_asset, 2)
+    equity_adj = round(ias16_reval - ecl - deferred_tax, 2)
+    liabilities_adj = round(rou_asset + deferred_tax, 2)
+
+    ifrs_total_assets = round(nsbu_total_assets + asset_adj, 2)
+    ifrs_total_equity = round(nsbu_total_equity + equity_adj, 2)
+    ifrs_total_liabilities = round(nsbu_total_liabilities + liabilities_adj, 2)
+
+    balance_rows = [
+        {
+            "label": "Итого активов",
+            "nsbu": nsbu_total_assets,
+            "adjustment": asset_adj,
+            "ifrs": ifrs_total_assets,
+            "detail": f"+{ias16_reval:,.0f} (IAS 16) -{ecl:,.0f} (ECL) +{rou_asset:,.0f} (ROU)",
+        },
+        {
+            "label": "Итого капитал",
+            "nsbu": nsbu_total_equity,
+            "adjustment": equity_adj,
+            "ifrs": ifrs_total_equity,
+            "detail": f"+{ias16_reval:,.0f} (OCI) -{ecl:,.0f} (ECL) -{deferred_tax:,.0f} (DT)",
+        },
+        {
+            "label": "Итого обязательств",
+            "nsbu": nsbu_total_liabilities,
+            "adjustment": liabilities_adj,
+            "ifrs": ifrs_total_liabilities,
+            "detail": f"+{rou_asset:,.0f} (IFRS 16) +{deferred_tax:,.0f} (DT)",
+        },
+    ]
+
+    return JSONResponse({
+        "profit_rows": profit_rows,
+        "balance_rows": balance_rows,
+        "adjustments_summary": {
+            "ias16_revaluation": ias16_reval,
+            "ifrs9_ecl": ecl,
+            "ifrs16_rou_asset": rou_asset,
+            "ifrs16_pnl_effect": ifrs16_pnl_effect,
+            "deferred_tax": deferred_tax,
+        },
+    })

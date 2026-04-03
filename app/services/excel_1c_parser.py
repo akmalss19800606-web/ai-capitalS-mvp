@@ -420,7 +420,10 @@ class Excel1CParser:
                     "inflow": self._safe_decimal_val(row[2] if len(row) > 2 else None),
                     "outflow": self._safe_decimal_val(row[3] if len(row) > 3 else None),
                     "net": self._safe_decimal_val(row[4] if len(row) > 4 else None),
-                    "source": str(row[5] or "") if len(row) > 5 else "",
+                    "previous_inflow": self._safe_decimal_val(row[5] if len(row) > 5 else None),
+                    "previous_outflow": self._safe_decimal_val(row[6] if len(row) > 6 else None),
+                    "previous_net": self._safe_decimal_val(row[7] if len(row) > 7 else None),
+                    "source": str(row[8] or "") if len(row) > 8 else "",
                 }
                 if entry["inflow"] or entry["outflow"]:
                     result.cashflow.append(entry)
