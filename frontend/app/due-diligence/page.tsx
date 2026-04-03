@@ -280,12 +280,13 @@ export default function DueDiligencePage() {
     return item.category === checklistFilter;
   }) || [];
 
-  const kpiData = result ? [
+  const kpiDataArray = result ? [
     { label: 'Общий скор', value: `${result.total_score}`, status: result.total_score >= 75 ? 'completed' as const : result.total_score >= 50 ? 'in_progress' as const : 'not_started' as const },
     { label: 'Уровень риска', value: RISK_LABELS[result.risk_level] || result.risk_level, status: result.risk_level === 'low' ? 'completed' as const : result.risk_level === 'medium' ? 'in_progress' as const : 'not_started' as const },
     { label: 'Чеклист', value: `${result.checklist?.filter(i => i.status === 'passed').length || 0}/${result.checklist?.length || 0}`, status: 'in_progress' as const },
     { label: 'Ред флаги', value: `${result.red_flags?.length || 0}`, status: (result.red_flags?.length || 0) === 0 ? 'completed' as const : 'not_started' as const },
   ] : [];
+  const kpiData = result ? { score: result.total_score, riskLevel: result.risk_level as any, checklistProgress: (result.checklist?.filter((i: any) => i.status === 'passed').length || 0) / Math.max(result.checklist?.length || 1, 1) * 100, status: (result.total_score >= 75 ? 'completed' : result.total_score >= 50 ? 'in_progress' : 'not_started') as any } : undefined;
 
   return (
     <DueDiligenceLayout title="Комплексная проверка (Due Diligence)" kpi={kpiData} hasResult={!!result} activeTab={activeTab as any} onTabChange={setActiveTab as any} loading={loading} error={error}
