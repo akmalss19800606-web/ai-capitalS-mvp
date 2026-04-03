@@ -234,6 +234,7 @@ function NsbuPnlTable() {
 
 function NsbuCashFlowTable() {
   const [rows, setRows] = useState<CashFlowRow[]>([]);
+  const [summary, setSummary] = useState<{ cash_begin: number; cash_end: number; net_cash_change: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
@@ -242,7 +243,11 @@ function NsbuCashFlowTable() {
     fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/v1/portfolios/reports/nsbu/cashflow`,
       { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.rows) setRows(d.rows); setLoading(false); })
+      .then(d => {
+        if (d?.rows) setRows(d.rows);
+        if (d?.summary) setSummary(d.summary);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, [token]);
 
@@ -253,6 +258,7 @@ function NsbuCashFlowTable() {
 
   const hasPrevious = rows.some(r => (r.previous_inflow ?? 0) !== 0 || (r.previous_outflow ?? 0) !== 0 || (r.previous_net ?? 0) !== 0);
   let currentGroup = '';
+  const colCount = hasPrevious ? 7 : 4;
   return (
     <div className="bg-white rounded-xl border border-[#e2e8f0]">
       <div className="overflow-x-auto p-6">
@@ -288,7 +294,6 @@ function NsbuCashFlowTable() {
             {rows.map((row, i) => {
               const showGroup = row.group && row.group !== currentGroup;
               if (showGroup) currentGroup = row.group;
-              const colCount = hasPrevious ? 7 : 4;
               return (
                 <React.Fragment key={i}>
                   {showGroup && (
@@ -322,6 +327,34 @@ function NsbuCashFlowTable() {
                 </React.Fragment>
               );
             })}
+            {/* Cash summary from balance sheet for reconciliation */}
+            {summary && (
+              <>
+                <tr className="bg-slate-100 border-t-2 border-slate-300">
+                  <td colSpan={colCount} className="py-1" />
+                </tr>
+                <tr className="bg-slate-50">
+                  <td className="py-2 px-4 font-medium text-slate-700">ДС на начало периода (по балансу)</td>
+                  <td className="py-2 px-4" colSpan={hasPrevious ? 2 : 2} />
+                  <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(summary.cash_begin)}</td>
+                  {hasPrevious && <td className="py-2 px-4" colSpan={3} />}
+                </tr>
+                <tr className="bg-slate-50">
+                  <td className="py-2 px-4 font-medium text-slate-700">ДС на конец периода (по балансу)</td>
+                  <td className="py-2 px-4" colSpan={hasPrevious ? 2 : 2} />
+                  <td className="py-2 px-4 text-right font-medium">{formatCurrencyUZS(summary.cash_end)}</td>
+                  {hasPrevious && <td className="py-2 px-4" colSpan={3} />}
+                </tr>
+                <tr className="bg-emerald-50 font-bold">
+                  <td className="py-2 px-4 text-emerald-800">Чистое изменение ДС (конец - начало)</td>
+                  <td className="py-2 px-4" colSpan={hasPrevious ? 2 : 2} />
+                  <td className={`py-2 px-4 text-right ${summary.net_cash_change >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                    {formatCurrencyUZS(summary.net_cash_change)}
+                  </td>
+                  {hasPrevious && <td className="py-2 px-4" colSpan={3} />}
+                </tr>
+              </>
+            )}
           </tbody>
         </table>
       </div>
@@ -1262,9 +1295,19 @@ interface ReconcBalanceRow {
   detail?: string;
 }
 
+interface ReconcDdsRow {
+  label: string;
+  nsbu: number;
+  adjustment: number;
+  ifrs: number;
+  note?: string;
+  isTotal?: boolean;
+}
+
 function ReconciliationReport() {
   const [profitRows, setProfitRows] = useState<ReconcProfitRow[]>([]);
   const [balanceRows, setBalanceRows] = useState<ReconcBalanceRow[]>([]);
+  const [ddsRows, setDdsRows] = useState<ReconcDdsRow[]>([]);
   const [loading, setLoading] = useState(true);
   const token = typeof window !== 'undefined'
     ? localStorage.getItem('access_token') || localStorage.getItem('token') : '';
@@ -1279,6 +1322,7 @@ function ReconciliationReport() {
         if (!mounted) return;
         if (d?.profit_rows) setProfitRows(d.profit_rows);
         if (d?.balance_rows) setBalanceRows(d.balance_rows);
+        if (d?.dds_rows) setDdsRows(d.dds_rows);
         setLoading(false);
       })
       .catch(() => { if (mounted) setLoading(false); });
@@ -1336,7 +1380,7 @@ function ReconciliationReport() {
           </div>
 
           <h4 className="font-semibold text-gray-800 mb-3 text-base">Сверка баланса (Balance bridge)</h4>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto mb-8">
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gradient-to-r from-indigo-800 to-purple-900 text-white">
@@ -1364,6 +1408,43 @@ function ReconciliationReport() {
               </tbody>
             </table>
           </div>
+
+          {/* DDS Reconciliation */}
+          {ddsRows.length > 0 && (
+            <>
+              <h4 className="font-semibold text-gray-800 mb-3 text-base">Сверка ДДС (Cash Flow bridge)</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-indigo-800 to-purple-900 text-white">
+                      <th className="text-left py-3 px-4 rounded-tl-lg">Статья</th>
+                      <th className="text-right py-3 px-4">НСБУ</th>
+                      <th className="text-right py-3 px-4">Корректировка МСФО</th>
+                      <th className="text-right py-3 px-4">МСФО</th>
+                      <th className="text-left py-3 px-4 rounded-tr-lg">Примечание</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ddsRows.map((row, i) => (
+                      <tr key={i} className={`border-b border-gray-100 ${
+                        row.isTotal ? 'bg-indigo-50 font-bold' : 'hover:bg-gray-50'
+                      }`}>
+                        <td className="py-2 px-4 font-medium">{row.label}</td>
+                        <td className="py-2 px-4 text-right">{formatCurrencyUZS(row.nsbu)}</td>
+                        <td className={`py-2 px-4 text-right font-medium ${
+                          row.adjustment > 0 ? 'text-emerald-600' : row.adjustment < 0 ? 'text-red-600' : ''
+                        }`}>
+                          {row.adjustment !== 0 ? (row.adjustment > 0 ? '+' : '') + formatCurrencyUZS(row.adjustment) : '0'}
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold">{formatCurrencyUZS(row.ifrs)}</td>
+                        <td className="py-2 px-4 text-gray-500 text-xs">{row.note || ''}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1418,6 +1499,7 @@ export default function PortfoliosPage() {
   const [needsReimport, setNeedsReimport] = useState(false);
   const [regForm, setRegForm] = useState<RegForm>(emptyForm);
   const [regSaving, setRegSaving] = useState(false);
+  const [regFormOpen, setRegFormOpen] = useState(false);
 
   const { setActiveOrg, setPeriod, setActiveStandard, setNsbuReady, setIfrsReady } = useAnalytics();
 
@@ -1450,9 +1532,12 @@ export default function PortfoliosPage() {
             setNeedsReimport(true);
             setImportStatus(d.message || 'Загрузите файл 1С для обновления данных');
           }
+        } else {
+          // No company info — auto-open the registration form
+          setRegFormOpen(true);
         }
       })
-      .catch(() => {});
+      .catch(() => { setRegFormOpen(true); });
   }, [token, apiBase, setActiveOrg]);
 
   async function handleRegister() {
@@ -1598,90 +1683,100 @@ export default function PortfoliosPage() {
         </div>
       )}
 
-      {/* Company card or registration form */}
-      {companyInfo?.name ? (
-        <CompanyCard info={companyInfo} />
-      ) : (
-        <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
-          <h3 className="font-semibold text-gray-800 mb-4">📋 Регистрация организации</h3>
+      {/* Company card */}
+      {companyInfo?.name && <CompanyCard info={companyInfo} />}
 
-          {/* Org type selector */}
-          <div className="flex flex-wrap gap-3 mb-5">
-            {orgTypes.map(t => (
-              <button key={t.key} onClick={() => setRegForm(f => ({ ...f, org_type: t.key }))}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition ${
-                  regForm.org_type === t.key
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                }`}>
-                <span className="text-xl">{t.icon}</span> {t.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Form fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Наименование организации *</label>
-              <input type="text" value={regForm.name} onChange={e => setRegForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="ООО «Компания»" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">ИНН</label>
-              <input type="text" value={regForm.inn} onChange={e => setRegForm(f => ({ ...f, inn: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="123456789" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">ОКЭД / Вид деятельности</label>
-              <input type="text" value={regForm.oked} onChange={e => setRegForm(f => ({ ...f, oked: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="41.20 — Строительство" />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Юридический адрес</label>
-              <input type="text" value={regForm.address} onChange={e => setRegForm(f => ({ ...f, address: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="г. Ташкент, ул. ..." />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Директор</label>
-              <input type="text" value={regForm.director} onChange={e => setRegForm(f => ({ ...f, director: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="Иванов И.И." />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Главный бухгалтер</label>
-              <input type="text" value={regForm.accountant} onChange={e => setRegForm(f => ({ ...f, accountant: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
-                placeholder="Петрова А.А." />
-            </div>
-          </div>
-
-          {/* Size selector */}
-          <div className="mb-5">
-            <label className="block text-xs text-gray-500 mb-2">Размер предприятия</label>
-            <div className="flex gap-3">
-              {sizes.map(s => (
-                <button key={s.key} onClick={() => setRegForm(f => ({ ...f, size: s.key }))}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition ${
-                    regForm.size === s.key
+      {/* Registration / Edit form — always available, collapsed after import */}
+      <div className="bg-white rounded-xl border border-[#e2e8f0]">
+        <button
+          onClick={() => setRegFormOpen(o => !o)}
+          className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 transition rounded-xl"
+        >
+          <h3 className="font-semibold text-gray-800">
+            {companyInfo?.name ? '✏️ Редактировать реквизиты' : '📋 Регистрация организации'}
+          </h3>
+          <span className="text-gray-400 text-lg">{regFormOpen ? '▲' : '▼'}</span>
+        </button>
+        {regFormOpen && (
+          <div className="px-6 pb-6">
+            {/* Org type selector */}
+            <div className="flex flex-wrap gap-3 mb-5">
+              {orgTypes.map(t => (
+                <button key={t.key} onClick={() => setRegForm(f => ({ ...f, org_type: t.key }))}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border-2 transition ${
+                    regForm.org_type === t.key
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
                   }`}>
-                  {s.label}
+                  <span className="text-xl">{t.icon}</span> {t.label}
                 </button>
               ))}
             </div>
-          </div>
 
-          <button onClick={handleRegister} disabled={!regForm.name.trim() || regSaving}
-            className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
-            💾 Зарегистрировать организацию
-          </button>
-        </div>
-      )}
+            {/* Form fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Наименование организации *</label>
+                <input type="text" value={regForm.name} onChange={e => setRegForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="ООО «Компания»" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">ИНН</label>
+                <input type="text" value={regForm.inn} onChange={e => setRegForm(f => ({ ...f, inn: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="123456789" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">ОКЭД / Вид деятельности</label>
+                <input type="text" value={regForm.oked} onChange={e => setRegForm(f => ({ ...f, oked: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="41.20 — Строительство" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Юридический адрес</label>
+                <input type="text" value={regForm.address} onChange={e => setRegForm(f => ({ ...f, address: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="г. Ташкент, ул. ..." />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Директор</label>
+                <input type="text" value={regForm.director} onChange={e => setRegForm(f => ({ ...f, director: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="Иванов И.И." />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">Главный бухгалтер</label>
+                <input type="text" value={regForm.accountant} onChange={e => setRegForm(f => ({ ...f, accountant: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none"
+                  placeholder="Петрова А.А." />
+              </div>
+            </div>
+
+            {/* Size selector */}
+            <div className="mb-5">
+              <label className="block text-xs text-gray-500 mb-2">Размер предприятия</label>
+              <div className="flex gap-3">
+                {sizes.map(s => (
+                  <button key={s.key} onClick={() => setRegForm(f => ({ ...f, size: s.key }))}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium border-2 transition ${
+                      regForm.size === s.key
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleRegister} disabled={!regForm.name.trim() || regSaving}
+              className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 transition">
+              {companyInfo?.name ? '💾 Сохранить реквизиты' : '💾 Зарегистрировать организацию'}
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl border border-[#e2e8f0] p-6">
         <h3 className="font-semibold text-gray-800 mb-4">📤 Источник данных</h3>

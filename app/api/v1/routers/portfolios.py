@@ -859,12 +859,34 @@ async def get_nsbu_pnl(
 async def get_nsbu_cashflow(
     current_user: User = Depends(get_current_user),
 ):
-    """Get Cash Flow report from parsed 1C data (cashflow)."""
+    """Get Cash Flow report from parsed 1C data (cashflow).
+
+    Adds summary rows with cash begin/end from balance sheet (accounts 50xx/51xx/52xx)
+    to ensure DDS reconciles with balance: net_change = cash_end - cash_begin.
+    """
     cache = _user_cache(current_user.id)
     rows = cache.get("cashflow", [])
     if not rows:
         return JSONResponse({"rows": []})
-    return JSONResponse({"rows": rows})
+
+    # Compute cash begin/end from balance accounts for reconciliation
+    accounts = cache.get("accounts", {})
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    cash_begin = _v("5010", "previous") + _v("5110", "previous") + _v("5210", "previous")
+    cash_end = _v("5010") + _v("5110") + _v("5210")
+    net_cash_change = round(cash_end - cash_begin, 2)
+
+    return JSONResponse({
+        "rows": rows,
+        "summary": {
+            "cash_begin": round(cash_begin, 2),
+            "cash_end": round(cash_end, 2),
+            "net_cash_change": net_cash_change,
+        },
+    })
 
 
 # ---------------------------------------------------------------------------

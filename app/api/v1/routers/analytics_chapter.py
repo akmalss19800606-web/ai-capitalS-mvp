@@ -264,15 +264,39 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
     expenses_prev = pnl.get("total_expenses_start", pnl.get("total_expenses_begin", 0))
 
     # If pnl totals are zero, extract from income_expenses by account codes
-    if revenue == 0 and expenses == 0 and income_expenses:
-        ie = _revenue_costs_from_income_expenses(income_expenses)
-        revenue = ie["revenue_cur"]
-        expenses = ie["costs_cur"] + ie["opex_cur"]
-        revenue_prev = ie["revenue_prev"]
-        expenses_prev = ie["costs_prev"] + ie["opex_prev"]
+    cost_of_goods = 0.0
+    cost_of_goods_prev = 0.0
+    opex = 0.0
+    opex_prev = 0.0
+    other_exp = 0.0
+    other_exp_prev = 0.0
+    tax_ie = 0.0
+    tax_ie_prev = 0.0
 
-    gross_profit = revenue - expenses
-    gross_profit_prev = revenue_prev - expenses_prev
+    if income_expenses:
+        ie = _revenue_costs_from_income_expenses(income_expenses)
+        if ie["revenue_cur"] > 0:
+            revenue = ie["revenue_cur"] if revenue == 0 else revenue
+            revenue_prev = ie["revenue_prev"] if revenue_prev == 0 else revenue_prev
+        cost_of_goods = ie["costs_cur"]
+        cost_of_goods_prev = ie["costs_prev"]
+        opex = ie["opex_cur"]
+        opex_prev = ie["opex_prev"]
+        other_exp = ie["other_expenses_cur"]
+        other_exp_prev = ie["other_expenses_prev"]
+        tax_ie = ie["tax_cur"]
+        tax_ie_prev = ie["tax_prev"]
+        if revenue == 0 and expenses == 0:
+            revenue = ie["revenue_cur"]
+            revenue_prev = ie["revenue_prev"]
+    elif revenue == 0 and expenses == 0:
+        # No income_expenses data — fallback: all expenses treated as cost_of_goods
+        cost_of_goods = expenses
+        cost_of_goods_prev = expenses_prev
+
+    # Gross profit = Revenue - Cost of goods (20xx only)
+    gross_profit = revenue - cost_of_goods
+    gross_profit_prev = revenue_prev - cost_of_goods_prev
 
     # IFRS 16 lease adjustments (from account 6970 if exists)
     lease_payment = _v("6970")
@@ -295,20 +319,27 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
     net_fa = _v("0100") - _v("0200")
     oci_revaluation = round(net_fa * 0.15, 2)
 
-    profit_before_tax = gross_profit - rou_depreciation - lease_interest - ecl_impairment
-    income_tax = round(profit_before_tax * 0.15, 2) if profit_before_tax > 0 else 0
+    # Operating profit = Gross profit - Operating expenses (94xx)
+    operating_profit = gross_profit - opex
+    operating_profit_prev = gross_profit_prev - opex_prev
+
+    # Profit before tax = Operating profit - Other expenses - IFRS adjustments
+    profit_before_tax = operating_profit - other_exp - rou_depreciation - lease_interest - ecl_impairment
+    income_tax = tax_ie if tax_ie > 0 else (round(profit_before_tax * 0.15, 2) if profit_before_tax > 0 else 0)
     net_profit = profit_before_tax - income_tax
     total_comprehensive = net_profit + oci_revaluation
 
-    profit_before_tax_prev = gross_profit_prev
-    income_tax_prev = round(profit_before_tax_prev * 0.15, 2) if profit_before_tax_prev > 0 else 0
+    profit_before_tax_prev = operating_profit_prev - other_exp_prev
+    income_tax_prev = tax_ie_prev if tax_ie_prev > 0 else (round(profit_before_tax_prev * 0.15, 2) if profit_before_tax_prev > 0 else 0)
     net_profit_prev = profit_before_tax_prev - income_tax_prev
 
     rows = [
         {"label": "I. ОТЧЁТ О ПРИБЫЛЯХ И УБЫТКАХ", "current": None, "previous": None, "isHeader": True},
         {"label": "Выручка", "current": revenue, "previous": revenue_prev, "note": "IAS 18"},
-        {"label": "Себестоимость", "current": -expenses if expenses else None, "previous": -expenses_prev if expenses_prev else None, "note": "IAS 2"},
+        {"label": "Себестоимость", "current": -cost_of_goods if cost_of_goods else None, "previous": -cost_of_goods_prev if cost_of_goods_prev else None, "note": "IAS 2"},
         {"label": "Валовая прибыль", "current": gross_profit, "previous": gross_profit_prev, "isTotal": True},
+        {"label": "Операционные расходы", "current": -opex if opex else None, "previous": -opex_prev if opex_prev else None, "note": "IAS 1"},
+        {"label": "Прочие расходы", "current": -other_exp if other_exp else None, "previous": -other_exp_prev if other_exp_prev else None, "note": "IAS 1"},
         {"label": "Амортизация ПП-актива (IFRS 16)", "current": -rou_depreciation if rou_depreciation else None, "previous": None, "note": "IFRS 16"},
         {"label": "Процентные расходы по аренде (IFRS 16)", "current": -lease_interest if lease_interest else None, "previous": None, "note": "IFRS 16"},
         {"label": "Обесценение дебиторки (IFRS 9 ECL)", "current": -ecl_impairment if ecl_impairment else None, "previous": None, "note": "IFRS 9"},
@@ -338,11 +369,21 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
     revenue = pnl.get("total_revenue_end", 0)
     expenses = pnl.get("total_expenses_end", 0)
 
-    # If pnl totals are zero, extract from income_expenses by account codes
-    if revenue == 0 and expenses == 0 and income_expenses:
+    # Extract detailed cost breakdown from income_expenses
+    cost_of_goods = 0.0
+    opex = 0.0
+    if income_expenses:
         ie = _revenue_costs_from_income_expenses(income_expenses)
-        revenue = ie["revenue_cur"]
-        expenses = ie["costs_cur"] + ie["opex_cur"]
+        if ie["revenue_cur"] > 0:
+            revenue = ie["revenue_cur"] if revenue == 0 else revenue
+        cost_of_goods = ie["costs_cur"]
+        opex = ie["opex_cur"]
+        if revenue == 0 and expenses == 0:
+            revenue = ie["revenue_cur"]
+    # Supplier payments = cost of goods + operating expenses (full costs)
+    supplier_payments = cost_of_goods + opex
+    if supplier_payments == 0:
+        supplier_payments = expenses
 
     # Cash positions
     cash_end = _v("5010") + _v("5110") + _v("5210")
@@ -367,7 +408,7 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
     payables_change = _v("6010") - _v("6010", "previous")
     tax_paid = _v("6310") + _v("6610")
 
-    operating_cash = revenue - expenses - receivables_change + payables_change - tax_paid - lease_interest
+    operating_cash = revenue - supplier_payments - receivables_change + payables_change - tax_paid - lease_interest
 
     # Investing
     capex_change = _v("0100") - _v("0100", "previous")
@@ -383,7 +424,7 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
     rows = [
         {"label": "I. ОПЕРАЦИОННАЯ ДЕЯТЕЛЬНОСТЬ", "current": None, "previous": None, "isHeader": True},
         {"label": "Поступления от покупателей", "current": revenue if revenue else None, "previous": None, "note": "IAS 7"},
-        {"label": "Оплата поставщикам и персоналу", "current": -expenses if expenses else None, "previous": None, "note": "IAS 7"},
+        {"label": "Оплата поставщикам и персоналу", "current": -supplier_payments if supplier_payments else None, "previous": None, "note": "IAS 7"},
         {"label": "Процентные расходы по аренде (IFRS 16)", "current": -lease_interest if lease_interest else None, "previous": None, "note": "IFRS 16"},
         {"label": "Налоги уплаченные", "current": -tax_paid if tax_paid else None, "previous": None, "note": "IAS 12"},
         {"label": "Итого по операционной деятельности", "current": operating_total, "previous": None, "isTotal": True},
@@ -2743,8 +2784,76 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         ws_recon.append([])
         ws_recon.append([])
 
-        # ---- Table 3: Детализация корректировок с проводками ----
-        ws_recon.append(["Таблица 3: Детализация корректировок с проводками"])
+        # ---- Table 3: Reconciliation ДДС ----
+        ws_recon.append(["Таблица 3: Reconciliation ДДС"])
+        r = ws_recon.max_row
+        ws_recon.cell(r, 1).font = Font(bold=True, size=12)
+        ws_recon.append([])
+
+        ws_recon.append(["Статья", "НСБУ", "Корректировка МСФО", "МСФО", "Примечание"])
+        style_header_row(ws_recon, ws_recon.max_row, RECON_FILL)
+
+        # Compute DDS reconciliation data
+        def _dds_v(code: str, fld: str = "current") -> float:
+            acc = accounts.get(code)
+            return acc[fld] if acc else 0.0
+
+        dds_cash_begin = _dds_v("5010", "previous") + _dds_v("5110", "previous") + _dds_v("5210", "previous")
+        dds_cash_end = _dds_v("5010") + _dds_v("5110") + _dds_v("5210")
+
+        # NSBU DDS from cashflow data
+        dds_cashflow = cache.get("cashflow", [])
+        dds_nsbu_oper = 0.0
+        dds_nsbu_invest = 0.0
+        dds_nsbu_fin = 0.0
+        for item in (dds_cashflow or []):
+            group_upper = str(item.get("group", "")).upper()
+            net_val = float(item.get("net") or 0)
+            inflow_val = float(item.get("inflow") or 0)
+            outflow_val = float(item.get("outflow") or 0)
+            row_net = net_val if net_val else (inflow_val - outflow_val)
+            if "ОПЕРАЦИОННАЯ" in group_upper:
+                dds_nsbu_oper += row_net
+            elif "ИНВЕСТИЦИОННАЯ" in group_upper:
+                dds_nsbu_invest += row_net
+            elif "ФИНАНСОВАЯ" in group_upper:
+                dds_nsbu_fin += row_net
+        if dds_nsbu_oper == 0 and dds_nsbu_invest == 0 and dds_nsbu_fin == 0:
+            dds_nsbu_oper = dds_cash_end - dds_cash_begin
+
+        # IFRS 16 reclassification for DDS
+        dds_lease_7800 = 0.0
+        dds_acc_7800 = accounts.get("7800")
+        if dds_acc_7800:
+            dds_lease_7800 = float(dds_acc_7800.get("current", 0))
+        dds_ifrs16_adj = round(dds_lease_7800 / 3.0, 2) if dds_lease_7800 else 0.0
+
+        dds_recon_rows = [
+            ("Операционный поток", round(dds_nsbu_oper, 2), dds_ifrs16_adj, round(dds_nsbu_oper + dds_ifrs16_adj, 2), "Арендные платежи переклассифицированы"),
+            ("Инвестиционный поток", round(dds_nsbu_invest, 2), 0, round(dds_nsbu_invest, 2), "Без изменений"),
+            ("Финансовый поток", round(dds_nsbu_fin, 2), -dds_ifrs16_adj, round(dds_nsbu_fin - dds_ifrs16_adj, 2), "Погашение обязат. по аренде"),
+            ("Итого изменение ДС", round(dds_nsbu_oper + dds_nsbu_invest + dds_nsbu_fin, 2), 0, round(dds_nsbu_oper + dds_nsbu_invest + dds_nsbu_fin, 2), "Должно совпадать"),
+            ("ДС на начало", round(dds_cash_begin, 2), 0, round(dds_cash_begin, 2), ""),
+            ("ДС на конец", round(dds_cash_end, 2), 0, round(dds_cash_end, 2), "Сверить с балансом"),
+        ]
+        for label, nsbu_val, adj_val, ifrs_val, note in dds_recon_rows:
+            is_total = label.startswith("Итого") or label.startswith("ДС на конец")
+            ws_recon.append([label, nsbu_val, adj_val, ifrs_val, note])
+            r = ws_recon.max_row
+            style_data_cell(ws_recon.cell(r, 1), is_bold=is_total)
+            style_data_cell(ws_recon.cell(r, 2), is_number=True, is_bold=is_total)
+            style_data_cell(ws_recon.cell(r, 3), is_number=True)
+            style_data_cell(ws_recon.cell(r, 4), is_number=True, is_bold=is_total)
+            style_data_cell(ws_recon.cell(r, 5))
+            if is_total:
+                for ci in range(5):
+                    ws_recon.cell(r, ci + 1).fill = LIGHT_BLUE
+
+        ws_recon.append([])
+        ws_recon.append([])
+
+        # ---- Table 4: Детализация корректировок с проводками ----
+        ws_recon.append(["Таблица 4: Детализация корректировок с проводками"])
         r = ws_recon.max_row
         ws_recon.cell(r, 1).font = Font(bold=True, size=12)
         ws_recon.append([])
@@ -2805,16 +2914,21 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 async def get_reconciliation(
     current_user: User = Depends(get_current_user),
 ):
-    """Reconciliation of NSBU to IFRS: profit bridge + balance bridge."""
+    """Reconciliation of NSBU to IFRS: profit bridge + balance bridge + DDS bridge."""
     agg = _get_balance_aggregates(user_id=current_user.id)
     if not agg:
-        return JSONResponse({"profit_rows": [], "balance_rows": []})
+        return JSONResponse({"profit_rows": [], "balance_rows": [], "dds_rows": []})
 
     cache = _user_cache(current_user.id)
+    accounts = cache.get("accounts", {})
+    income_expenses = cache.get("income_expenses", [])
+    pnl = cache.get("pnl", {})
+
+    # Use shared NSBU net profit from aggregates (same as ОПиУ НСБУ)
+    nsbu_net_profit = agg["net_profit"]
 
     net_fa = agg["net_fa"]
     receivables = agg["receivables"]
-    nsbu_net_profit = agg["net_profit"]
 
     # IFRS adjustments (same logic as _ifrs_adjusted_aggregates)
     ias16_reval = round(net_fa * 0.15, 2)         # IAS 16 revaluation surplus
@@ -2822,26 +2936,24 @@ async def get_reconciliation(
     deferred_tax = round(ias16_reval * 0.15, 2)   # Deferred tax on revaluation (15%)
 
     # IFRS 16 lease effect: ROU depreciation vs operating lease payments
-    # Approximate from account 7800 (lease liability)
-    accounts = cache.get("accounts", {})
     lease_7800 = 0.0
     acc_7800 = accounts.get("7800")
     if acc_7800:
         lease_7800 = float(acc_7800.get("current", 0))
 
-    # IFRS 16 effect on P&L: depreciation of ROU + interest - operating lease payment
-    # ROU depreciation ~= lease_liability / remaining_term (approx 3.5 yrs)
-    # Interest ~= lease_liability * discount_rate (approx 10%)
-    # Operating lease payment under NSBU ~= lease_liability / 3
     ifrs16_depr = round(lease_7800 / 3.5, 2) if lease_7800 else 0.0
     ifrs16_interest = round(lease_7800 * 0.10, 2) if lease_7800 else 0.0
     ifrs16_nsbu_expense = round(lease_7800 / 3.0, 2) if lease_7800 else 0.0
     ifrs16_pnl_effect = round(ifrs16_nsbu_expense - ifrs16_depr - ifrs16_interest, 2)
 
+    # Use shared IFRS net profit computed from NSBU net profit + adjustments
     ifrs_net_profit = round(nsbu_net_profit + ias16_reval - ecl + ifrs16_pnl_effect - deferred_tax, 2)
 
     # ROU asset for balance
     rou_asset = round(lease_7800 * 3.5, 2) if lease_7800 else 0.0
+
+    # --- Use shared IFRS balance aggregates for consistency ---
+    agg_ifrs = _ifrs_adjusted_aggregates(agg)
 
     # --- Profit reconciliation ---
     profit_rows = [
@@ -2890,18 +3002,18 @@ async def get_reconciliation(
         },
     ]
 
-    # --- Balance reconciliation ---
+    # --- Balance reconciliation (use shared _ifrs_adjusted_aggregates for consistency) ---
     nsbu_total_assets = agg["total_assets"]
     nsbu_total_equity = agg["total_equity"]
     nsbu_total_liabilities = agg["total_liabilities"]
 
-    asset_adj = round(ias16_reval - ecl + rou_asset, 2)
-    equity_adj = round(ias16_reval - ecl - deferred_tax, 2)
-    liabilities_adj = round(rou_asset + deferred_tax, 2)
+    ifrs_total_assets = agg_ifrs["total_assets"]
+    ifrs_total_equity = agg_ifrs["total_equity"]
+    ifrs_total_liabilities = agg_ifrs["total_liabilities"]
 
-    ifrs_total_assets = round(nsbu_total_assets + asset_adj, 2)
-    ifrs_total_equity = round(nsbu_total_equity + equity_adj, 2)
-    ifrs_total_liabilities = round(nsbu_total_liabilities + liabilities_adj, 2)
+    asset_adj = round(ifrs_total_assets - nsbu_total_assets, 2)
+    equity_adj = round(ifrs_total_equity - nsbu_total_equity, 2)
+    liabilities_adj = round(ifrs_total_liabilities - nsbu_total_liabilities, 2)
 
     balance_rows = [
         {
@@ -2927,9 +3039,101 @@ async def get_reconciliation(
         },
     ]
 
+    # --- DDS (Cash Flow) reconciliation ---
+    def _v(code: str, field: str = "current") -> float:
+        acc = accounts.get(code)
+        return acc[field] if acc else 0.0
+
+    cash_begin = _v("5010", "previous") + _v("5110", "previous") + _v("5210", "previous")
+    cash_end = _v("5010") + _v("5110") + _v("5210")
+
+    # Build NSBU DDS totals from cashflow data or estimate from balance
+    cashflow_data = cache.get("cashflow", [])
+    nsbu_operating = 0.0
+    nsbu_investing = 0.0
+    nsbu_financing = 0.0
+
+    if cashflow_data:
+        for item in cashflow_data:
+            group_upper = str(item.get("group", "")).upper()
+            net_val = float(item.get("net") or 0)
+            inflow_val = float(item.get("inflow") or 0)
+            outflow_val = float(item.get("outflow") or 0)
+            row_net = net_val if net_val else (inflow_val - outflow_val)
+            if "ОПЕРАЦИОННАЯ" in group_upper:
+                nsbu_operating += row_net
+            elif "ИНВЕСТИЦИОННАЯ" in group_upper:
+                nsbu_investing += row_net
+            elif "ФИНАНСОВАЯ" in group_upper:
+                nsbu_financing += row_net
+
+    # If no cashflow data parsed, estimate from balance changes
+    if nsbu_operating == 0 and nsbu_investing == 0 and nsbu_financing == 0:
+        net_cash_change = cash_end - cash_begin
+        # Simple estimate: all change is operating
+        nsbu_operating = net_cash_change
+
+    nsbu_total_dds = round(nsbu_operating + nsbu_investing + nsbu_financing, 2)
+
+    # IFRS 16 adjustment: reclassify lease payments from operating to financing
+    ifrs16_oper_adj = round(ifrs16_nsbu_expense, 2) if lease_7800 else 0.0  # add back to operating
+    ifrs16_fin_adj = round(-ifrs16_nsbu_expense, 2) if lease_7800 else 0.0   # move to financing (principal + interest split)
+
+    ifrs_operating = round(nsbu_operating + ifrs16_oper_adj, 2)
+    ifrs_investing = round(nsbu_investing, 2)
+    ifrs_financing = round(nsbu_financing + ifrs16_fin_adj, 2)
+    ifrs_total_dds = round(ifrs_operating + ifrs_investing + ifrs_financing, 2)
+
+    dds_rows = [
+        {
+            "label": "Операционный поток",
+            "nsbu": round(nsbu_operating, 2),
+            "adjustment": ifrs16_oper_adj,
+            "ifrs": ifrs_operating,
+            "note": "Арендные платежи переклассифицированы" if ifrs16_oper_adj else "",
+        },
+        {
+            "label": "Инвестиционный поток",
+            "nsbu": round(nsbu_investing, 2),
+            "adjustment": 0,
+            "ifrs": ifrs_investing,
+            "note": "Без изменений",
+        },
+        {
+            "label": "Финансовый поток",
+            "nsbu": round(nsbu_financing, 2),
+            "adjustment": ifrs16_fin_adj,
+            "ifrs": ifrs_financing,
+            "note": "Погашение обязат. по аренде" if ifrs16_fin_adj else "",
+        },
+        {
+            "label": "Итого изменение ДС",
+            "nsbu": nsbu_total_dds,
+            "adjustment": 0,
+            "ifrs": ifrs_total_dds,
+            "note": "Должно совпадать",
+            "isTotal": True,
+        },
+        {
+            "label": "ДС на начало",
+            "nsbu": round(cash_begin, 2),
+            "adjustment": 0,
+            "ifrs": round(cash_begin, 2),
+            "note": "",
+        },
+        {
+            "label": "ДС на конец",
+            "nsbu": round(cash_end, 2),
+            "adjustment": 0,
+            "ifrs": round(cash_end, 2),
+            "note": "Сверить с балансом",
+        },
+    ]
+
     return JSONResponse({
         "profit_rows": profit_rows,
         "balance_rows": balance_rows,
+        "dds_rows": dds_rows,
         "adjustments_summary": {
             "ias16_revaluation": ias16_reval,
             "ifrs9_ecl": ecl,
