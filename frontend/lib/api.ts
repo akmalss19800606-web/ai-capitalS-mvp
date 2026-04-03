@@ -185,18 +185,19 @@ export const accessControl = {
   assignRole: (data: unknown) => apiRequest('/access-control/assign', { method: 'POST', body: JSON.stringify(data) }),
 };
 
-// FE-18: Removed duplicate `get` — `getByInn` serves the same purpose
+// FE-19: Added .get() as alias for .getByInn() — used in due-diligence/page.tsx handleCompanyLookup
 export const companyLookup = {
   search: (query: string) => apiRequest(`/companies/search?q=${encodeURIComponent(query)}`),
   getByInn: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
+  get: (inn: string) => apiRequest(`/companies/${encodeURIComponent(inn)}`),
 };
 
 export const ddScoring = {
   score: (inn: string) => apiRequest(`/dd/scoring/${encodeURIComponent(inn)}`),
-    run: (data: unknown) => apiRequest('/dd/scoring', { method: 'POST', body: JSON.stringify(data) }),
-    updateChecklist: (id: number, data: unknown) => apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PUT', body: JSON.stringify(data) }),
-    history: () => apiRequest('/dd/scoring/history'),
-    getById: (id: number) => apiRequest(`/dd/scoring/${id}`),
+  run: (data: unknown) => apiRequest('/dd/scoring', { method: 'POST', body: JSON.stringify(data) }),
+  updateChecklist: (id: number, data: unknown) => apiRequest(`/dd/scoring/${id}/checklist`, { method: 'PUT', body: JSON.stringify(data) }),
+  history: () => apiRequest('/dd/scoring/history'),
+  getById: (id: number) => apiRequest(`/dd/scoring/${id}`),
   delete: (id: number) => apiRequest(`/dd/scoring/${id}`, { method: 'DELETE' }),
   export: (id: number, format: string = 'pdf') => apiRequest(`/dd/scoring/${id}/export?format=${format}`),
   compare: (ids: number[]) => apiRequest('/dd/scoring/compare', { method: 'POST', body: JSON.stringify({ ids }) }),
@@ -285,7 +286,7 @@ export const etl = {
 };
 
 export const charts = {
-waterfall: (portfolioId?: number) => apiRequest(`/charts/waterfall${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
+  waterfall: (portfolioId?: number) => apiRequest(`/charts/waterfall${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
   tornado: (portfolioId?: number) => apiRequest(`/charts/tornado${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
   bubble: (portfolioId?: number) => apiRequest(`/charts/bubble${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
   heatmap: (portfolioId?: number) => apiRequest(`/charts/heatmap${portfolioId ? `?portfolio_id=${portfolioId}` : ''}`),
