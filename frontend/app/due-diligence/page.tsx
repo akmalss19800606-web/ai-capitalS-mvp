@@ -251,15 +251,16 @@ export default function DueDiligencePage() {
       console.log('DD: sending payload', payload);
       const res = await ddScoring.run(payload);
       console.log('DD: got response', res, typeof res);
-      if (res && typeof res === 'object') {
+      if (res && typeof res === 'object' && 'total_score' in res) {
         setResult(res as DDResult);
         setActiveTab('Обзор');
       } else {
-        setError('Пустой ответ от сервера');
+        console.error('DD: unexpected response shape', res);
+        setError('Пустой или некорректный ответ от сервера');
       }
     } catch (e: unknown) {
       console.error('DD scoring error:', e);
-      setError((e as any).message || 'Ошибка при DD-скоринге');
+      setError((e as Error).message || 'Ошибка при DD-скоринге');
     }
     finally { setLoading(false); }
   };
