@@ -1730,7 +1730,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         raise HTTPException(status_code=500, detail=f"Ошибка сохранения Excel: {str(e)}")
 
     org_name = company_info.get("name", "portfolio") if company_info else "portfolio"
-    safe_name = "".join(c for c in org_name if c.isalnum() or c in " _-").strip()[:30] or "report"
+    safe_name = "".join(c for c in org_name if c.isascii() and (c.isalnum() or c in " _-")).strip()[:30] or "report"
     filename = f"report_{safe_name}_{req.portfolio_id}.xlsx"
 
     return StreamingResponse(
