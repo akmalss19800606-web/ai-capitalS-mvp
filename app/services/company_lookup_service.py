@@ -24,18 +24,50 @@ HEADERS = {
 }
 
 
+def _parse_raw_name(raw: str) -> tuple[str, str | None, str | None]:
+    """
+    Парсит сырой текст ссылки с orginfo.uz вида:
+      302172046Ликвидирована10.01.2012"BENETRA ALLIANCE" xususiy korxonasi...
+    Возвращает (clean_name, registration_date, status).
+    Формат: ИНН? + Статус? + Дата? + "Название"
+    """
+    s = raw or ''
+    extracted_date: str | None = None
+    extracted_status: str | None = None
+
+    # 1. Убираем ИНН в начале (9-12 цифр)
+    s = re.sub(r'^\d{9,12}', '', s)
+
+    # 2. Извлекаем и убираем статус
+    status_match = re.match(r'^(Ликвидирован[аоы]?|Действующее|Действует|Реорганизовано)', s, re.I)
+    if status_match:
+        extracted_status = status_match.group(1)
+        s = s[status_match.end():]
+
+    # 3. Извлекаем и убираем дату DD.MM.YYYY — это дата РЕГИСТРАЦИИ (основания)
+    date_match = re.match(r'^(\d{2}\.\d{2}\.\d{4})', s)
+    if date_match:
+        extracted_date = date_match.group(1)  # например "10.01.2012"
+        s = s[date_match.end():]
+
+    # 4. Убираем обрамляющие кавычки и пробелы
+    clean_name = s.strip().strip('"').strip("'").strip()
+
+    return clean_name, extracted_date, extracted_status
+
+
 def _clean_company_name(raw: str) -> str:
-    """Очищает название компании от артефактов парсера orginfo.uz."""
-    name = raw or ''
-    # Убираем ИНН (цифры) в начале строки
-    name = re.sub(r'^\d{9,12}', '', name)
-    # Убираем статус (если попал в начало)
-    name = re.sub(r'^(Ликвидирован[аоы]?|Действующее|Действует|Реорганизовано)', '', name)
-    # Убираем дату DD.MM.YYYY в начале
-    name = re.sub(r'^\d{2}\.\d{2}\.\d{4}', '', name)
-    # Убираем обрамляющие кавычки и пробелы
-    name = name.strip().strip('"').strip("'").strip()
+    """Быстрая очистка имени (без извлечения даты)."""
+    name, _, _ = _parse_raw_name(raw)
     return name
+
+
+def _date_to_year(date_str: str | None) -> int | None:
+    """Извлекает год из строки вида DD.MM.YYYY или YYYY-MM-DD."""
+    if not date_str:
+        return None
+    m = re.search(r'(\d{4})', date_str)
+    return int(m.group(1)) if m else None
 
 
 async def search_company_orginfo(query: str) -> list[dict]:
@@ -60,18 +92,32 @@ async def search_company_orginfo(query: str) -> list[dict]:
             if not raw_name:
                 continue
 
-            # Очищаем name: убираем ИНН, статус и дату с начала строки
-            name = _clean_company_name(raw_name)
-            if not name:
+            # Парсим сырое имя: извлекаем чистое название, дату регистрации и статус
+            clean_name, reg_date, status_from_name = _parse_raw_name(raw_name)
+            if not clean_name:
                 continue
 
             org_url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
             parent = link.find_parent(["div", "li", "tr", "article"])
             inn = _extract_inn_from_element(parent) if parent else ""
-            status = _extract_status_from_element(parent) if parent else ""
+            # Статус: сначала из имени, потом из контекста родителя
+            status = status_from_name or (_extract_status_from_element(parent) if parent else "")
 
-            results.append({"inn": inn, "name": name, "url": org_url, "status": status})
+            result_item = {
+                "inn": inn,
+                "name": clean_name,
+                "url": org_url,
+                "status": status,
+            }
+            # Сохраняем дату регистрации и год основания если извлекли из имени
+            if reg_date:
+                result_item["registration_date"] = reg_date
+                year = _date_to_year(reg_date)
+                if year:
+                    result_item["founded_year"] = year
+
+            results.append(result_item)
 
     except httpx.HTTPStatusError as e:
         logger.error("Ошибка HTTP при поиске на orginfo.uz: %s", e)
@@ -111,9 +157,7 @@ async def fetch_company_details(org_url: str) -> dict:
 
         # Извлекаем год из даты регистрации
         if details.get("registration_date") and not details.get("founded_year"):
-            m = re.search(r'(\d{4})', details["registration_date"])
-            if m:
-                details["founded_year"] = int(m.group(1))
+            details["founded_year"] = _date_to_year(details["registration_date"])
 
     except httpx.HTTPStatusError as e:
         logger.error("Ошибка HTTP при загрузке страницы организации: %s", e)
@@ -143,6 +187,12 @@ async def lookup_by_inn(db: Session, inn: str) -> dict | None:
     if not details.get("name"):
         return None
 
+    # Если fetch_company_details не нашёл дату — берём из search результата
+    if not details.get("registration_date") and search_results[0].get("registration_date"):
+        details["registration_date"] = search_results[0]["registration_date"]
+    if not details.get("founded_year") and search_results[0].get("founded_year"):
+        details["founded_year"] = search_results[0]["founded_year"]
+
     if not details.get("inn"):
         details["inn"] = inn
     details["source"] = "orginfo.uz"
@@ -168,6 +218,11 @@ async def force_lookup_by_inn(db: Session, inn: str) -> dict | None:
     details = await fetch_company_details(company_url)
     if not details.get("name"):
         return None
+
+    if not details.get("registration_date") and search_results[0].get("registration_date"):
+        details["registration_date"] = search_results[0]["registration_date"]
+    if not details.get("founded_year") and search_results[0].get("founded_year"):
+        details["founded_year"] = search_results[0]["founded_year"]
 
     if not details.get("inn"):
         details["inn"] = inn
@@ -374,7 +429,6 @@ async def advanced_dd_search(
 
 def _company_to_dict(company: CompanyProfile) -> dict:
     """Преобразует объект CompanyProfile в словарь для ответа API."""
-    # Извлекаем founded_year из raw_data (JSON)
     founded_year = None
     if company.raw_data:
         try:
@@ -383,9 +437,7 @@ def _company_to_dict(company: CompanyProfile) -> dict:
             if not founded_year:
                 reg_date = raw.get("registration_date", "")
                 if reg_date:
-                    m = re.search(r'(\d{4})', str(reg_date))
-                    if m:
-                        founded_year = int(m.group(1))
+                    founded_year = _date_to_year(str(reg_date))
         except Exception:
             pass
     return {
