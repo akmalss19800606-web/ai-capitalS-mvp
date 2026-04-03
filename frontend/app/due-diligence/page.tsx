@@ -86,6 +86,7 @@ interface DDResult {
   checklist: ChecklistItem[]; category_details: CategoryDetail[]; benchmarks: BenchmarkItem[];
   red_flags: RedFlagItem[]; recommendations: string[]; executive_summary: string;
   created_at: string; decision?: { id: number; title: string; status: string };
+  [key: string]: unknown;
 }
 type Tab = 'Обзор' | 'Категории' | 'Чеклист' | 'Бенчмарки' | 'Риски';
 
@@ -247,9 +248,19 @@ export default function DueDiligencePage() {
       if (licensesInfo) payload.licenses_info = licensesInfo;
       if (servicingBank) payload.servicing_bank = servicingBank;
       if (keyCounterparties) payload.key_counterparties = keyCounterparties;
+      console.log('DD: sending payload', payload);
       const res = await ddScoring.run(payload);
-      setResult(res); setActiveTab('Обзор');
-    } catch (e: unknown) { setError((e as any).message || 'Ошибка при DD-скоринге'); }
+      console.log('DD: got response', res, typeof res);
+      if (res && typeof res === 'object') {
+        setResult(res as DDResult);
+        setActiveTab('Обзор');
+      } else {
+        setError('Пустой ответ от сервера');
+      }
+    } catch (e: unknown) {
+      console.error('DD scoring error:', e);
+      setError((e as any).message || 'Ошибка при DD-скоринге');
+    }
     finally { setLoading(false); }
   };
 
@@ -451,7 +462,11 @@ export default function DueDiligencePage() {
                   <p style={{ fontSize: '14px', color: C.textMuted, lineHeight: 1.6, margin: 0 }}>{result.executive_summary}</p>
                 </div>
               )}
-              <FinancialHighlights result={result} />
+              <FinancialHighlights scoreCards={SCORE_CATEGORIES.map(cat => ({
+                label: cat.label,
+                score: (result as any)[cat.key] || 0,
+                color: cat.color,
+              }))} />
               <div style={{ ...card }}>
                 <SectionTitle>Оценка по категориям</SectionTitle>
                 <ResponsiveContainer width="100%" height={260}>
