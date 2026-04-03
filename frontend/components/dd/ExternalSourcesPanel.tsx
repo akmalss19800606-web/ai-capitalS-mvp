@@ -48,7 +48,7 @@ export default function ExternalSourcesPanel({ inn }: ExternalSourcesPanelProps)
             style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: 10,
+              gap: 8,
               padding: '12px',
               borderRadius: 8,
               border: `1px solid ${C.border}`,
@@ -65,10 +65,10 @@ export default function ExternalSourcesPanel({ inn }: ExternalSourcesPanelProps)
               (e.currentTarget as HTMLElement).style.borderColor = C.border;
             }}
           >
-            <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{source.icon}</span>
+            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{source.icon}</span>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{source.name}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{source.description}</div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{source.name}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{source.description}</div>
             </div>
           </a>
         ))}
