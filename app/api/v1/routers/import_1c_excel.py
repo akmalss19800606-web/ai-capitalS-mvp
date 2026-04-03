@@ -159,6 +159,30 @@ def import_1c_excel(
     cache["fixed_assets"] = parsed.fixed_assets
     cache["tax_rows"] = parsed.tax_rows
 
+    # ── Extract tax expense from 1C tax sheet (Налог_на_прибыль) ─────
+    # The tax sheet contains "РАСХОД ПО ТЕКУЩЕМУ НАЛОГУ" which is the actual
+    # income tax amount. Code 9720 may NOT exist in income_expenses sheet.
+    tax_expense_from_sheet = 0.0
+    for tr in parsed.tax_rows:
+        if not isinstance(tr, dict):
+            continue
+        tr_name = str(tr.get("name", "")).upper()
+        if "РАСХОД" in tr_name and "НАЛОГ" in tr_name:
+            tax_expense_from_sheet = abs(float(tr.get("current_year") or 0))
+            break
+    if tax_expense_from_sheet == 0:
+        # Fallback: sum all positive current_year values from tax sheet
+        for tr in parsed.tax_rows:
+            if not isinstance(tr, dict):
+                continue
+            val = float(tr.get("current_year") or 0)
+            if val > 0:
+                tax_expense_from_sheet = val
+                break
+    if tax_expense_from_sheet > 0:
+        cache["tax_expense"] = tax_expense_from_sheet
+        logger.info("1C import: tax_expense from tax sheet = %.0f", tax_expense_from_sheet)
+
     # ── Build accounts dict + pnl dict from OSV entries ──────────────
     # This enables KPI calculations (profitability, DCF, stress-test, etc.)
     accounts = {}
@@ -224,7 +248,8 @@ def import_1c_excel(
             if code.startswith("90"):
                 ie_revenue_cur += cur_val
                 ie_revenue_prev += prev_val
-            elif code.startswith("20") or code.startswith("94"):
+            elif code.startswith("20") or code.startswith("29") or code.startswith("94"):
+                # 20xx = COGS, 29xx = production wages, 94xx = opex
                 ie_costs_cur += cur_val
                 ie_costs_prev += prev_val
         if ie_revenue_cur > 0:

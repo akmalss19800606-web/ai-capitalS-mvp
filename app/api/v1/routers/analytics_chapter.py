@@ -81,22 +81,23 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     cost_of_goods = 0.0
     operating_expenses = 0.0
     other_expenses = 0.0
+    other_income = 0.0
     tax = 0.0
     gross_profit = 0.0
     operating_profit = 0.0
     profit_before_tax = 0.0
 
     # Fallback 1: income_expenses list from parsed P&L (most reliable source)
-    # Always try when revenue==0 because import may write 0 even when IE data exists
     ie_list = cache.get("income_expenses", [])
     if ie_list:
         ie_result = _revenue_costs_from_income_expenses(ie_list)
         if ie_result["revenue_cur"] > 0:
-            revenue = ie_result["revenue_cur"]
-        cost_of_goods = ie_result["costs_cur"]
-        operating_expenses = ie_result["opex_cur"]
-        other_expenses = ie_result["other_expenses_cur"]
-        tax = ie_result["tax_cur"]
+            revenue = ie_result["revenue_cur"]  # 90xx only (main revenue)
+        cost_of_goods = ie_result["costs_cur"]  # 20xx + 29xx
+        operating_expenses = ie_result["opex_cur"]  # 94xx
+        other_expenses = ie_result["other_expenses_cur"]  # 95xx + 96xx
+        other_income = ie_result["other_income_cur"]  # 91xx + 93xx
+        tax = ie_result["tax_cur"]  # 9720
         if expenses == 0 and (cost_of_goods + operating_expenses) > 0:
             expenses = cost_of_goods + operating_expenses + other_expenses
 
@@ -113,18 +114,32 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
             elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
                 expenses += abs(cur_d) if cur_d else abs(cur)
 
-    # Compute detailed P&L breakdown
+    # Compute detailed P&L breakdown (standard NSBU ОПиУ structure)
     gross_profit = revenue - cost_of_goods
     operating_profit = gross_profit - operating_expenses
-    profit_before_tax = operating_profit - other_expenses
-    # Tax: use 9720 from income_expenses first (parsed by _revenue_costs_from_income_expenses),
-    # fallback to 15% only if no 9720 data
+    # Profit before tax includes other income/expenses (prochie)
+    profit_before_tax = operating_profit + other_income - other_expenses
+
+    # Tax cascade: 1) from 1C tax sheet, 2) from 9720 in income_expenses, 3) fallback 15%
+    if tax == 0:
+        tax = cache.get("tax_expense", 0)
+    if tax == 0:
+        # Try 9720 from income_expenses (already parsed above, would be in ie_result)
+        for item in ie_list:
+            if not isinstance(item, dict):
+                continue
+            code = str(item.get("name", ""))[:4]
+            if code == "9720":
+                tax = float(item.get("current_year") or item.get("current_period") or item.get("current") or 0)
+                break
     if tax == 0 and profit_before_tax > 0:
         tax = round(profit_before_tax * 0.15, 2)
     net_profit = profit_before_tax - tax
 
     # IFRS adjustments — compute once, store in agg for reuse everywhere
-    ecl = round(receivables * 0.05, 2)
+    # ECL applies to TRADE receivables only (account 2010), not advances (2300)
+    trade_receivables = _v("2010")
+    ecl = round(trade_receivables * 0.05, 2)
     revaluation = round(net_fa * 0.15, 2)
     net_profit_ifrs = net_profit - ecl
 
@@ -157,6 +172,7 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
         "gross_profit": gross_profit,
         "operating_expenses": operating_expenses,
         "operating_profit": operating_profit,
+        "other_income": other_income,
         "other_expenses": other_expenses,
         "profit_before_tax": profit_before_tax,
         "tax": tax,
@@ -166,6 +182,7 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
         "net_profit_ifrs": net_profit_ifrs,
         "net_fa": net_fa,
         "capex": capex,
+        "trade_receivables": trade_receivables,
         # Previous period
         "total_assets_prev": total_assets_p,
         "non_current_assets_prev": non_current_assets_p,
@@ -185,7 +202,8 @@ def _ifrs_adjusted_aggregates(agg: dict) -> dict:
     """
     ifrs = dict(agg)
     # Reuse pre-computed IFRS values from agg (single source of truth)
-    ecl = agg.get("ecl", round(agg["receivables"] * 0.05, 2))
+    # ECL applies to trade receivables only (2010), not advances (2300)
+    ecl = agg.get("ecl", round(agg.get("trade_receivables", agg["receivables"]) * 0.05, 2))
     ias16_reval = agg.get("revaluation", round(agg["net_fa"] * 0.15, 2))
     deferred_tax = round(ias16_reval * 0.15, 2)
     # ROU asset estimate (950,000 default if lease data not explicit)
@@ -217,15 +235,17 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
       9720 = income tax
     """
     import re as _re
-    revenue_cur = 0.0
+    revenue_cur = 0.0        # 90xx only (main revenue)
     revenue_prev = 0.0
-    costs_cur = 0.0
+    other_income_cur = 0.0   # 91xx, 93xx (prochie dohody)
+    other_income_prev = 0.0
+    costs_cur = 0.0          # 20xx + 29xx (cost of goods / production)
     costs_prev = 0.0
-    opex_cur = 0.0
+    opex_cur = 0.0           # 94xx (operating expenses)
     opex_prev = 0.0
-    other_expenses_cur = 0.0
+    other_expenses_cur = 0.0  # 95xx, 96xx
     other_expenses_prev = 0.0
-    tax_cur = 0.0
+    tax_cur = 0.0            # 9720
     tax_prev = 0.0
     for item in (income_expenses or []):
         if not isinstance(item, dict):
@@ -238,10 +258,14 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
         if code == "9720":
             tax_cur += cur
             tax_prev += prev
-        elif code.startswith("90") or code.startswith("91") or code.startswith("93"):
+        elif code.startswith("90"):
             revenue_cur += cur
             revenue_prev += prev
-        elif code.startswith("20"):
+        elif code.startswith("91") or code.startswith("93"):
+            other_income_cur += cur
+            other_income_prev += prev
+        elif code.startswith("20") or code.startswith("29"):
+            # 20xx = COGS, 29xx = production wages (ФОТ производственного персонала)
             costs_cur += cur
             costs_prev += prev
         elif code.startswith("94"):
@@ -252,6 +276,7 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
             other_expenses_prev += prev
     return {
         "revenue_cur": revenue_cur, "revenue_prev": revenue_prev,
+        "other_income_cur": other_income_cur, "other_income_prev": other_income_prev,
         "costs_cur": costs_cur, "costs_prev": costs_prev,
         "opex_cur": opex_cur, "opex_prev": opex_prev,
         "other_expenses_cur": other_expenses_cur, "other_expenses_prev": other_expenses_prev,
@@ -286,17 +311,22 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
     tax_ie = 0.0
     tax_ie_prev = 0.0
 
+    other_income = 0.0
+    other_income_prev = 0.0
+
     if income_expenses:
         ie = _revenue_costs_from_income_expenses(income_expenses)
         if ie["revenue_cur"] > 0:
-            revenue = ie["revenue_cur"]
+            revenue = ie["revenue_cur"]  # 90xx only
             revenue_prev = ie["revenue_prev"] if ie["revenue_prev"] > 0 else revenue_prev
-        cost_of_goods = ie["costs_cur"]
+        cost_of_goods = ie["costs_cur"]  # 20xx + 29xx
         cost_of_goods_prev = ie["costs_prev"]
         opex = ie["opex_cur"]
         opex_prev = ie["opex_prev"]
         other_exp = ie["other_expenses_cur"]
         other_exp_prev = ie["other_expenses_prev"]
+        other_income = ie["other_income_cur"]  # 91xx + 93xx
+        other_income_prev = ie["other_income_prev"]
         tax_ie = ie["tax_cur"]
         tax_ie_prev = ie["tax_prev"]
     elif revenue == 0 and expenses == 0:
@@ -321,9 +351,9 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
         rou_depreciation = 0
         lease_interest = 0
 
-    # IFRS 9 ECL (5% of trade receivables — 2010 + 2300 only)
-    receivables = _v("2010") + _v("2300")
-    ecl_impairment = round(receivables * 0.05, 2)
+    # IFRS 9 ECL (5% of TRADE receivables — 2010 only, not advances 2300)
+    trade_receivables = _v("2010")
+    ecl_impairment = round(trade_receivables * 0.05, 2)
 
     # IAS 16 revaluation (15% premium on PPE)
     net_fa = _v("0100") - _v("0200")
@@ -333,9 +363,9 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
     operating_profit = gross_profit - opex
     operating_profit_prev = gross_profit_prev - opex_prev
 
-    # NSBU profit before tax = Operating profit - Other expenses (no IFRS adjustments)
-    nsbu_pbt = operating_profit - other_exp
-    nsbu_pbt_prev = operating_profit_prev - other_exp_prev
+    # NSBU profit before tax = Operating profit + Other income - Other expenses
+    nsbu_pbt = operating_profit + other_income - other_exp
+    nsbu_pbt_prev = operating_profit_prev + other_income_prev - other_exp_prev
 
     # Tax: use 9720 from income_expenses, fallback to 15%
     income_tax = tax_ie if tax_ie > 0 else (round(nsbu_pbt * 0.15, 2) if nsbu_pbt > 0 else 0)
@@ -358,6 +388,7 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
         {"label": "Себестоимость", "current": -cost_of_goods if cost_of_goods else None, "previous": -cost_of_goods_prev if cost_of_goods_prev else None, "note": "IAS 2"},
         {"label": "Валовая прибыль", "current": gross_profit, "previous": gross_profit_prev, "isTotal": True},
         {"label": "Операционные расходы", "current": -opex if opex else None, "previous": -opex_prev if opex_prev else None, "note": "IAS 1"},
+        {"label": "Прочие доходы", "current": other_income if other_income else None, "previous": other_income_prev if other_income_prev else None, "note": "IAS 1"},
         {"label": "Прочие расходы", "current": -other_exp if other_exp else None, "previous": -other_exp_prev if other_exp_prev else None, "note": "IAS 1"},
         {"label": "Амортизация ПП-актива (IFRS 16)", "current": -rou_depreciation if rou_depreciation else None, "previous": None, "note": "IFRS 16"},
         {"label": "Процентные расходы по аренде (IFRS 16)", "current": -lease_interest if lease_interest else None, "previous": None, "note": "IFRS 16"},
@@ -486,7 +517,7 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
     # Use agg as single source of truth for net_profit_ifrs, ecl, revaluation
     if agg and "net_profit_ifrs" in agg:
         net_profit_ifrs = agg["net_profit_ifrs"]
-        ecl_adjustment = agg.get("ecl", round((_v("2010") + _v("2300")) * 0.05, 2))
+        ecl_adjustment = agg.get("ecl", round(_v("2010") * 0.05, 2))
         oci_revaluation = agg.get("revaluation", round((_v("0100") - _v("0200")) * 0.15, 2))
     else:
         pnl = pnl or {}
@@ -496,14 +527,17 @@ def _build_ifrs_equity_rows(accounts: dict, pnl: Optional[dict] = None,
             ie = _revenue_costs_from_income_expenses(income_expenses)
             revenue = ie["revenue_cur"]
             expenses = ie["costs_cur"] + ie["opex_cur"] + ie["other_expenses_cur"]
-            tax = ie["tax_cur"] if ie["tax_cur"] > 0 else round(max(revenue - expenses, 0) * 0.15, 2)
-            net_profit = (revenue - expenses) - tax
+            other_inc = ie.get("other_income_cur", 0)
+            pbt = revenue + other_inc - expenses
+            tax = ie["tax_cur"] if ie["tax_cur"] > 0 else round(max(pbt, 0) * 0.15, 2)
+            net_profit = pbt - tax
         else:
             net_profit = revenue - expenses
 
         net_fa = _v("0100") - _v("0200")
         oci_revaluation = round(net_fa * 0.15, 2)
-        ecl_adjustment = round((_v("2010") + _v("2300")) * 0.05, 2)
+        # ECL on trade receivables only (2010), not advances (2300)
+        ecl_adjustment = round(_v("2010") * 0.05, 2)
         net_profit_ifrs = net_profit - ecl_adjustment
 
     total_prev = charter_prev + reserve_prev + retained_prev
@@ -642,7 +676,7 @@ async def debug_cache(current_user: User = Depends(get_current_user)):
             val = item.get("current_year", 0) or 0
             if code.startswith("90"):
                 revenue_from_ie += val
-            elif code.startswith("20") or code.startswith("94"):
+            elif code.startswith("20") or code.startswith("29") or code.startswith("94"):
                 costs_from_ie += val
 
     # Compute from accounts (OSV)
@@ -1148,8 +1182,9 @@ def _build_ai_analysis(agg: dict) -> tuple:
         conclusions.append(("Чистая маржа", "bad",
             f"Чистая маржа {margin*100:.1f}% — КРИТИЧНО. Бизнес убыточен или на грани."))
 
-    # Gross margin
-    gross_margin = _safe_div(rev - exp, rev) if rev else 0
+    # Gross margin — use agg["gross_profit"] (same source as KPI коэффициенты)
+    gp = agg.get("gross_profit", rev - agg.get("cost_of_goods", exp))
+    gross_margin = _safe_div(gp, rev) if rev else 0
     if gross_margin > 0.20:
         conclusions.append(("Валовая маржа", "ok",
             f"Валовая маржа {gross_margin*100:.1f}% — хорошая наценка на продукцию."))
@@ -1513,7 +1548,8 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     section_map["I. ВЫРУЧКА"].append((name, cur, prev))
                 elif code.startswith("91") or code.startswith("93"):
                     section_map["IV. ПРОЧИЕ ДОХОДЫ"].append((name, cur, prev))
-                elif code.startswith("20"):
+                elif code.startswith("20") or code.startswith("29"):
+                    # 20xx = COGS, 29xx = production wages (ФОТ производственного персонала)
                     section_map["II. СЕБЕСТОИМОСТЬ"].append((name, cur, prev))
                 elif code.startswith("94"):
                     section_map["III. ОПЕРАЦИОННЫЕ РАСХОДЫ"].append((name, cur, prev))
@@ -1601,6 +1637,7 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                 else:
                     gross_cur = total_revenue_cur - total_costs_cur
                     op_profit_cur = gross_cur - total_opex_cur
+                    # Profit before tax includes prochie dohody - prochie rashody
                     pbt_cur = op_profit_cur + total_other_income_cur - total_other_expenses_cur
                     if total_tax_cur == 0 and pbt_cur > 0:
                         total_tax_cur = round(pbt_cur * 0.15, 2)
@@ -1613,6 +1650,10 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
                     total_tax_prev = round(pbt_prev * 0.15, 2)
                 net_prev = pbt_prev - total_tax_prev
 
+                # Standard NSBU ОПиУ structure:
+                # Выручка - Себестоимость = ВАЛОВАЯ ПРИБЫЛЬ
+                # - Операц. расходы = ОПЕРАЦИОННАЯ ПРИБЫЛЬ
+                # + Прочие доходы - Прочие расходы = ПРИБЫЛЬ ДО НАЛОГООБЛОЖЕНИЯ
                 _pnl_summary_row("ВАЛОВАЯ ПРИБЫЛЬ", gross_cur, gross_prev, is_highlight=True)
                 _pnl_summary_row("ОПЕРАЦИОННАЯ ПРИБЫЛЬ", op_profit_cur, op_profit_prev)
                 _pnl_summary_row("ПРИБЫЛЬ ДО НАЛОГООБЛОЖЕНИЯ", pbt_cur, pbt_prev)
@@ -2158,14 +2199,14 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
             return acc["current"] if acc else 0.0
 
         net_fa = _adj_v("0100") - _adj_v("0200")
-        receivables_adj = _adj_v("2010") + _adj_v("2300")
+        trade_receivables_adj = _adj_v("2010")  # trade receivables only, not advances
         lease_val = _adj_v("7800")
         lease_payment = _adj_v("6970")
 
         # IAS 16: PPE revaluation — 15% premium on net fixed assets
         ias16_reval = round(net_fa * 0.15, 2)
-        # IFRS 9: ECL impairment — 5% of receivables
-        ecl_impairment = round(receivables_adj * 0.05, 2)
+        # IFRS 9: ECL impairment — 5% of TRADE receivables only (2010)
+        ecl_impairment = round(trade_receivables_adj * 0.05, 2)
         # IFRS 16: Lease ROU asset computation
         ifrs16_rou = 0.0
         if lease_payment > 0:
@@ -2182,8 +2223,8 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
         computed_adjustments = [
             ("IAS 16 Переоценка ОС", "0100", net_fa, net_fa + ias16_reval, ias16_reval,
              f"Переоценка основных средств +15% = +{ias16_reval:,.0f}. Увеличивает прочий совокупный доход (OCI)."),
-            ("IFRS 9 ECL-резерв", "2010", receivables_adj, receivables_adj - ecl_impairment, -ecl_impairment,
-             f"Резерв ожидаемых кредитных убытков 5% = -{ecl_impairment:,.0f}. Уменьшает дебиторскую задолженность."),
+            ("IFRS 9 ECL-резерв", "2010", trade_receivables_adj, trade_receivables_adj - ecl_impairment, -ecl_impairment,
+             f"Резерв ожидаемых кредитных убытков 5% от торговой дебиторки (2010) = -{ecl_impairment:,.0f}. Уменьшает дебиторскую задолженность."),
         ]
         if ifrs16_rou > 0:
             computed_adjustments.append(
