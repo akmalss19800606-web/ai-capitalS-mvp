@@ -77,31 +77,26 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     revenue = pnl.get("total_revenue_end", 0.0)
     expenses = pnl.get("total_expenses_end", 0.0)
 
-    # Fallback: if pnl totals are zero, try to extract from balance accounts
-    # (some ОСВ files don't have clear section VI/VII headers)
-    if revenue == 0 and expenses == 0:
-        for code, acc in accounts.items():
-            code_str = str(code)
-            cur = acc.get("credit_end", 0) or acc.get("current", 0)
-            cur_d = acc.get("debit_end", 0) or acc.get("current", 0)
-            # Revenue accounts: 90xx (sales revenue)
-            if code_str.startswith("90"):
-                revenue += abs(cur) if cur else abs(cur_d)
-            # Cost of goods / expenses: 20xx-29xx, 44xx, 91xx-99xx
-            elif code_str.startswith(("20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "44")):
-                expenses += abs(cur_d) if cur_d else abs(cur)
-            # Other operating expenses: 91xx-99xx
-            elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
-                expenses += abs(cur_d) if cur_d else abs(cur)
-
-    # Fallback: if still zero, use income_expenses list from 1C parsed data
-    # Extract by NSBU account codes: 90xx=revenue, 20xx=COGS, 94xx=OpEx
-    if revenue == 0 and expenses == 0:
+    # Fallback 1: income_expenses list from parsed P&L (most reliable source)
+    if not revenue and not expenses:
         ie_list = cache.get("income_expenses", [])
         if ie_list:
             ie_result = _revenue_costs_from_income_expenses(ie_list)
             revenue = ie_result["revenue_cur"]
             expenses = ie_result["costs_cur"] + ie_result["opex_cur"]
+
+    # Fallback 2: extract from ОСВ balance accounts (less reliable for P&L)
+    if not revenue and not expenses:
+        for code, acc in accounts.items():
+            code_str = str(code)
+            cur = acc.get("credit_end", 0) or acc.get("current", 0)
+            cur_d = acc.get("debit_end", 0) or acc.get("current", 0)
+            if code_str.startswith("90"):
+                revenue += abs(cur) if cur else abs(cur_d)
+            elif code_str.startswith(("20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "44")):
+                expenses += abs(cur_d) if cur_d else abs(cur)
+            elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
+                expenses += abs(cur_d) if cur_d else abs(cur)
 
     net_profit = revenue - expenses
 
@@ -159,6 +154,8 @@ def _revenue_costs_from_income_expenses(income_expenses: list) -> dict:
     opex_cur = 0.0
     opex_prev = 0.0
     for item in (income_expenses or []):
+        if not isinstance(item, dict):
+            continue
         name = str(item.get("name", ""))
         m = _re.match(r"(\d{4})", name)
         code = m.group(1) if m else ""
@@ -478,6 +475,55 @@ def _calc_kpis(agg: dict) -> list:
             ],
         },
     ]
+
+
+# ---------------------------------------------------------------------------
+# GET /analytics/debug-cache  (temporary diagnostic endpoint)
+# ---------------------------------------------------------------------------
+
+@router.get("/analytics/debug-cache")
+async def debug_cache(current_user: User = Depends(get_current_user)):
+    cache = _user_cache(current_user.id)
+    pnl = cache.get("pnl", {})
+    ie = cache.get("income_expenses", [])
+    accounts = cache.get("accounts", {})
+
+    # Try to compute revenue the same way _get_balance_aggregates does
+    revenue_from_pnl = pnl.get("total_revenue_end", 0.0)
+    revenue_from_pnl2 = pnl.get("revenue", pnl.get("total_revenue", 0.0))
+
+    # Compute from income_expenses
+    revenue_from_ie = 0
+    costs_from_ie = 0
+    for item in (ie if isinstance(ie, list) else []):
+        if isinstance(item, dict):
+            code = str(item.get("name", ""))[:4]
+            val = item.get("current_year", 0) or 0
+            if code.startswith("90"):
+                revenue_from_ie += val
+            elif code.startswith("20") or code.startswith("94"):
+                costs_from_ie += val
+
+    # Compute from accounts (OSV)
+    revenue_from_accounts = 0
+    for code, acc in accounts.items():
+        if code.startswith("90"):
+            revenue_from_accounts += acc.get("credit_end", 0) or acc.get("current", 0) or 0
+
+    return {
+        "cache_keys": list(cache.keys()),
+        "pnl_keys": list(pnl.keys()) if isinstance(pnl, dict) else str(type(pnl)),
+        "pnl_raw": pnl,
+        "income_expenses_count": len(ie) if isinstance(ie, list) else 0,
+        "income_expenses_sample": ie[:3] if isinstance(ie, list) else [],
+        "accounts_count": len(accounts),
+        "accounts_90xx": {k: v for k, v in accounts.items() if k.startswith("90")},
+        "revenue_from_pnl": revenue_from_pnl,
+        "revenue_from_pnl2": revenue_from_pnl2,
+        "revenue_from_ie": revenue_from_ie,
+        "costs_from_ie": costs_from_ie,
+        "revenue_from_accounts": revenue_from_accounts,
+    }
 
 
 # ---------------------------------------------------------------------------
