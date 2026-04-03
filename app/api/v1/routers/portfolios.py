@@ -828,8 +828,9 @@ async def get_ifrs_income(
     if not accounts:
         return JSONResponse({"rows": []})
     pnl = cache.get("pnl")
+    income_expenses = cache.get("income_expenses", [])
     company_info = cache.get("company_info")
-    result = {"rows": _build_ifrs_income_rows(accounts, pnl)}
+    result = {"rows": _build_ifrs_income_rows(accounts, pnl, income_expenses=income_expenses)}
     if company_info:
         result["company_info"] = company_info
     return JSONResponse(result)
@@ -850,8 +851,12 @@ async def get_ifrs_cashflow(
     if not accounts:
         return JSONResponse({"rows": []})
     pnl = cache.get("pnl")
+    income_expenses = cache.get("income_expenses", [])
+    cashflow_items = cache.get("cashflow", [])
     company_info = cache.get("company_info")
-    result = {"rows": _build_ifrs_cashflow_rows(accounts, pnl)}
+    result = {"rows": _build_ifrs_cashflow_rows(accounts, pnl,
+                                                 income_expenses=income_expenses,
+                                                 cashflow_data=cashflow_items)}
     if company_info:
         result["company_info"] = company_info
     return JSONResponse(result)
@@ -920,6 +925,8 @@ async def export_portfolio_excel(
     current_user: User = Depends(get_current_user),
 ):
     """Export full NSBU + IFRS report as Excel with real data from cache."""
+    import logging as _logging
+    _export_logger = _logging.getLogger(__name__)
     try:
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill
@@ -1001,18 +1008,21 @@ async def export_portfolio_excel(
             ws3.append([row["label"], row["nsbu"], row["ifrs"], diff_val, row.get("reason", "")])
 
         # --- Sheet 4: KPI ---
-        from app.api.v1.routers.analytics_chapter import _get_balance_aggregates, _calc_kpis
-        agg = _get_balance_aggregates()
-        ws4 = wb.create_sheet("KPI")
-        header_row = ["Группа", "Показатель", "Значение", "Норма", "Статус"]
-        ws4.append(header_row)
-        for cell in ws4[ws4.max_row]:
-            cell.font = bold
-            cell.fill = header_fill
-        if agg:
-            for group in _calc_kpis(agg):
-                for m in group["metrics"]:
-                    ws4.append([group["title"], m["label"], m["value"], m["norm"], m["status"]])
+        try:
+            from app.api.v1.routers.analytics_chapter import _get_balance_aggregates, _calc_kpis
+            agg = _get_balance_aggregates(user_id=current_user.id)
+            ws4 = wb.create_sheet("KPI")
+            header_row = ["Группа", "Показатель", "Значение", "Норма", "Статус"]
+            ws4.append(header_row)
+            for cell in ws4[ws4.max_row]:
+                cell.font = bold
+                cell.fill = header_fill
+            if agg:
+                for group in _calc_kpis(agg):
+                    for m in group["metrics"]:
+                        ws4.append([group["title"], m["label"], m["value"], m["norm"], m["status"]])
+        except Exception as kpi_err:
+            _export_logger.error("Excel export: KPI sheet failed: %s", kpi_err, exc_info=True)
 
         buf = io.BytesIO()
         wb.save(buf)
@@ -1023,4 +1033,5 @@ async def export_portfolio_excel(
             headers={"Content-Disposition": "attachment; filename=report_nsbu_ifrs.xlsx"},
         )
     except Exception as e:
-        raise HTTPException(500, str(e))
+        _export_logger.error("Excel export failed: %s", e, exc_info=True)
+        raise HTTPException(500, f"Ошибка генерации Excel: {str(e)}")

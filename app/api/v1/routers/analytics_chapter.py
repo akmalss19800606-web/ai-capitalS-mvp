@@ -38,10 +38,12 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
         pnl = cache.get("pnl", {})
     else:
         # Backward-compat: scan all user caches for any with accounts
+        cache = {}
         accounts = None
         pnl = {}
         for uid, ucache in _portfolio_cache.items():
             if ucache.get("accounts"):
+                cache = ucache
                 accounts = ucache["accounts"]
                 pnl = ucache.get("pnl", {})
                 break
@@ -92,6 +94,18 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
             elif code_str.startswith(("91", "92", "93", "94", "95", "96", "97", "98", "99")):
                 expenses += abs(cur_d) if cur_d else abs(cur)
 
+    # Fallback: if still zero, use income_expenses list from 1C parsed data
+    if revenue == 0 and expenses == 0:
+        ie_list = cache.get("income_expenses", [])
+        for ie in ie_list:
+            name = ie.get("name", "")
+            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
+            section = ie.get("section", "").lower()
+            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
+                revenue += cur_val
+            else:
+                expenses += cur_val
+
     net_profit = revenue - expenses
 
     # Previous period
@@ -132,8 +146,13 @@ def _get_balance_aggregates(user_id: Optional[int] = None) -> Optional[dict]:
     }
 
 
-def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
-    """Build IFRS Comprehensive Income (IAS 1) rows from cache data."""
+def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None,
+                             income_expenses: Optional[list] = None) -> list:
+    """Build IFRS Comprehensive Income (IAS 1) rows from cache data.
+
+    Starts with NSBU P&L data (from income_expenses or pnl dict), then applies
+    IFRS adjustments (IFRS 16, IFRS 9, IAS 16).
+    """
     def _v(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
         return acc[field] if acc else 0.0
@@ -143,6 +162,20 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     expenses = pnl.get("total_expenses_end", 0)
     revenue_prev = pnl.get("total_revenue_start", pnl.get("total_revenue_begin", 0))
     expenses_prev = pnl.get("total_expenses_start", pnl.get("total_expenses_begin", 0))
+
+    # If pnl totals are zero, extract from income_expenses list (1C parsed data)
+    if revenue == 0 and expenses == 0 and income_expenses:
+        for ie in income_expenses:
+            name = ie.get("name", "")
+            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
+            prev_val = float(ie.get("previous_year") or ie.get("previous_period") or 0)
+            section = ie.get("section", "").lower()
+            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
+                revenue += cur_val
+                revenue_prev += prev_val
+            else:
+                expenses += cur_val
+                expenses_prev += prev_val
 
     gross_profit = revenue - expenses
     gross_profit_prev = revenue_prev - expenses_prev
@@ -196,8 +229,13 @@ def _build_ifrs_income_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
     return rows
 
 
-def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None) -> list:
-    """Build IFRS Cash Flow (IAS 7) rows from cache data."""
+def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None,
+                               income_expenses: Optional[list] = None,
+                               cashflow_data: Optional[list] = None) -> list:
+    """Build IFRS Cash Flow (IAS 7) rows from cache data.
+
+    Starts with NSBU cash flow data, then applies IFRS adjustments (IFRS 16).
+    """
     def _v(code: str, field: str = "current") -> float:
         acc = accounts.get(code)
         return acc[field] if acc else 0.0
@@ -205,6 +243,17 @@ def _build_ifrs_cashflow_rows(accounts: dict, pnl: Optional[dict] = None) -> lis
     pnl = pnl or {}
     revenue = pnl.get("total_revenue_end", 0)
     expenses = pnl.get("total_expenses_end", 0)
+
+    # If pnl totals are zero, extract from income_expenses list
+    if revenue == 0 and expenses == 0 and income_expenses:
+        for ie in income_expenses:
+            name = ie.get("name", "")
+            cur_val = float(ie.get("current_year") or ie.get("current_period") or 0)
+            section = ie.get("section", "").lower()
+            if "доход" in section or "выручк" in name.lower() or "реализац" in name.lower():
+                revenue += cur_val
+            else:
+                expenses += cur_val
 
     # Cash positions
     cash_end = _v("5010") + _v("5110") + _v("5210")
@@ -466,6 +515,7 @@ async def calculate_dcf(
     total_assets = agg["total_assets"] if agg else 0
     total_liabilities = agg["total_liabilities"] if agg else 0
     total_equity = agg["total_equity"] if agg else 0
+    cash = agg["cash"] if agg else 0
 
     wacc = data.wacc if data.wacc else 0.15
     growth_rate = data.growth_rate if data.growth_rate else 0.05
@@ -506,7 +556,9 @@ async def calculate_dcf(
     pv_terminal = terminal_value / ((1 + wacc) ** years)
 
     enterprise_value = pv_fcff + pv_terminal
-    equity_value = enterprise_value - total_liabilities
+    # Equity = EV - Net Debt, where Net Debt = Total Liabilities - Cash
+    net_debt = total_liabilities - cash
+    equity_value = enterprise_value - net_debt
 
     return JSONResponse({
         "wacc": round(wacc, 4),
@@ -515,6 +567,7 @@ async def calculate_dcf(
         "intrinsic_value_per_share": round(equity_value, 0),
         "pv_fcff": round(pv_fcff, 0),
         "terminal_value": round(pv_terminal, 0),
+        "net_debt": round(net_debt, 0),
         "fcff_year1": round(fcff_projections[0], 0) if len(fcff_projections) > 0 else 0,
         "fcff_year2": round(fcff_projections[1], 0) if len(fcff_projections) > 1 else 0,
         "fcff_year3": round(fcff_projections[2], 0) if len(fcff_projections) > 2 else 0,
@@ -1218,6 +1271,19 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
             if item.get("isHeader"):
                 for ci in range(3):
                     ws_oci.cell(r, ci + 1).fill = LIGHT_PURPLE
+    elif accounts:
+        # Use the IFRS income builder which pulls from pnl + income_expenses
+        _ie = cache.get("income_expenses", [])
+        for item in _build_ifrs_income_rows(accounts, pnl, income_expenses=_ie):
+            ws_oci.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
+            r = ws_oci.max_row
+            is_hdr = item.get("isHeader") or item.get("isTotal")
+            style_data_cell(ws_oci.cell(r, 1), is_bold=is_hdr)
+            style_data_cell(ws_oci.cell(r, 2), is_number=True, is_bold=is_hdr)
+            style_data_cell(ws_oci.cell(r, 3), is_number=True, is_bold=is_hdr)
+            if item.get("isHeader"):
+                for ci in range(3):
+                    ws_oci.cell(r, ci + 1).fill = LIGHT_PURPLE
     elif pnl and (pnl.get("total_revenue_end", 0) or pnl.get("total_expenses_end", 0)):
         rev_e = pnl.get("total_revenue_end", 0)
         exp_e = pnl.get("total_expenses_end", 0)
@@ -1267,7 +1333,9 @@ def _do_export_full_report(req: ExportRequest, db: Session, current_user: User):
 
     if not cf_ifrs_written and accounts:
         # Build IFRS CashFlow from cached balance data
-        _ifrs_cf_rows = _build_ifrs_cashflow_rows(accounts, pnl)
+        _ie = cache.get("income_expenses", [])
+        _cf = cache.get("cashflow", [])
+        _ifrs_cf_rows = _build_ifrs_cashflow_rows(accounts, pnl, income_expenses=_ie, cashflow_data=_cf)
         for item in _ifrs_cf_rows:
             ws_cf_ifrs.append([item.get("label", ""), item.get("current", item.get("amount")), item.get("previous")])
             r = ws_cf_ifrs.max_row
