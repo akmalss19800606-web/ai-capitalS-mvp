@@ -291,6 +291,7 @@ export default function DashboardPage() {
         <WidgetCard title="⚡ Быстрые инструменты" className="xl:col-span-2 bg-gray-50">
           <QuickTools />
         </WidgetCard>
+
       </div>
 
       {/* Row 4: Economic News — full width */}
