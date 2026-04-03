@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -59,10 +59,12 @@ export default function MarketAnalysisPage(){
   const [step,setStep]=useState(0);
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
+  const [stepText,setStepText]=useState("");
   const [result,setResult]=useState<any>(null);
   const [error,setError]=useState("");
   const [macro,setMacro]=useState<any>(null);
   const [provider,setProvider]=useState("groq");
+  const sseRef=useRef<EventSource|null>(null);
   const [f,setF]=useState({
     oked_section:"J",oked_division:"62",oked_class:"",activity_description:"",
     investment_amount:"50000",investment_currency:"USD" as "USD"|"UZS",
@@ -82,14 +84,43 @@ export default function MarketAnalysisPage(){
   useEffect(()=>{apiCall("/reference/macro-context").then(setMacro).catch(()=>setMacro({policy_rate_pct:14,inflation_cpi_pct:7.2,usd_uzs_rate:12850,gdp_growth_pct:6.5,tsmi_index:843.5}));},[]);
 
   async function submit(){
-    setLoading(true);setError("");setResult(null);setProgress(10);
-    const iv=setInterval(()=>setProgress(p=>Math.min(p+Math.random()*8,90)),800);
+    setLoading(true);setError("");setResult(null);setProgress(0);setStepText("Подключение...");
+    if(sseRef.current){sseRef.current.close();sseRef.current=null;}
+    const body={...f,investment_amount:parseFloat(f.investment_amount)||50000,expected_revenue_year1:f.expected_revenue_year1?parseFloat(f.expected_revenue_year1):null,provider};
+    const token=typeof window!=="undefined"?localStorage.getItem("token"):null;
     try{
-      const body={...f,investment_amount:parseFloat(f.investment_amount)||50000,expected_revenue_year1:f.expected_revenue_year1?parseFloat(f.expected_revenue_year1):null,provider};
-      const data=await apiCall("/uz-market/generate-report",body);
-      setProgress(100);setResult(data);
+      const resp=await fetch(`${API}/api/v1/uz-market/generate-report/stream`,{
+        method:"POST",headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},body:JSON.stringify(body),
+      });
+      if(!resp.ok)throw new Error(await resp.text());
+      const reader=resp.body?.getReader();
+      if(!reader)throw new Error("Streaming не поддерживается");
+      const decoder=new TextDecoder();
+      let buf="";
+      let reportId="";
+      while(true){
+        const{done,value}=await reader.read();
+        if(done)break;
+        buf+=decoder.decode(value,{stream:true});
+        const lines=buf.split("\n");
+        buf=lines.pop()||"";
+        for(const line of lines){
+          if(!line.startsWith("data: "))continue;
+          try{
+            const ev=JSON.parse(line.slice(6));
+            if(ev.progress!==undefined)setProgress(ev.progress);
+            if(ev.step)setStepText(ev.step);
+            if(ev.error){setError(ev.error);setLoading(false);return;}
+            if(ev.report_id)reportId=ev.report_id;
+          }catch{}
+        }
+      }
+      if(reportId){
+        const data=await apiCall(`/uz-market/reports/${reportId}`);
+        setResult(data);
+      }
     }catch(e:any){setError(e.message||"Ошибка генерации");}
-    finally{clearInterval(iv);setLoading(false);}
+    finally{setLoading(false);}
   }
   async function exportFmt(fmt:string){
     if(!result)return;
@@ -184,7 +215,7 @@ export default function MarketAnalysisPage(){
       {step===6&&<button onClick={submit} disabled={loading} style={{padding:"12px 32px",borderRadius:8,border:"none",background:loading?C.muted:"#10b981",color:"#fff",cursor:loading?"not-allowed":"pointer",fontSize:14,fontWeight:700}}>{loading?"Генерация AI-отчёта...":"🚀 Создать AI-отчёт"}</button>}
       <div style={{flex:1}}/><Sel value={provider} onChange={(e:any)=>setProvider(e.target.value)} style={{width:180}}><option value="groq">Groq (быстро)</option><option value="perplexity">Perplexity (глубже)</option></Sel>
     </div>
-    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>AI анализирует данные... {progress.toFixed(0)}%</p></div>}
+    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s ease",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>{stepText||"AI анализирует данные..."} {progress.toFixed(0)}%</p></div>}
     {error&&<div style={{marginTop:16,padding:12,background:C.errorBg,borderRadius:8,border:`1px solid ${C.error}`,color:C.error}}>{error}</div>}
     {result&&renderReport()}
   </div></div>;

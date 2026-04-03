@@ -1,16 +1,20 @@
 """
 UZ Market Analysis Router — MARKET-001 (fixed v2)
 Endpoints: sectors, quick-ask, deep-analysis, compare,
-           generate-report (25-field), macro-context, history
+           generate-report (25-field), generate-report/stream (SSE),
+           macro-context, history
 Auth made optional for generate-report and macro-context (MVP).
 """
 import logging
 import uuid
 import time
+import json as _json
+import asyncio
 from typing import Optional, List, Literal
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.api.v1.deps import get_current_user
@@ -274,6 +278,71 @@ async def generate_full_report(body: FullReportRequest, _u=Depends(get_optional_
         logger.error(f"Generate report error: {e}")
         # MKT-05: Don't expose internal error details to client
         raise HTTPException(500, "Internal server error")
+
+
+# ---------------------------------------------------------------------------
+# E5-04: SSE streaming endpoint for real-time progress bar
+# ---------------------------------------------------------------------------
+
+@router.post("/generate-report/stream", summary="AI-отчёт с прогрессом (SSE)")
+async def generate_report_stream(body: FullReportRequest, _u=Depends(get_optional_user)):
+    """
+    SSE-стрим: отправляет JSON-события прогресса во время генерации отчёта.
+    Формат события: data: {"step": "...", "progress": N}\n\n
+    Финальное событие: data: {"step": "Готово", "progress": 100, "report_id": "..."}\n\n
+    """
+    report_id = str(uuid.uuid4())
+    uid = str(getattr(_u, 'id', 'anon')) if _u else 'anon'
+
+    async def event_stream():
+        start_time = time.time()
+
+        # Step 1: Подготовка данных
+        yield f"data: {_json.dumps({'step': 'Подготовка данных...', 'progress': 10}, ensure_ascii=False)}\n\n"
+        await asyncio.sleep(0.3)
+
+        # Step 2: Анализ рынка
+        yield f"data: {_json.dumps({'step': 'Анализ рынка...', 'progress': 25}, ensure_ascii=False)}\n\n"
+        await asyncio.sleep(0.3)
+
+        # Step 3: Сбор данных
+        yield f"data: {_json.dumps({'step': 'Сбор данных...', 'progress': 50}, ensure_ascii=False)}\n\n"
+
+        # Actually generate the report
+        try:
+            result = await svc.full_market_analysis(
+                request=body.dict(),
+                report_id=report_id,
+                provider=body.provider,
+            )
+        except Exception as e:
+            logger.error(f"SSE generate report error: {e}")
+            yield f"data: {_json.dumps({'step': 'Ошибка генерации', 'progress': 0, 'error': 'Внутренняя ошибка сервера'}, ensure_ascii=False)}\n\n"
+            return
+
+        # Step 4: Генерация отчёта
+        yield f"data: {_json.dumps({'step': 'Генерация отчёта...', 'progress': 75}, ensure_ascii=False)}\n\n"
+        await asyncio.sleep(0.3)
+
+        elapsed = round(time.time() - start_time, 2)
+        result["generation_time_sec"] = elapsed
+        result["id"] = report_id
+
+        # Store report
+        _reports_store[f"{uid}:{report_id}"] = result
+
+        # Step 5: Готово
+        yield f"data: {_json.dumps({'step': 'Готово', 'progress': 100, 'report_id': report_id}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
