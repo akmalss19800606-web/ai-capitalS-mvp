@@ -110,17 +110,22 @@ def import_1c_excel(
 
     # ── Persist organization to DB (upsert by INN + user_id) ─────────
     try:
+        inn_val = (parsed.inn or "").strip()
         org = None
-        if parsed.inn:
+        if inn_val:
             org = db.query(Organization).filter(
-                Organization.inn == parsed.inn,
+                Organization.inn == inn_val,
+                Organization.user_id == current_user.id,
+            ).first()
+        if not org:
+            org = db.query(Organization).filter(
                 Organization.user_id == current_user.id,
             ).first()
         if not org:
             org = Organization(
                 user_id=current_user.id,
                 name=parsed.organization_name or "Без названия",
-                inn=parsed.inn,
+                inn=inn_val or None,
             )
             db.add(org)
         # Update fields from parsed data

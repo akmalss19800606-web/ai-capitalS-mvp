@@ -136,20 +136,26 @@ async def register_company(
 
     # Persist to DB
     try:
+        inn_val = (data.inn or "").strip()
         org = None
-        if data.inn:
+        if inn_val:
             org = db.query(Organization).filter(
-                Organization.inn == data.inn,
+                Organization.inn == inn_val,
+                Organization.user_id == current_user.id,
+            ).first()
+        if not org:
+            org = db.query(Organization).filter(
                 Organization.user_id == current_user.id,
             ).first()
         if not org:
             org = Organization(
                 user_id=current_user.id,
                 name=data.name or "Без названия",
-                inn=data.inn,
+                inn=inn_val or None,
             )
             db.add(org)
         org.name = data.name or org.name
+        org.inn = inn_val or org.inn
         org.director = data.director or org.director
         org.accountant = data.accountant or org.accountant
         org.address = data.address or org.address
@@ -196,6 +202,7 @@ async def get_company_info(
             "status": "ok",
             "company_info": db_info,
             "source": "db",
+            "needs_reimport": True,
             "message": "Загрузите файл 1С для обновления данных",
         })
 

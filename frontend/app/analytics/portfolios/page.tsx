@@ -1415,6 +1415,7 @@ export default function PortfoliosPage() {
   const [loading, setLoading] = useState(false);
   const [importStatus, setImportStatus] = useState('');
   const [companyInfo, setCompanyInfo] = useState<any>(null);
+  const [needsReimport, setNeedsReimport] = useState(false);
   const [regForm, setRegForm] = useState<RegForm>(emptyForm);
   const [regSaving, setRegSaving] = useState(false);
 
@@ -1445,7 +1446,8 @@ export default function PortfoliosPage() {
             accountant: d.company_info.accountant || prev.accountant,
           }));
           // If data loaded from DB (not cache), show reload hint
-          if (d.source === 'db') {
+          if (d.source === 'db' || d.needs_reimport) {
+            setNeedsReimport(true);
             setImportStatus(d.message || 'Загрузите файл 1С для обновления данных');
           }
         }
@@ -1554,6 +1556,7 @@ export default function PortfoliosPage() {
         // Mark NSBU as ready and set standard
         setActiveStandard('nsbu');
         setNsbuReady(true);
+        setNeedsReimport(false);
 
         if (data.warnings?.length) {
           setImportStatus(prev => prev + ` | Предупреждения: ${data.warnings.join(', ')}`);
@@ -1586,6 +1589,14 @@ export default function PortfoliosPage() {
           Зарегистрируйте организацию и загрузите данные — система автоматически построит отчёты НСБУ и МСФО.
         </p>
       </div>
+
+      {/* Reimport banner when data loaded from DB but cache is empty */}
+      {needsReimport && companyInfo?.name && (
+        <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm text-amber-800">
+          <strong>Данные организации восстановлены из базы.</strong>{' '}
+          Загрузите файл 1С для обновления финансовых отчётов.
+        </div>
+      )}
 
       {/* Company card or registration form */}
       {companyInfo?.name ? (
