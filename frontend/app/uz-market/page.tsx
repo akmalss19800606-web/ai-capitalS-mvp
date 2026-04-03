@@ -59,6 +59,7 @@ export default function MarketAnalysisPage(){
   const [step,setStep]=useState(0);
   const [loading,setLoading]=useState(false);
   const [progress,setProgress]=useState(0);
+  const [progressStep,setProgressStep]=useState("");
   const [result,setResult]=useState<any>(null);
   const [error,setError]=useState("");
   const [macro,setMacro]=useState<any>(null);
@@ -83,14 +84,44 @@ export default function MarketAnalysisPage(){
   useEffect(()=>{apiCall("/uz-market/macro-context").then(setMacro).catch(()=>setMacro({policy_rate_pct:14,inflation_cpi_pct:7.2,usd_uzs_rate:12850,gdp_growth_pct:6.5,tsmi_index:843.5}));},[]);
 
   async function submit(){
-    setLoading(true);setError("");setResult(null);setProgress(10);
-    const iv=setInterval(()=>setProgress(p=>Math.min(p+Math.random()*8,90)),800);
+    setLoading(true);setError("");setResult(null);setProgress(0);setProgressStep("Подключение...");
+    const body={...f,investment_amount:parseFloat(f.investment_amount)||50000,expected_revenue_year1:f.expected_revenue_year1?parseFloat(f.expected_revenue_year1):null,provider};
+    const token=typeof window!=="undefined"?localStorage.getItem("token"):null;
     try{
-      const body={...f,investment_amount:parseFloat(f.investment_amount)||50000,expected_revenue_year1:f.expected_revenue_year1?parseFloat(f.expected_revenue_year1):null,provider};
-      const data=await apiCall("/uz-market/generate-report",body);
-      setProgress(100);setResult(data);
+      const res=await fetch(`${API}/api/v1/uz-market/generate-report/stream`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})},
+        body:JSON.stringify(body),
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const reader=res.body!.getReader();
+      const decoder=new TextDecoder();
+      let buf="";
+      let reportId="";
+      while(true){
+        const {done,value}=await reader.read();
+        if(done) break;
+        buf+=decoder.decode(value,{stream:true});
+        const lines=buf.split("\n\n");
+        buf=lines.pop()||"";
+        for(const line of lines){
+          const m=line.match(/^data:\s*(.+)$/m);
+          if(!m) continue;
+          try{
+            const ev=JSON.parse(m[1]);
+            if(ev.error){setError(ev.error);setLoading(false);return;}
+            setProgress(ev.progress||0);
+            setProgressStep(ev.step||"");
+            if(ev.report_id) reportId=ev.report_id;
+          }catch{}
+        }
+      }
+      if(reportId){
+        const report=await apiCall(`/uz-market/reports/${reportId}`);
+        setResult(report);
+      }
     }catch(e:any){setError(e.message||"Ошибка генерации");}
-    finally{clearInterval(iv);setLoading(false);}
+    finally{setLoading(false);setProgressStep("");}
   }
   async function loadQaHistory(){setQaHistLoading(true);try{const token=typeof window!=="undefined"?localStorage.getItem("token"):null;const h={"Content-Type":"application/json",...(token?{Authorization:`Bearer ${token}`}:{})};const r=await fetch(`${API}/api/v1/uz-market/quick-ask/history?limit=50`,{headers:h});if(!r.ok)throw new Error("err");const d=await r.json();setQaHistory(d.items||[]);}catch{}finally{setQaHistLoading(false);}}
   async function quickAsk(){if(!qaQuestion.trim())return;setQaLoading(true);setQaError("");setQaAnswer(null);try{const data=await apiCall("/uz-market/quick-ask",{question:qaQuestion,provider});setQaAnswer(data);loadQaHistory();}catch(e:any){setQaError(e.message||"Ошибка Quick Ask");}finally{setQaLoading(false);}} async function exportFmt(fmt:string){
@@ -214,7 +245,7 @@ export default function MarketAnalysisPage(){
       {step===6&&<button onClick={submit} disabled={loading} style={{padding:"12px 32px",borderRadius:8,border:"none",background:loading?C.muted:"#10b981",color:"#fff",cursor:loading?"not-allowed":"pointer",fontSize:14,fontWeight:700}}>{loading?"Генерация AI-отчёта...":"🚀 Создать AI-отчёт"}</button>}
       <div style={{flex:1}}/><Sel value={provider} onChange={(e:any)=>setProvider(e.target.value)} style={{width:180}}><option value="groq">Groq (быстро)</option><option value="perplexity">Perplexity (глубже)</option></Sel>
     </div>
-    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>AI анализирует данные... {progress.toFixed(0)}%</p></div>}
+    {loading&&<div style={{marginTop:16}}><div style={{height:8,background:C.border,borderRadius:4,overflow:"hidden"}}><div style={{height:"100%",background:"linear-gradient(90deg,#3b82f6,#8b5cf6)",width:`${progress}%`,transition:"width 0.5s",borderRadius:4}}/></div><p style={{textAlign:"center",color:C.muted,fontSize:13,marginTop:8}}>{progressStep||"AI анализирует данные..."} {progress>0?`${progress}%`:""}</p></div>}
     {error&&<div style={{marginTop:16,padding:12,background:C.errorBg,borderRadius:8,border:`1px solid ${C.error}`,color:C.error}}>{error}</div>}
     {result&&renderReport()}
   </div></div>;

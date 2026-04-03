@@ -297,18 +297,24 @@ async def generate_report_stream(body: FullReportRequest, _u=Depends(get_optiona
     async def event_stream():
         start_time = time.time()
 
-        # Step 1: Подготовка данных
-        yield f"data: {_json.dumps({'step': 'Подготовка данных...', 'progress': 10}, ensure_ascii=False)}\n\n"
-        await asyncio.sleep(0.3)
+        def evt(step: str, progress: int, **extra):
+            return f"data: {_json.dumps({'step': step, 'progress': progress, **extra}, ensure_ascii=False)}\n\n"
 
-        # Step 2: Анализ рынка
-        yield f"data: {_json.dumps({'step': 'Анализ рынка...', 'progress': 25}, ensure_ascii=False)}\n\n"
-        await asyncio.sleep(0.3)
+        yield evt("Проверка входных данных...", 5)
+        await asyncio.sleep(0.2)
 
-        # Step 3: Сбор данных
-        yield f"data: {_json.dumps({'step': 'Сбор данных...', 'progress': 50}, ensure_ascii=False)}\n\n"
+        yield evt("Загрузка макроэкономических показателей...", 10)
+        await asyncio.sleep(0.2)
 
-        # Actually generate the report
+        yield evt("Обогащение региональных данных...", 18)
+        await asyncio.sleep(0.2)
+
+        yield evt("Подготовка запроса к AI-провайдеру...", 25)
+        await asyncio.sleep(0.1)
+
+        yield evt("Генерация 12-секционного анализа...", 30)
+
+        # Actual AI report generation
         try:
             result = await svc.full_market_analysis(
                 request=body.dict(),
@@ -317,12 +323,20 @@ async def generate_report_stream(body: FullReportRequest, _u=Depends(get_optiona
             )
         except Exception as e:
             logger.error(f"SSE generate report error: {e}")
-            yield f"data: {_json.dumps({'step': 'Ошибка генерации', 'progress': 0, 'error': 'Внутренняя ошибка сервера'}, ensure_ascii=False)}\n\n"
+            yield evt("Ошибка генерации", 0, error="Внутренняя ошибка сервера")
             return
 
-        # Step 4: Генерация отчёта
-        yield f"data: {_json.dumps({'step': 'Генерация отчёта...', 'progress': 75}, ensure_ascii=False)}\n\n"
-        await asyncio.sleep(0.3)
+        yield evt("Формирование SWOT и PESTEL анализа...", 65)
+        await asyncio.sleep(0.2)
+
+        yield evt("Расчёт инвестиционной привлекательности...", 78)
+        await asyncio.sleep(0.2)
+
+        yield evt("Оценка рисков и рекомендации...", 88)
+        await asyncio.sleep(0.15)
+
+        yield evt("Подготовка итогового отчёта...", 95)
+        await asyncio.sleep(0.1)
 
         elapsed = round(time.time() - start_time, 2)
         result["generation_time_sec"] = elapsed
@@ -331,8 +345,7 @@ async def generate_report_stream(body: FullReportRequest, _u=Depends(get_optiona
         # Store report
         _reports_store[f"{uid}:{report_id}"] = result
 
-        # Step 5: Готово
-        yield f"data: {_json.dumps({'step': 'Готово', 'progress': 100, 'report_id': report_id}, ensure_ascii=False)}\n\n"
+        yield evt("Готово", 100, report_id=report_id)
 
     return StreamingResponse(
         event_stream(),
