@@ -5,6 +5,20 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: '/market-analysis',
+        destination: '/uz-market',
+        permanent: true,
+      },
+      {
+        source: '/calculator-pro',
+        destination: '/calculator',
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

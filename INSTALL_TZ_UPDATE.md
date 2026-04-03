@@ -64,7 +64,7 @@ docker compose up --build -d
 
 ## Шаг 5: Проверить
 
-- Frontend market analysis: http://localhost:3000/market-analysis
+- Frontend market analysis: http://localhost:3000/uz-market
 - Frontend calculator: http://localhost:3000/calculator
 - API docs: http://localhost:8000/docs
 
